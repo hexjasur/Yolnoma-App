@@ -8,27 +8,36 @@ import VideosPage from './VideosPage';
 import VideoDetailPage from './VideoDetailPage';
 import BgRemover from './BgRemover';
 
+import LoginPage from './LoginPage';
+import ProtectedLayout from '../components/layout/ProtectedLayout';
+import { AuthProvider } from '../context/AuthContext';
+
 export default function AppRoutes() {
   return (
-    <HashRouter>
-      <Routes>
-        <Route element={<Layout />}>
+    <AuthProvider>
+      <HashRouter>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
 
-          <Route path="/" element={<HomePage />} />
+          {/* Protected Routes */}
+          <Route element={<ProtectedLayout />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/tools" element={<div>Tools Page</div>} />
+              <Route path="/tools/bg-remover" element={<BgRemover />} />
 
-          <Route path="/tools" element={<div>Tools Page</div>} />
+              {/* PERFORMANCE ROUTES */}
+              <Route path="/performances" element={<PerformancePage />} />
+              <Route path="/performances/:id" element={<PerformanceDetailPage />} />
 
-          <Route path="/tools/bg-remover" element={<BgRemover />} />
-
-          {/* PERFORMANCE ROUTES */}
-          <Route path="/performances" element={<PerformancePage />} />
-          <Route path="/performances/:id" element={<PerformanceDetailPage />} />
-
-          {/* VIDEO ROUTES */}
-          <Route path="/videos" element={<VideosPage />} />
-          <Route path="/videos/:videoId" element={<VideoDetailPage />} />
-        </Route>
-      </Routes>
-    </HashRouter>
+              {/* VIDEO ROUTES */}
+              <Route path="/videos" element={<VideosPage />} />
+              <Route path="/videos/:videoId" element={<VideoDetailPage />} />
+            </Route>
+          </Route>
+        </Routes>
+      </HashRouter>
+    </AuthProvider>
   );
 }
