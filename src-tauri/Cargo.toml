@@ -1,8 +1,15 @@
+# ============================================
+# Yolnoma Desktop Utility App
+# Author: Jasurbek Haydarov
+# Backend: Rust + Tauri v2
+# ============================================
+
+
 [package]
-name = "performance"
-version = "0.3.2"
-description = "Performance Desktop App"
-authors = ["you"]
+name = "yolnoma-app"
+version = "0.3.3"
+description = "Yolnoma Desktop Utility App"
+authors = ["Jasurbek Haydarov"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,7 +18,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "performance_lib"
+name = "yolnoma_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
