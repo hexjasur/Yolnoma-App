@@ -1,9 +1,10 @@
-use crate::db::get_db;
-use crate::models::{Performance, SavedVideo};
+use crate::db::{get_db, get_yolnoma_db};
+use crate::models::{Performance, SavedVideo, User};
 use futures::TryStreamExt;
 use mongodb::bson::{doc, oid::ObjectId, DateTime, Document};
 use mongodb::options::{FindOneAndUpdateOptions, ReturnDocument};
 use serde::Deserialize;
+use bcrypt::verify;
 
 #[derive(Debug, Deserialize)]
 pub struct UpdatePerformance {
@@ -334,3 +335,51 @@ pub async fn list_saved_videos() -> Result<Vec<SavedVideo>, String> {
 
     Ok(result)
 }
+
+#[tauri::command]
+pub async fn db_login(
+    email: String,
+    password: String,
+    state: tauri::State<'_, crate::AuthState>,
+) -> Result<serde_json::Value, String> {
+    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
+    let collection = db.collection::<User>("users");
+
+    let filter = doc! { "email": &email };
+    let user = collection
+        .find_one(filter, None)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    if let Some(u) = user {
+        // Verify password
+        let is_valid = verify(&password, &u.password_hash).map_err(|_| "Invalid password hash".to_string())?;
+        
+        if is_valid {
+            // Update auth state
+            let mut logged_in_user = state.user_id.lock().unwrap();
+            *logged_in_user = u.id.map(|oid| oid.to_hex());
+            
+            return Ok(serde_json::json!({
+                "success": true,
+                "user": {
+                    "id": logged_in_user.clone(),
+                    "email": u.email,
+                    "role": u.role,
+                }
+            }));
+        } else {
+            return Err("Noto'g'ri email yoki parol".into());
+        }
+    }
+
+    Err("Noto'g'ri email yoki parol".into())
+}
+
+#[tauri::command]
+pub async fn db_logout(state: tauri::State<'_, crate::AuthState>) -> Result<(), String> {
+    let mut logged_in_user = state.user_id.lock().unwrap();
+    *logged_in_user = None;
+    Ok(())
+}
+

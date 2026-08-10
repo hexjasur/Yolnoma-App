@@ -25,3 +25,12 @@ pub struct SavedVideo {
     #[serde(default)]
     pub created_at: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct User {
+    #[serde(rename = "_id")]
+    pub id: Option<bson::oid::ObjectId>,
+    pub email: String,
+    pub password_hash: String,
+    pub role: String,
+}
