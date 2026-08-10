@@ -1,0 +1,342 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ──────────────────────────────────────────── */
+:root {
+  --bg-base:       #14110E;
+  --bg-elevated:   #181410;
+  --bg-card:       #1B1713;
+  --bg-hover:      #1E1A15;
+
+  --accent:        #D97757;
+  --accent-dim:    rgba(217, 119, 87, 0.18);
+  --accent-border: rgba(217, 119, 87, 0.28);
+  --accent-hover:  rgba(217, 119, 87, 0.45);
+  --accent-glow:   rgba(217, 119, 87, 0.08);
+
+  --text-primary:  #F2EDE6;
+  --text-muted:    rgba(242, 237, 230, 0.55);
+  --text-faint:    rgba(242, 237, 230, 0.30);
+
+  --border:        rgba(242, 237, 230, 0.08);
+  --border-hover:  rgba(242, 237, 230, 0.14);
+
+  --radius-sm:     8px;
+  --radius-md:     12px;
+  --radius-lg:     16px;
+  --radius-xl:     20px;
+  --radius-2xl:    24px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+
+  --font-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Georgia", "Iowan Old Style", serif;
+  --font-mono:  "JetBrains Mono", "Fira Code", monospace;
+
+  --transition-fast:   0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow:   0.4s ease;
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(242, 237, 230, 0.12);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 237, 230, 0.2);
+}
+
+button { cursor: pointer; }
+
+/* ─── App Button (base) ──────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* primary */
+.btn-primary {
+  background: linear-gradient(135deg, rgba(217, 119, 87, 0.22), rgba(217, 119, 87, 0.10));
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(217, 119, 87, 0.32), rgba(217, 119, 87, 0.16));
+  border-color: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(217, 119, 87, 0.15);
+}
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+/* ghost */
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(242, 237, 230, 0.05);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+/* danger */
+.btn-danger {
+  background: rgba(220, 80, 80, 0.10);
+  border-color: rgba(220, 80, 80, 0.30);
+  color: #F2A8A8;
+}
+.btn-danger:hover:not(:disabled) {
+  background: rgba(220, 80, 80, 0.18);
+  border-color: rgba(220, 80, 80, 0.50);
+  color: #FFC5C5;
+  transform: translateY(-1px);
+}
+
+/* icon-only */
+.btn-icon {
+  padding: 7px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Form Controls ──────────────────────────────────────────── */
+.form-input,
+.form-textarea {
+  width: 100%;
+  background: rgba(242, 237, 230, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.form-input::placeholder,
+.form-textarea::placeholder { color: var(--text-faint); }
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--accent-border);
+  background: rgba(217, 119, 87, 0.04);
+}
+
+.form-textarea { resize: vertical; min-height: 80px; }
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+/* ─── Modal ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fadeIn var(--transition-fast) ease;
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  animation: scaleIn 0.2s ease;
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modal-body { 
+  padding: 24px 28px; 
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 28px 24px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Skeleton ───────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(242, 237, 230, 0.04) 0%,
+    rgba(242, 237, 230, 0.08) 50%,
+    rgba(242, 237, 230, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ─── Image Upload ───────────────────────────────────────────── */
+.upload-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--accent-border);
+  background: var(--accent-glow);
+}
+
+/* ─── Keyframes ──────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin 1s linear infinite;
+}
+
+/* ─── Card Hover ─────────────────────────────────────────────── */
+.perf-card {
+  transition:
+    border-color var(--transition-normal),
+    transform var(--transition-normal),
+    box-shadow var(--transition-normal);
+}
+.perf-card:hover {
+  border-color: rgba(217, 119, 87, 0.4) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.perf-card:hover .perf-img {
+  transform: scale(1.05);
+}
+.perf-card:hover .perf-spotlight {
+  opacity: 1 !important;
+}
+.perf-card:hover .card-actions {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.perf-img {
+  transition: transform var(--transition-slow);
+}
+.perf-spotlight {
+  transition: opacity var(--transition-normal);
+}
+.card-actions {
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
