@@ -357,15 +357,20 @@ pub async fn db_login(
         
         if is_valid {
             // Update auth state
+            let user_id_hex = u.id.map(|oid| oid.to_hex());
             let mut logged_in_user = state.user_id.lock().unwrap();
-            *logged_in_user = u.id.map(|oid| oid.to_hex());
+            *logged_in_user = user_id_hex.clone();
             
             return Ok(serde_json::json!({
                 "success": true,
                 "user": {
-                    "id": logged_in_user.clone(),
+                    "id": user_id_hex,
                     "email": u.email,
                     "role": u.role,
+                    "display_name": u.display_name,
+                    "avatar_url": u.avatar_url,
+                    "thumbnail_url": u.thumbnail_url,
+                    "is_private": u.is_private.unwrap_or(false),
                 }
             }));
         } else {
@@ -377,9 +382,159 @@ pub async fn db_login(
 }
 
 #[tauri::command]
+pub async fn get_profile(user_id: String) -> Result<serde_json::Value, String> {
+    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
+    let collection = db.collection::<User>("users");
+
+    let object_id = ObjectId::parse_str(&user_id).map_err(|_| "Invalid user id".to_string())?;
+    let filter = doc! { "_id": object_id };
+    let user = collection
+        .find_one(filter, None)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    match user {
+        Some(u) => Ok(serde_json::json!({
+            "id": u.id.map(|oid| oid.to_hex()),
+            "email": u.email,
+            "role": u.role,
+            "display_name": u.display_name,
+            "avatar_url": u.avatar_url,
+            "thumbnail_url": u.thumbnail_url,
+            "is_private": u.is_private.unwrap_or(false),
+        })),
+        None => Err("User not found".into()),
+    }
+}
+
+#[tauri::command]
+pub async fn update_profile(
+    user_id: String,
+    display_name: Option<String>,
+    avatar_url: Option<String>,
+    thumbnail_url: Option<String>,
+    is_private: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
+    let collection = db.collection::<User>("users");
+
+    let object_id = ObjectId::parse_str(&user_id).map_err(|_| "Invalid user id".to_string())?;
+    let filter = doc! { "_id": object_id };
+
+    let mut update_doc = Document::new();
+    if let Some(name) = display_name {
+        update_doc.insert("display_name", name);
+    }
+    if let Some(avatar) = avatar_url {
+        update_doc.insert("avatar_url", avatar);
+    }
+    if let Some(thumb) = thumbnail_url {
+        update_doc.insert("thumbnail_url", thumb);
+    }
+    if let Some(private) = is_private {
+        update_doc.insert("is_private", private);
+    }
+
+    if update_doc.is_empty() {
+        return Err("No update fields provided".into());
+    }
+
+    let options = FindOneAndUpdateOptions::builder()
+        .return_document(ReturnDocument::After)
+        .build();
+
+    let updated = collection
+        .find_one_and_update(filter, doc! { "$set": update_doc }, options)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match updated {
+        Some(u) => Ok(serde_json::json!({
+            "id": u.id.map(|oid| oid.to_hex()),
+            "email": u.email,
+            "role": u.role,
+            "display_name": u.display_name,
+            "avatar_url": u.avatar_url,
+            "thumbnail_url": u.thumbnail_url,
+            "is_private": u.is_private.unwrap_or(false),
+        })),
+        None => Err("User not found".into()),
+    }
+}
+
+#[tauri::command]
+pub async fn change_password(
+    user_id: String,
+    old_password: String,
+    new_password: String,
+) -> Result<(), String> {
+    if new_password.len() < 6 {
+        return Err("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak".into());
+    }
+
+    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
+    let collection = db.collection::<User>("users");
+
+    let object_id = ObjectId::parse_str(&user_id).map_err(|_| "Invalid user id".to_string())?;
+    let filter = doc! { "_id": object_id };
+
+    let user = collection
+        .find_one(filter.clone(), None)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?
+        .ok_or("Foydalanuvchi topilmadi".to_string())?;
+
+    let is_valid = verify(&old_password, &user.password_hash)
+        .map_err(|_| "Parol tekshirishda xatolik".to_string())?;
+    if !is_valid {
+        return Err("Eski parol noto'g'ri".into());
+    }
+
+    let new_hash = bcrypt::hash(&new_password, 10)
+        .map_err(|_| "Parolni shifrlashda xatolik".to_string())?;
+
+    collection
+        .update_one(filter, doc! { "$set": { "password_hash": new_hash } }, None)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn db_logout(state: tauri::State<'_, crate::AuthState>) -> Result<(), String> {
     let mut logged_in_user = state.user_id.lock().unwrap();
     *logged_in_user = None;
     Ok(())
+}
+
+#[derive(serde::Serialize)]
+pub struct UserResponse {
+    pub id: String,
+    pub email: String,
+    pub role: String,
+}
+
+#[tauri::command]
+pub async fn list_users() -> Result<Vec<UserResponse>, String> {
+    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
+    let collection = db.collection::<User>("users");
+
+    let mut cursor = collection
+        .find(None, None)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let mut result = Vec::new();
+
+    while let Some(user) = cursor.try_next().await.map_err(|e| e.to_string())? {
+        result.push(UserResponse {
+            id: user.id.map(|oid| oid.to_hex()).unwrap_or_default(),
+            email: user.email,
+            role: user.role,
+        });
+    }
+
+    Ok(result)
 }
 

@@ -1,25 +1,32 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
-import { LayoutGrid, Drama, Settings, Film, LogOut } from 'lucide-react';
+import { LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser, Gamepad2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { canAccessPage } from '../../config/roles';
 
 const links = [
-  { to: '/', label: 'Dashboard', icon: LayoutGrid },
-  { to: '/tools/bg-remover', label: 'Background removal', icon: LayoutGrid },
-  { to: '/performances', label: 'Performance', icon: Drama },
-  { to: '/videos', label: 'Stream', icon: Film },
+  { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
+  { to: '/tools/bg-remover', label: 'Background remover', icon: LayoutGrid, name: 'bg-remover' },
+  { to: '/tools/steam-idler', label: 'Steam Idler', icon: Gamepad2, name: 'steam-idler' },
+  { to: '/performances', label: 'Performance', icon: Drama, name: 'performances' },
+  { to: '/videos', label: 'Stream', icon: Film, name: 'videos' },
+  { to: '/users', label: 'Users', icon: Users, name: 'users' },
+  { to: '/profile', label: 'Profil', icon: CircleUser, name: 'profile' },
 ];
 
 export default function Sidebar() {
   const [version, setVersion] = useState<string>('');
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   useEffect(() => {
     getVersion()
       .then(setVersion)
       .catch(() => setVersion('0.0.0'));
   }, []);
+
+  // Filter links based on user's role
+  const filteredLinks = links.filter((link) => canAccessPage(user?.role, link.name));
 
   return (
     <aside className="w-64 shrink-0 border-r border-[var(--border)] bg-[var(--bg-elevated)] flex flex-col">
@@ -39,7 +46,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-1 flex flex-col">
-        {links.map(({ to, label, icon: Icon }) => (
+        {filteredLinks.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -79,19 +86,21 @@ export default function Sidebar() {
         {/* Separator */}
         <div className="h-px bg-[var(--border)] my-3 mx-2" />
 
-        {/* Static link for Settings (can be added as a route later) */}
-        <a
-          href="#"
-          className="group relative flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(242,237,230,0.04)] transition-colors duration-150 cursor-not-allowed opacity-60 mb-1"
-          onClick={(e) => e.preventDefault()}
-        >
-          <Settings
-            size={17}
-            strokeWidth={1.75}
-            className="text-[var(--text-faint)] group-hover:text-[var(--text-muted)]"
-          />
-          Sozlamalar (Tez orada)
-        </a>
+        {/* Static link for Settings */}
+        {canAccessPage(user?.role, 'settings') && (
+          <a
+            href="#"
+            className="group relative flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(242,237,230,0.04)] transition-colors duration-150 cursor-not-allowed opacity-60 mb-1"
+            onClick={(e) => e.preventDefault()}
+          >
+            <Settings
+              size={17}
+              strokeWidth={1.75}
+              className="text-[var(--text-faint)] group-hover:text-[var(--text-muted)]"
+            />
+            Sozlamalar (Tez orada)
+          </a>
+        )}
         
         {/* Logout Button */}
         <button

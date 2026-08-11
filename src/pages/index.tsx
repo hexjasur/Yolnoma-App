@@ -7,8 +7,11 @@ import PerformanceDetailPage from './PerformanceDetailPage';
 import VideosPage from './VideosPage';
 import VideoDetailPage from './VideoDetailPage';
 import BgRemover from './BgRemover';
+import SteamIdlerPage from './SteamIdlerPage';
 
 import LoginPage from './LoginPage';
+import UsersPage from './UsersPage';
+import ProfilePage from './ProfilePage';
 import ProtectedLayout from '../components/layout/ProtectedLayout';
 import { AuthProvider } from '../context/AuthContext';
 
@@ -26,6 +29,7 @@ export default function AppRoutes() {
               <Route path="/" element={<HomePage />} />
               <Route path="/tools" element={<div>Tools Page</div>} />
               <Route path="/tools/bg-remover" element={<BgRemover />} />
+              <Route path="/tools/steam-idler" element={<SteamIdlerPage />} />
 
               {/* PERFORMANCE ROUTES */}
               <Route path="/performances" element={<PerformancePage />} />
@@ -34,6 +38,12 @@ export default function AppRoutes() {
               {/* VIDEO ROUTES */}
               <Route path="/videos" element={<VideosPage />} />
               <Route path="/videos/:videoId" element={<VideoDetailPage />} />
+
+              {/* USERS ROUTES */}
+              <Route path="/users" element={<UsersPage />} />
+
+              {/* PROFILE ROUTE */}
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>
         </Routes>

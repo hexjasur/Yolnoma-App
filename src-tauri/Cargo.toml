@@ -7,7 +7,7 @@
 
 [package]
 name = "yolnoma-app"
-version = "0.3.3"
+version = "0.4.11"
 description = "Yolnoma Desktop Utility App"
 authors = ["Jasurbek Haydarov"]
 edition = "2021"
@@ -25,7 +25,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-window-state = "2"
 
@@ -39,3 +39,9 @@ futures = "0.3"
 dotenvy = "0.15"
 reqwest = { version = "0.12", features = ["json"] }
 bcrypt = "0.15"
+sysinfo = "0.30"
+regex = "1"
+steamlocate = "2"
+
+[profile.dev]
+codegen-units = 1
