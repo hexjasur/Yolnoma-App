@@ -33,4 +33,12 @@ pub struct User {
     pub email: String,
     pub password_hash: String,
     pub role: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub avatar_url: Option<String>,
+    #[serde(default)]
+    pub thumbnail_url: Option<String>,
+    #[serde(default)]
+    pub is_private: Option<bool>,
 }

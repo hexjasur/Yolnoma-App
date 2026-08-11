@@ -1,8 +1,12 @@
 use std::sync::Mutex;
+use tauri::Emitter;
+
 
 mod commands;
 mod db;
+mod embedded_api_key;
 mod models;
+mod steam_idler;
 
 pub struct AuthState {
     pub user_id: Mutex<Option<String>>,
@@ -13,16 +17,124 @@ fn ping() -> String {
     "pong".to_string()
 }
 
+/// Barcha idlingni to'xtatib dasturdan chiqish
+#[tauri::command]
+async fn exit_app(
+    state: tauri::State<'_, steam_idler::IdlingState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    // Barcha idling jarayonlarini to'xtatamiz
+    let mut processes = state.processes.lock().await;
+    for (_, mut h) in processes.drain() {
+        let _ = h.child.kill().await;
+    }
+    drop(processes);
+    // Dasturdan chiqamiz
+    app.exit(0);
+    Ok(())
+}
+
+/// Oynani yashirish (minimize to tray)
+#[tauri::command]
+fn hide_window(window: tauri::WebviewWindow) -> Result<(), String> {
+    window.hide().map_err(|e| e.to_string())
+}
+
+/// Idling holatini tekshirish (tray tooltip uchun)
+#[tauri::command]
+async fn get_idling_count(
+    state: tauri::State<'_, steam_idler::IdlingState>,
+) -> Result<usize, String> {
+    let processes = state.processes.lock().await;
+    Ok(processes.len())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(AuthState {
             user_id: Mutex::new(None),
         })
+        .manage(steam_idler::IdlingState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .setup(|app| {
+            use tauri::{
+                menu::{MenuBuilder, MenuItemBuilder},
+                tray::{TrayIconBuilder, TrayIconEvent},
+                Manager,
+            };
+
+            // Tray menyu
+            let show = MenuItemBuilder::new("Ochish")
+                .id("show")
+                .build(app)?;
+            let quit = MenuItemBuilder::new("Dasturdan chiqish")
+                .id("quit")
+                .build(app)?;
+            let menu = MenuBuilder::new(app)
+                .item(&show)
+                .item(&quit)
+                .build()?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Yolnoma")
+                .menu(&menu)
+                .show_menu_on_left_click(false) // Left click opens window, right click opens menu
+                .on_menu_event(move |app, event| match event.id().as_ref() {
+                    "show" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        // Barcha idling jarayonlarini to'xtatamiz, keyin chiqamiz
+                        let state = app.state::<steam_idler::IdlingState>();
+                        tauri::async_runtime::block_on(async {
+                            let mut processes = state.processes.lock().await;
+                            for (_, mut h) in processes.drain() {
+                                let _ = h.child.kill().await;
+                            }
+                        });
+                        // 500ms kutib, Steam trigger bo'lsin
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        button_state: tauri::tray::MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            // X tugmasi bosilganda frontend ga event yuboramiz
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                // Frontend ga signal yuboramiz — u dialog ko'rsatadi
+                let _ = window.emit("close-requested", ());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             ping,
+            exit_app,
+            hide_window,
+            get_idling_count,
             commands::add_performance,
             commands::list_performances,
             commands::get_performance,
@@ -35,6 +147,18 @@ pub fn run() {
             commands::list_saved_videos,
             commands::db_login,
             commands::db_logout,
+            commands::list_users,
+            commands::get_profile,
+            commands::update_profile,
+            commands::change_password,
+            // ── Steam Idler ──
+            steam_idler::steam_is_running,
+            steam_idler::get_steam_accounts,
+            steam_idler::get_steam_games,
+            steam_idler::start_idling,
+            steam_idler::stop_idling,
+            steam_idler::stop_all_idling,
+            steam_idler::get_idle_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

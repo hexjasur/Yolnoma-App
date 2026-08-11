@@ -1,29 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 
-interface User {
+export interface UserProfile {
   id: string;
   email: string;
   role: string;
+  display_name?: string;
+  avatar_url?: string;
+  thumbnail_url?: string;
+  is_private?: boolean;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: User | null;
-  login: (userData: User) => void;
+  user: UserProfile | null;
+  login: (userData: UserProfile) => void;
   logout: () => void;
+  updateUser: (updates: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-import { invoke } from '@tauri-apps/api/core';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for persisted session
     const storedUser = localStorage.getItem('yolnoma_user');
     if (storedUser) {
       try {
@@ -37,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = (userData: User) => {
+  const login = (userData: UserProfile) => {
     setUser(userData);
     setIsAuthenticated(true);
     localStorage.setItem('yolnoma_user', JSON.stringify(userData));
@@ -55,6 +58,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUser = (updates: Partial<UserProfile>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('yolnoma_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#14110E' }}>
@@ -67,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
