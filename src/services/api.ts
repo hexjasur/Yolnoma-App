@@ -29,22 +29,28 @@ const processQueue = (err: Error | null, token: string | null = null) => {
 
 async function refreshToken(): Promise<string | null> {
   const currentRefreshToken = localStorage.getItem('yolnoma_refresh_token');
+  const currentSessionId = localStorage.getItem('yolnoma_session_id');
   if (!currentRefreshToken) return null;
 
   try {
     const baseUrl = getBackendUrl();
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${currentRefreshToken}`,
+      'Content-Type': 'application/json',
+    };
+    if (currentSessionId) {
+      headers['x-session-id'] = currentSessionId;
+    }
+
     const res = await invoke<ProxyResponse>('proxy_request', {
       method: 'POST',
       url: `${baseUrl}/api/v2/auth/refresh`,
-      headers: {
-        'Authorization': `Bearer ${currentRefreshToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: null,
     });
 
     if (res.status !== 200) {
-      throw new Error('Refresh token invalid');
+      throw new Error('Refresh token invalid or session terminated');
     }
 
     const data = res.body;
@@ -71,6 +77,7 @@ async function refreshToken(): Promise<string | null> {
     // Explicitly clear tokens only on critical auth rejection
     localStorage.removeItem('yolnoma_access_token');
     localStorage.removeItem('yolnoma_refresh_token');
+    localStorage.removeItem('yolnoma_session_id');
     localStorage.removeItem('yolnoma_user');
     window.location.hash = '#/login'; // Redirect to login
     return null;
@@ -87,8 +94,12 @@ async function request(path: string, options: RequestOptions = {}): Promise<any>
 
   if (!options.skipAuth) {
     const token = localStorage.getItem('yolnoma_access_token');
+    const sessionId = localStorage.getItem('yolnoma_session_id');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (sessionId) {
+      headers['x-session-id'] = sessionId;
     }
   }
 
@@ -114,7 +125,7 @@ async function request(path: string, options: RequestOptions = {}): Promise<any>
     const response = await invoke<ProxyResponse>('proxy_request', proxyOptions);
 
     if (response.status === 401 && !options.skipAuth) {
-      // Token expired, refresh it
+      // Token expired or session check, refresh it
       if (!isRefreshing) {
         isRefreshing = true;
         const newAccessToken = await refreshToken();
