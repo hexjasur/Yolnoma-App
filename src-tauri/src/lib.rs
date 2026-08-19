@@ -156,11 +156,10 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // X tugmasi bosilganda frontend ga event yuboramiz
+            // X tugmasi bosilganda oynani avtomatik trayga yashiramiz (faqat tray menu 'Exit' dan to'liq chiqadi)
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                // Frontend ga signal yuboramiz — u dialog ko'rsatadi
-                let _ = window.emit("close-requested", ());
+                let _ = window.hide();
             }
         })
         .invoke_handler(tauri::generate_handler![

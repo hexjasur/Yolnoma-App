@@ -1,42 +1,54 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Film, Bookmark, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Search, Film, Bookmark, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { videoApi } from '@/services/videoApi';
-import { usePerformances } from '@/hooks/usePerformances';
+import { performanceService } from '@/services/performance.service';
 import VideoCard from '@/components/VideoCard';
-import { Button, Input } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { EpornerVideo, SavedVideo } from '@/types/video';
+import type { Performance } from '@/types';
 
 export default function VideosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialQuery = searchParams.get('query') || '';
 
-  const { items: performers } = usePerformances();
+  // Read URL query parameters as the source of truth
+  const queryParam = searchParams.get('query') || '';
+  const pageParam = parseInt(searchParams.get('page') || '1', 10);
+  const currentPage = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+
+  // Lightweight Top 10 Performers
+  const [topPerformers, setTopPerformers] = useState<Performance[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    performanceService.list(1, 10)
+      .then((res) => {
+        if (active && res?.data) {
+          setTopPerformers(res.data.slice(0, 10));
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const [activeTab, setActiveTab] = useState<'search' | 'saved'>('search');
-  const [query, setQuery] = useState(initialQuery);
-  const [page, setPage] = useState(1);
+  const [queryInput, setQueryInput] = useState(queryParam);
   const [videos, setVideos] = useState<EpornerVideo[]>([]);
   const [totalVideos, setTotalVideos] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Saved videos state
+  // Saved videos state (User-Specific Collection)
   const [savedVideos, setSavedVideos] = useState<SavedVideo[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
 
-  // Sync URL query changes to state & sessionStorage
+  // Synchronize local search input when URL query changes
   useEffect(() => {
-    const q = searchParams.get('query');
-    if (q !== null && q !== undefined && q.trim()) {
-      setQuery(q);
-      setPage(1);
-      sessionStorage.setItem('last_video_search_query', q.trim());
-    } else if (q === '') {
-      setQuery('');
-      setPage(1);
+    setQueryInput(queryParam);
+    if (queryParam.trim()) {
+      sessionStorage.setItem('last_video_search_query', queryParam.trim());
     }
-  }, [searchParams]);
+  }, [queryParam]);
 
   // Load Eporner videos
   const fetchVideos = useCallback(async (searchQuery: string, pageNum: number) => {
@@ -48,9 +60,9 @@ export default function VideosPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await videoApi.search(searchQuery, pageNum);
+      const res = await videoApi.search(searchQuery, pageNum, 20);
       setVideos(res.videos || []);
-      setTotalVideos(parseInt(String(res.total_count || 0)));
+      setTotalVideos(parseInt(String(res.total_count || 0), 10));
     } catch (err) {
       setError(String(err));
     } finally {
@@ -58,14 +70,14 @@ export default function VideosPage() {
     }
   }, []);
 
-  // Fetch when query or page changes
+  // Fetch when queryParam, currentPage or tab changes
   useEffect(() => {
     if (activeTab === 'search') {
-      fetchVideos(query, page);
+      fetchVideos(queryParam, currentPage);
     }
-  }, [query, page, activeTab, fetchVideos]);
+  }, [queryParam, currentPage, activeTab, fetchVideos]);
 
-  // Load Saved Videos
+  // Load User-Specific Saved Videos
   const loadSaved = useCallback(async () => {
     setSavedLoading(true);
     try {
@@ -86,24 +98,34 @@ export default function VideosPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1);
-    if (query.trim()) {
-      sessionStorage.setItem('last_video_search_query', query.trim());
-      setSearchParams({ query: query.trim() });
-    } else {
-      sessionStorage.removeItem('last_video_search_query');
-      setSearchParams({});
+    const nextParams = new URLSearchParams();
+    if (queryInput.trim()) {
+      nextParams.set('query', queryInput.trim());
+      nextParams.set('page', '1');
+      sessionStorage.setItem('last_video_search_query', queryInput.trim());
     }
+    setSearchParams(nextParams);
   };
 
   const handlePerformerSelect = (name: string) => {
-    setQuery(name);
-    setPage(1);
+    setQueryInput(name);
+    const nextParams = new URLSearchParams();
+    nextParams.set('query', name);
+    nextParams.set('page', '1');
     sessionStorage.setItem('last_video_search_query', name);
-    setSearchParams({ query: name });
+    setSearchParams(nextParams);
   };
 
-  const totalPages = useMemo(() => Math.ceil(totalVideos / 20), [totalVideos]);
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage === currentPage) return;
+    const nextParams = new URLSearchParams(searchParams);
+    if (queryParam) nextParams.set('query', queryParam);
+    nextParams.set('page', String(newPage));
+    setSearchParams(nextParams);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = useMemo(() => Math.ceil(totalVideos / 20) || 1, [totalVideos]);
 
   return (
     <div style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
@@ -140,166 +162,234 @@ export default function VideosPage() {
             }`}
           >
             <Bookmark size={14} />
-            Saqlanganlar
+            Saqlanganlar ({savedVideos.length})
           </button>
         </div>
       </div>
 
+      {/* Main Content Areas */}
       {activeTab === 'search' ? (
         <div className="space-y-6">
-          {/* Search Controls */}
-          <div className="grid gap-4 md:grid-cols-[1fr_260px]">
-            {/* Input query */}
-            <form onSubmit={handleSearchSubmit} className="relative">
-              <Input
-                placeholder="Performer yoki video nomi..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pr-12"
+          {/* Search Bar */}
+          <form onSubmit={handleSearchSubmit} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]"
               />
-              <button
-                type="submit"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <Search size={18} />
-              </button>
-            </form>
+              <input
+                type="text"
+                placeholder="Video nomi, model yoki kalit so'z bo'yicha qidirish…"
+                value={queryInput}
+                onChange={(e) => setQueryInput(e.target.value)}
+                className="form-input w-full pl-10"
+              />
+            </div>
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? 'Qidirilmoqda…' : 'Qidirish'}
+            </Button>
+          </form>
 
-            {/* Quick Performer Select */}
-            <div className="relative">
-              <select
-                onChange={(e) => handlePerformerSelect(e.target.value)}
-                value={performers.some((p) => p.full_name === query) ? query : ''}
-                className="w-full bg-[rgba(242,237,230,0.03)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-border)] focus:bg-[var(--accent-glow)] transition-all cursor-pointer appearance-none"
-              >
-                <option value="" className="bg-[var(--bg-elevated)]">
-                  Tezkor qidiruv (Performerlar)
-                </option>
-                {performers.map((perf) => (
-                  <option key={perf.id} value={perf.full_name} className="bg-[var(--bg-elevated)]">
-                    {perf.full_name}
-                  </option>
+          {/* Quick Performers Filter Chips (Top 10 Fast & Optimized) */}
+          {topPerformers.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs text-[var(--text-faint)] uppercase tracking-wider font-semibold">
+                Katalog ishtirokchilari (Top 10):
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {topPerformers.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handlePerformerSelect(p.full_name)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      queryParam.toLowerCase() === p.full_name.toLowerCase()
+                        ? 'border-[var(--accent)] bg-[var(--accent-glow)] text-[var(--text-primary)]'
+                        : 'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent-border)]'
+                    }`}
+                  >
+                    {p.thumbnail_url && (
+                      <img
+                        src={p.thumbnail_url}
+                        alt={p.full_name}
+                        className="w-4 h-4 rounded-full object-cover"
+                      />
+                    )}
+                    {p.full_name}
+                  </button>
                 ))}
-              </select>
-              <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 border-l-4 border-r-4 border-t-4 border-transparent border-t-[var(--text-faint)]" />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Error State */}
+          {/* Error Banner */}
           {error && (
-            <div className="flex items-center gap-3 rounded-xl border border-red-500/25 bg-red-500/[0.06] p-4 text-sm text-red-300">
+            <div className="flex items-center gap-2 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 text-sm">
               <AlertCircle size={16} />
-              <span>Ma'lumotlarni yuklashda xatolik yuz berdi: {error}</span>
+              <span>{error}</span>
             </div>
           )}
 
-          {/* Loading Skeletons */}
-          {loading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {/* Loading Skeleton / Results Info */}
+          {queryParam && !error && (
+            <div className="flex items-center justify-between text-xs text-[var(--text-faint)] border-b border-[var(--border)] pb-3">
+              <span>
+                «<strong className="text-[var(--text-primary)]">{queryParam}</strong>» bo'yicha topildi:{' '}
+                {totalVideos} ta video
+              </span>
+              {totalPages > 1 && (
+                <span>
+                  Sahifa {currentPage} / {totalPages}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Video Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <div className="skeleton aspect-video w-full rounded-2xl" />
-                  <div className="skeleton h-4 w-3/4 rounded-md" />
-                  <div className="flex justify-between">
-                    <div className="skeleton h-3 w-1/4 rounded-md" />
-                    <div className="skeleton h-3 w-1/4 rounded-md" />
-                  </div>
-                </div>
+                <div
+                  key={i}
+                  className="aspect-video w-full rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border)] animate-pulse"
+                />
               ))}
             </div>
-          )}
-
-          {/* Video list */}
-          {!loading && videos.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {videos.map((video) => (
-                <VideoCard key={video.id} video={video} />
+          ) : videos.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {videos.map((v) => (
+                <VideoCard key={v.id} video={v} />
               ))}
             </div>
-          )}
-
-          {/* Empty search */}
-          {!loading && !query.trim() && (
-            <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center text-[var(--text-muted)]">
-              <Film className="mx-auto mb-4 text-[var(--text-faint)]" size={36} />
-              <p className="text-sm">Enter a name to search for data or select a performer from the quick list.</p>
+          ) : queryParam ? (
+            <div className="py-16 text-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
+              <Film size={32} className="mx-auto mb-2 opacity-30 text-[var(--accent)]" />
+              <p className="text-base text-[var(--text-primary)]">Hech qanday video topilmadi</p>
+              <p className="text-xs mt-1">Boshqa so'z yoki ism bilan qidirib ko'ring.</p>
+            </div>
+          ) : (
+            <div className="py-20 text-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
+              <Search size={36} className="mx-auto mb-3 opacity-30 text-[var(--accent)]" />
+              <p className="text-base text-[var(--text-primary)] font-medium">Videolarni qidirish</p>
+              <p className="text-xs mt-1">Qidiruv satriga yozing yoki yuqoridagi ishtirokchilardan birini tanlang.</p>
             </div>
           )}
 
-          {/* No results */}
-          {!loading && query.trim() && videos.length === 0 && !error && (
-            <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center text-[var(--text-muted)]">
-              <AlertCircle className="mx-auto mb-4 text-[var(--text-faint)]" size={36} />
-              <p className="text-sm">"{query}" bo'yicha hech qanday video topilmadi.</p>
-            </div>
-          )}
-
-          {/* Pagination */}
+          {/* Pagination Controls (Always preserving query and page in URL) */}
           {!loading && totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-[var(--border)] pt-6 mt-8">
-              <p className="text-xs text-[var(--text-faint)] font-mono">
-                Jami: {totalVideos} video · Sahifa {page} / {totalPages}
-              </p>
-              <div className="flex gap-3">
+            <div className="flex items-center justify-between flex-wrap gap-4 pt-6 border-t border-[var(--border)] mt-8">
+              <div className="text-xs text-[var(--text-faint)]">
+                Ko'rsatilmoqda: {(currentPage - 1) * 20 + 1} - {Math.min(currentPage * 20, totalVideos)} (Jami: {totalVideos} ta)
+              </div>
+
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  disabled={page === 1}
+                  disabled={currentPage <= 1}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  className="gap-1"
                 >
-                  <ChevronLeft size={16} /> Oldingi
+                  <ChevronLeft size={14} /> Oldingi
                 </Button>
+
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                  .map((p, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && p - prev > 1;
+                    return (
+                      <span key={p} className="flex items-center gap-1">
+                        {showEllipsis && <span className="text-[var(--text-faint)] px-1">…</span>}
+                        <button
+                          type="button"
+                          onClick={() => handlePageChange(p)}
+                          style={{
+                            minWidth: 32,
+                            height: 32,
+                            padding: '0 6px',
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: p === currentPage ? 700 : 500,
+                            background: p === currentPage ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+                            color: p === currentPage ? '#fff' : 'var(--text-muted)',
+                            border: p === currentPage ? '1px solid var(--accent)' : '1px solid var(--border)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {p}
+                        </button>
+                      </span>
+                    );
+                  })}
+
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                  disabled={page === totalPages}
+                  disabled={currentPage >= totalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  className="gap-1"
                 >
-                  Keyingi <ChevronRight size={16} />
+                  Keyingi <ChevronRight size={14} />
                 </Button>
               </div>
             </div>
           )}
         </div>
       ) : (
-        /* Saved Videos Tab */
+        /* Saved Videos Tab (User-Specific) */
         <div className="space-y-6">
-          {savedLoading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-[var(--text-muted)]">
+              Siz saqlagan videolar to'plami ({savedVideos.length})
+            </h2>
+            <Button variant="ghost" size="sm" onClick={loadSaved} disabled={savedLoading}>
+              <RefreshCw size={13} className={savedLoading ? 'animate-spin' : ''} />
+              Yangilash
+            </Button>
+          </div>
+
+          {savedLoading ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <div className="skeleton aspect-video w-full rounded-2xl" />
-                  <div className="skeleton h-4 w-3/4 rounded-md" />
-                </div>
+                <div
+                  key={i}
+                  className="aspect-video w-full rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border)] animate-pulse"
+                />
               ))}
             </div>
-          )}
-
-          {!savedLoading && savedVideos.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center text-[var(--text-muted)]">
-              <Bookmark className="mx-auto mb-4 text-[var(--text-faint)]" size={36} />
-              <p className="text-sm">There are no saved Streams yet.</p>
-            </div>
-          )}
-
-          {!savedLoading && savedVideos.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {savedVideos.map((saved) => {
-                // Map SavedVideo back to EpornerVideo format for reuse in VideoCard
+          ) : savedVideos.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {savedVideos.map((sv) => {
+                // Map SavedVideo to EpornerVideo shape for consistent card presentation
                 const mappedVideo: EpornerVideo = {
-                  id: saved.videoId,
-                  title: saved.title,
-                  url: `https://www.eporner.com/video-${saved.videoId}/`,
-                  default_thumb: { size: 'medium', width: 333, height: 240, src: saved.defaultThumb },
-                  length_min: saved.lengthMin,
+                  id: sv.videoId,
+                  title: sv.title,
+                  url: '',
+                  default_thumb: {
+                    src: sv.defaultThumb,
+                    size: 'big',
+                    width: 640,
+                    height: 360,
+                  },
                   length_sec: 0,
-                  views: parseInt(saved.views.replace(/[^0-9]/g, '')) || 0,
-                  rate: saved.rate,
+                  length_min: sv.lengthMin,
+                  views: parseInt(sv.views || '0', 10) || 0,
+                  rate: sv.rate || '0.00',
                   keywords: '',
-                  embed: `https://www.eporner.com/embed/${saved.videoId}/`,
+                  embed: '',
+                  thumbs: [],
                 };
-                return <VideoCard key={mappedVideo.id} video={mappedVideo} />;
+                return <VideoCard key={sv.videoId} video={mappedVideo} />;
               })}
+            </div>
+          ) : (
+            <div className="py-20 text-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
+              <Bookmark size={36} className="mx-auto mb-3 opacity-30 text-[var(--accent)]" />
+              <p className="text-base text-[var(--text-primary)] font-medium">Saqlangan videolar yo'q</p>
+              <p className="text-xs mt-1">
+                Videolarni tomosha qilish paytida «Saqlash» tugmasini bosib shu yerga qo'shishingiz mumkin.
+              </p>
             </div>
           )}
         </div>
