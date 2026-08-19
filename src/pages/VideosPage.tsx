@@ -25,11 +25,17 @@ export default function VideosPage() {
   const [savedVideos, setSavedVideos] = useState<SavedVideo[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
 
-  // Sync URL query changes to state
+  // Sync URL query changes to state & sessionStorage
   useEffect(() => {
-    const q = searchParams.get('query') || '';
-    setQuery(q);
-    setPage(1);
+    const q = searchParams.get('query');
+    if (q !== null && q !== undefined && q.trim()) {
+      setQuery(q);
+      setPage(1);
+      sessionStorage.setItem('last_video_search_query', q.trim());
+    } else if (q === '') {
+      setQuery('');
+      setPage(1);
+    }
   }, [searchParams]);
 
   // Load Eporner videos
@@ -81,12 +87,19 @@ export default function VideosPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    setSearchParams({ query });
+    if (query.trim()) {
+      sessionStorage.setItem('last_video_search_query', query.trim());
+      setSearchParams({ query: query.trim() });
+    } else {
+      sessionStorage.removeItem('last_video_search_query');
+      setSearchParams({});
+    }
   };
 
   const handlePerformerSelect = (name: string) => {
     setQuery(name);
     setPage(1);
+    sessionStorage.setItem('last_video_search_query', name);
     setSearchParams({ query: name });
   };
 

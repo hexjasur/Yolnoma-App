@@ -43,11 +43,12 @@ class PerformanceStore {
     this.updateState({ loading: true, error: null });
 
     try {
-      const items = await performanceService.list();
+      const res = await performanceService.list(1, 100);
+      const items = res.data;
       this.hasFetched = true;
       this.updateState({ items, loading: false });
-    } catch (err) {
-      this.updateState({ error: String(err), loading: false });
+    } catch (err: any) {
+      this.updateState({ error: err?.message || String(err), loading: false });
     }
   }
 

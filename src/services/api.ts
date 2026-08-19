@@ -46,19 +46,34 @@ async function refreshToken(): Promise<string | null> {
       method: 'POST',
       url: `${baseUrl}/api/v2/auth/refresh`,
       headers,
-      body: null,
+      body: JSON.stringify({ refreshToken: currentRefreshToken, refresh_token: currentRefreshToken }),
     });
 
     if (res.status !== 200) {
       throw new Error('Refresh token invalid or session terminated');
     }
 
-    const data = res.body;
+    const body = res.body;
+    const data = body?.data || body;
     
     // Parse nested user or flat tokens, supporting snake_case and camelCase
-    const newAccessToken = data.accessToken || data.access_token || data.user?.accessToken || data.user?.access_token;
-    const newRefreshToken = data.refreshToken || data.refresh_token || data.user?.refreshToken || data.user?.refresh_token;
-    const userData = data.user || data;
+    const newAccessToken =
+      data?.accessToken ||
+      data?.access_token ||
+      data?.user?.accessToken ||
+      data?.user?.access_token ||
+      body?.accessToken ||
+      body?.access_token;
+
+    const newRefreshToken =
+      data?.refreshToken ||
+      data?.refresh_token ||
+      data?.user?.refreshToken ||
+      data?.user?.refresh_token ||
+      body?.refreshToken ||
+      body?.refresh_token;
+
+    const userData = data?.user || data;
 
     if (newAccessToken && newRefreshToken) {
       localStorage.setItem('yolnoma_access_token', newAccessToken);
@@ -189,6 +204,12 @@ export const api = {
     request(path, {
       ...options,
       method: 'PUT',
+      body,
+    }),
+  patch: (path: string, body?: any, options?: RequestOptions) =>
+    request(path, {
+      ...options,
+      method: 'PATCH',
       body,
     }),
   delete: (path: string, options?: RequestOptions) => request(path, { ...options, method: 'DELETE' }),
