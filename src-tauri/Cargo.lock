@@ -6163,7 +6163,7 @@ dependencies = [
 
 [[package]]
 name = "yolnoma-app"
-version = "0.4.71"
+version = "0.4.95"
 dependencies = [
  "bcrypt",
  "bson",

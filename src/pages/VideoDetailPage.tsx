@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Clock, Eye, Star, ExternalLink, Loader2 } from 'lucide-react';
 import { videoApi } from '@/services/videoApi';
 import SaveVideoButton from '@/components/SaveVideoButton';
@@ -9,11 +9,19 @@ import type { EpornerVideo } from '@/types/video';
 
 export default function VideoDetailPage() {
   const { videoId } = useParams<{ videoId: string }>();
+  const location = useLocation();
 
   const [video, setVideo] = useState<EpornerVideo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [server, setServer] = useState<'www' | 'es'>('www');
+
+  // Compute back URL with preserved query parameters
+  const backTarget =
+    location.state?.from ||
+    (sessionStorage.getItem('last_video_search_query')
+      ? `/videos?query=${encodeURIComponent(sessionStorage.getItem('last_video_search_query')!)}`
+      : '/videos');
 
   const loadVideo = useCallback(async () => {
     if (!videoId) return;
@@ -48,7 +56,7 @@ export default function VideoDetailPage() {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <Link
-          to="/videos"
+          to={backTarget}
           className="inline-flex items-center gap-2 text-sm text-[var(--text-faint)] hover:text-[#F2EDE6] transition-colors"
         >
           <ArrowLeft size={15} />
@@ -71,11 +79,11 @@ export default function VideoDetailPage() {
       {/* Navigation Row */}
       <div className="flex items-center justify-between">
         <Link
-          to="/videos"
+          to={backTarget}
           className="inline-flex items-center gap-2 text-sm text-[var(--text-faint)] hover:text-[#F2EDE6] transition-colors"
         >
           <ArrowLeft size={15} />
-          Return to the stream
+          Streams ga qaytish
         </Link>
         <SaveVideoButton video={video} />
       </div>
