@@ -48,7 +48,7 @@ async function run() {
     // Create user document
     const newUser = {
       email: ADMIN_EMAIL,
-      password_hash: hashedPassword,
+      password: hashedPassword,
       created_at: new Date(),
       role: "admin"
     };

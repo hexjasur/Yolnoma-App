@@ -1,10 +1,9 @@
-use crate::db::{get_db, get_yolnoma_db};
-use crate::models::{Performance, SavedVideo, User};
+use crate::db::get_db;
+use crate::models::{Performance, SavedVideo};
 use futures::TryStreamExt;
 use mongodb::bson::{doc, oid::ObjectId, DateTime, Document};
 use mongodb::options::{FindOneAndUpdateOptions, ReturnDocument};
 use serde::Deserialize;
-use bcrypt::verify;
 
 #[derive(Debug, Deserialize)]
 pub struct UpdatePerformance {
@@ -336,205 +335,44 @@ pub async fn list_saved_videos() -> Result<Vec<SavedVideo>, String> {
     Ok(result)
 }
 
-#[tauri::command]
-pub async fn db_login(
-    email: String,
-    password: String,
-    state: tauri::State<'_, crate::AuthState>,
-) -> Result<serde_json::Value, String> {
-    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
-    let collection = db.collection::<User>("users");
-
-    let filter = doc! { "email": &email };
-    let user = collection
-        .find_one(filter, None)
-        .await
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    if let Some(u) = user {
-        // Verify password
-        let is_valid = verify(&password, &u.password_hash).map_err(|_| "Invalid password hash".to_string())?;
-        
-        if is_valid {
-            // Update auth state
-            let user_id_hex = u.id.map(|oid| oid.to_hex());
-            let mut logged_in_user = state.user_id.lock().unwrap();
-            *logged_in_user = user_id_hex.clone();
-            
-            return Ok(serde_json::json!({
-                "success": true,
-                "user": {
-                    "id": user_id_hex,
-                    "email": u.email,
-                    "role": u.role,
-                    "display_name": u.display_name,
-                    "avatar_url": u.avatar_url,
-                    "thumbnail_url": u.thumbnail_url,
-                    "is_private": u.is_private.unwrap_or(false),
-                }
-            }));
-        } else {
-            return Err("Noto'g'ri email yoki parol".into());
-        }
-    }
-
-    Err("Noto'g'ri email yoki parol".into())
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ProxyResponse {
+    pub status: u16,
+    pub body: serde_json::Value,
 }
 
 #[tauri::command]
-pub async fn get_profile(user_id: String) -> Result<serde_json::Value, String> {
-    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
-    let collection = db.collection::<User>("users");
+pub async fn proxy_request(
+    method: String,
+    url: String,
+    headers: std::collections::HashMap<String, String>,
+    body: Option<serde_json::Value>,
+) -> Result<ProxyResponse, String> {
+    let client = reqwest::Client::new();
+    let mut req = match method.to_uppercase().as_str() {
+        "POST" => client.post(&url),
+        "PUT" => client.put(&url),
+        "DELETE" => client.delete(&url),
+        _ => client.get(&url),
+    };
 
-    let object_id = ObjectId::parse_str(&user_id).map_err(|_| "Invalid user id".to_string())?;
-    let filter = doc! { "_id": object_id };
-    let user = collection
-        .find_one(filter, None)
-        .await
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    match user {
-        Some(u) => Ok(serde_json::json!({
-            "id": u.id.map(|oid| oid.to_hex()),
-            "email": u.email,
-            "role": u.role,
-            "display_name": u.display_name,
-            "avatar_url": u.avatar_url,
-            "thumbnail_url": u.thumbnail_url,
-            "is_private": u.is_private.unwrap_or(false),
-        })),
-        None => Err("User not found".into()),
+    for (k, v) in headers {
+        req = req.header(k, v);
     }
+
+    if let Some(b) = body {
+        req = req.json(&b);
+    }
+
+    let res = req.send().await.map_err(|e| e.to_string())?;
+    let status = res.status().as_u16();
+    let text = res.text().await.map_err(|e| e.to_string())?;
+
+    // Try parsing as JSON, fallback to raw string in a JSON object
+    let body_json: serde_json::Value = serde_json::from_str(&text)
+        .unwrap_or(serde_json::json!({ "text": text }));
+
+    Ok(ProxyResponse { status, body: body_json })
 }
 
-#[tauri::command]
-pub async fn update_profile(
-    user_id: String,
-    display_name: Option<String>,
-    avatar_url: Option<String>,
-    thumbnail_url: Option<String>,
-    is_private: Option<bool>,
-) -> Result<serde_json::Value, String> {
-    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
-    let collection = db.collection::<User>("users");
-
-    let object_id = ObjectId::parse_str(&user_id).map_err(|_| "Invalid user id".to_string())?;
-    let filter = doc! { "_id": object_id };
-
-    let mut update_doc = Document::new();
-    if let Some(name) = display_name {
-        update_doc.insert("display_name", name);
-    }
-    if let Some(avatar) = avatar_url {
-        update_doc.insert("avatar_url", avatar);
-    }
-    if let Some(thumb) = thumbnail_url {
-        update_doc.insert("thumbnail_url", thumb);
-    }
-    if let Some(private) = is_private {
-        update_doc.insert("is_private", private);
-    }
-
-    if update_doc.is_empty() {
-        return Err("No update fields provided".into());
-    }
-
-    let options = FindOneAndUpdateOptions::builder()
-        .return_document(ReturnDocument::After)
-        .build();
-
-    let updated = collection
-        .find_one_and_update(filter, doc! { "$set": update_doc }, options)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    match updated {
-        Some(u) => Ok(serde_json::json!({
-            "id": u.id.map(|oid| oid.to_hex()),
-            "email": u.email,
-            "role": u.role,
-            "display_name": u.display_name,
-            "avatar_url": u.avatar_url,
-            "thumbnail_url": u.thumbnail_url,
-            "is_private": u.is_private.unwrap_or(false),
-        })),
-        None => Err("User not found".into()),
-    }
-}
-
-#[tauri::command]
-pub async fn change_password(
-    user_id: String,
-    old_password: String,
-    new_password: String,
-) -> Result<(), String> {
-    if new_password.len() < 6 {
-        return Err("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak".into());
-    }
-
-    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
-    let collection = db.collection::<User>("users");
-
-    let object_id = ObjectId::parse_str(&user_id).map_err(|_| "Invalid user id".to_string())?;
-    let filter = doc! { "_id": object_id };
-
-    let user = collection
-        .find_one(filter.clone(), None)
-        .await
-        .map_err(|e| format!("Database error: {}", e))?
-        .ok_or("Foydalanuvchi topilmadi".to_string())?;
-
-    let is_valid = verify(&old_password, &user.password_hash)
-        .map_err(|_| "Parol tekshirishda xatolik".to_string())?;
-    if !is_valid {
-        return Err("Eski parol noto'g'ri".into());
-    }
-
-    let new_hash = bcrypt::hash(&new_password, 10)
-        .map_err(|_| "Parolni shifrlashda xatolik".to_string())?;
-
-    collection
-        .update_one(filter, doc! { "$set": { "password_hash": new_hash } }, None)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn db_logout(state: tauri::State<'_, crate::AuthState>) -> Result<(), String> {
-    let mut logged_in_user = state.user_id.lock().unwrap();
-    *logged_in_user = None;
-    Ok(())
-}
-
-#[derive(serde::Serialize)]
-pub struct UserResponse {
-    pub id: String,
-    pub email: String,
-    pub role: String,
-}
-
-#[tauri::command]
-pub async fn list_users() -> Result<Vec<UserResponse>, String> {
-    let db = get_yolnoma_db().await.map_err(|e| e.to_string())?;
-    let collection = db.collection::<User>("users");
-
-    let mut cursor = collection
-        .find(None, None)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let mut result = Vec::new();
-
-    while let Some(user) = cursor.try_next().await.map_err(|e| e.to_string())? {
-        result.push(UserResponse {
-            id: user.id.map(|oid| oid.to_hex()).unwrap_or_default(),
-            email: user.email,
-            role: user.role,
-        });
-    }
-
-    Ok(result)
-}
 

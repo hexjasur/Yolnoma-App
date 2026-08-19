@@ -1,6 +1,6 @@
 use std::sync::Mutex;
-use tauri::Emitter;
-
+use tauri::{Emitter, Manager};
+use tauri_plugin_deep_link::DeepLinkExt;
 
 mod commands;
 mod db;
@@ -58,7 +58,40 @@ pub fn run() {
         .manage(steam_idler::IdlingState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+            for arg in args {
+                if arg.starts_with("yolnoma://") {
+                    if let Ok(parsed_url) = url::Url::parse(&arg) {
+                        if let Some((_, code)) = parsed_url.query_pairs().find(|(k, _)| k == "code") {
+                            let _ = app.emit("auth-code-received", code.to_string());
+                        }
+                    }
+                }
+            }
+        }))
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            // Register deep link scheme in Windows Registry (HKCU\Software\Classes\yolnoma)
+            #[cfg(any(windows, target_os = "linux"))]
+            {
+                let _ = app.deep_link().register_all();
+            }
+
+            let handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                for parsed_url in event.urls() {
+                    if parsed_url.scheme() == "yolnoma" {
+                        if let Some((_, code)) = parsed_url.query_pairs().find(|(k, _)| k == "code") {
+                            let _ = handle.emit("auth-code-received", code.to_string());
+                        }
+                    }
+                }
+            });
             use tauri::{
                 menu::{MenuBuilder, MenuItemBuilder},
                 tray::{TrayIconBuilder, TrayIconEvent},
@@ -66,10 +99,10 @@ pub fn run() {
             };
 
             // Tray menyu
-            let show = MenuItemBuilder::new("Ochish")
+            let show = MenuItemBuilder::new("Show")
                 .id("show")
                 .build(app)?;
-            let quit = MenuItemBuilder::new("Dasturdan chiqish")
+            let quit = MenuItemBuilder::new("Exit")
                 .id("quit")
                 .build(app)?;
             let menu = MenuBuilder::new(app)
@@ -135,6 +168,7 @@ pub fn run() {
             exit_app,
             hide_window,
             get_idling_count,
+            commands::proxy_request,
             commands::add_performance,
             commands::list_performances,
             commands::get_performance,
@@ -145,12 +179,6 @@ pub fn run() {
             commands::unsave_video,
             commands::get_video_save_status,
             commands::list_saved_videos,
-            commands::db_login,
-            commands::db_logout,
-            commands::list_users,
-            commands::get_profile,
-            commands::update_profile,
-            commands::change_password,
             // ── Steam Idler ──
             steam_idler::steam_is_running,
             steam_idler::get_steam_accounts,
