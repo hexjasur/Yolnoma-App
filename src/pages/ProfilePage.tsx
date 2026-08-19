@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import {
-  User, Shield, Lock, Settings, Camera, 
+  User, Shield, Lock, Settings, Camera,
   Eye, EyeOff, Check, Loader2, ChevronDown, ChevronUp,
-  Monitor, Package, AlertCircle, CheckCircle2, Image as ImageIcon
+  Monitor, Package, AlertCircle, CheckCircle2, Image as ImageIcon,
+  Globe, Wifi
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ImageCropper from '../components/ui/ImageCropper';
+import { api } from '../services/api';
 
 // ── Helpers ──────────────────────────────────────────────────
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY as string;
@@ -74,6 +76,119 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
       {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
       {message}
     </div>
+  );
+}
+
+// ── Sessions Card ─────────────────────────────────────────────
+interface Session {
+  _id: string;
+  ip: string;
+  device: string;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
+function SessionsCard() {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [terminatingId, setTerminatingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSessions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get('/api/auth/sessions');
+      setSessions(data.sessions || data || []);
+    } catch (e: any) {
+      setError(e?.message || "Sessiyalarni yuklashda xatolik");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchSessions(); }, []);
+
+  const terminateSession = async (id: string) => {
+    setTerminatingId(id);
+    try {
+      await api.post('/api/auth/logout-session', { _id: id });
+      setSessions(prev => prev.filter(s => s._id !== id));
+    } catch (e: any) {
+      setError(e?.message || "Sessiyani tugatishda xatolik");
+    } finally {
+      setTerminatingId(null);
+    }
+  };
+
+  const formatDate = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return iso; }
+  };
+
+  return (
+    <SectionCard title="Faol Sessiyalar" icon={Globe} collapsible>
+      <div className="pt-5 space-y-3">
+        {error && (
+          <div className="flex items-center gap-2 text-red-400 text-sm p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+            <AlertCircle size={14} />
+            {error}
+          </div>
+        )}
+        {loading ? (
+          Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="h-14 w-full bg-white/5 animate-pulse rounded-xl border border-white/5" />
+          ))
+        ) : sessions.length === 0 ? (
+          <div className="text-center py-8 text-white/30 text-sm">
+            <Wifi size={24} className="mx-auto mb-2 opacity-30" />
+            Faol sessiyalar topilmadi
+          </div>
+        ) : (
+          sessions.map(session => (
+            <div
+              key={session._id}
+              className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center
+                  ${session.isCurrent ? 'bg-[#D97757]/15' : 'bg-white/5'}`}>
+                  <Monitor size={13} className={session.isCurrent ? 'text-[#D97757]' : 'text-white/40'} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-white/70 font-mono">{session.ip}</p>
+                    {session.isCurrent && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#D97757]/15 text-[#D97757] font-semibold border border-[#D97757]/20">
+                        Joriy
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-white/25 truncate mt-0.5" title={session.device}>
+                    {session.device.length > 50 ? session.device.slice(0, 50) + '...' : session.device}
+                  </p>
+                  <p className="text-[10px] text-white/20 mt-0.5">{formatDate(session.createdAt)}</p>
+                </div>
+              </div>
+              {!session.isCurrent && (
+                <button
+                  onClick={() => terminateSession(session._id)}
+                  disabled={terminatingId === session._id}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium
+                             bg-red-500/10 text-red-400 border border-red-500/20
+                             hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed
+                             transition-colors duration-200"
+                >
+                  {terminatingId === session._id ? <Loader2 size={12} className="animate-spin" /> : 'Tugatish'}
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </SectionCard>
   );
 }
 
@@ -487,6 +602,9 @@ export default function ProfilePage() {
               </div>
             </div>
           </SectionCard>
+          {/* ── Sessions ─────────────────────────────────── */}
+          <SessionsCard />
+
         </div>
       </div>
     </div>

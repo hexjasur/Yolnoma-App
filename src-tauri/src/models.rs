@@ -26,19 +26,3 @@ pub struct SavedVideo {
     pub created_at: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct User {
-    #[serde(rename = "_id")]
-    pub id: Option<bson::oid::ObjectId>,
-    pub email: String,
-    pub password_hash: String,
-    pub role: String,
-    #[serde(default)]
-    pub display_name: Option<String>,
-    #[serde(default)]
-    pub avatar_url: Option<String>,
-    #[serde(default)]
-    pub thumbnail_url: Option<String>,
-    #[serde(default)]
-    pub is_private: Option<bool>,
-}

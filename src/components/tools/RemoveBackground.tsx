@@ -76,7 +76,7 @@ export default function RemoveBackground() {
             Tool
           </p>
           <h1 className="font-serif text-4xl font-medium tracking-tight">
-            Background removal
+            Background remover
           </h1>
           <p className="mt-2 text-white/45 text-sm">
             Upload an image — the background will be removed automatically

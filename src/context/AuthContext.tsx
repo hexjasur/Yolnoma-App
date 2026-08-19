@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { api } from '../services/api';
 
 export interface UserProfile {
   id: string;
@@ -14,7 +14,7 @@ export interface UserProfile {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: UserProfile | null;
-  login: (userData: UserProfile) => void;
+  login: (userData: UserProfile, accessToken: string, refreshToken: string) => void;
   logout: () => void;
   updateUser: (updates: Partial<UserProfile>) => void;
 }
@@ -27,35 +27,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('yolnoma_user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (e) {
-        console.error('Failed to parse user from local storage', e);
+    const initAuth = async () => {
+      const accessToken = localStorage.getItem('yolnoma_access_token');
+      const refreshToken = localStorage.getItem('yolnoma_refresh_token');
+      const storedUser = localStorage.getItem('yolnoma_user');
+
+      // 1. Agar keshda foydalanuvchi profili bo'lsa, zudlik bilan yuklaymiz (offline rejimda ishlash uchun)
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        } catch (e) {
+          console.error('Failed to parse cached user from local storage:', e);
+        }
       }
-    }
-    setLoading(false);
+
+      if (accessToken && refreshToken) {
+        try {
+          const res = await api.get('/api/v2/auth/me');
+          const rawUser = res?.data?.user || res?.user || res;
+          if (rawUser && (rawUser.id || rawUser._id)) {
+            const formattedUser: UserProfile = {
+              id: rawUser.id || rawUser._id,
+              email: rawUser.email,
+              role: rawUser.role || 'user',
+              display_name: rawUser.name || rawUser.display_name || rawUser.displayName,
+              avatar_url: rawUser.avatar || rawUser.avatar_url || rawUser.picture,
+              thumbnail_url: rawUser.thumbnail_url,
+              is_private: rawUser.is_private ?? false,
+            };
+            setUser(formattedUser);
+            setIsAuthenticated(true);
+            localStorage.setItem('yolnoma_user', JSON.stringify(formattedUser));
+          }
+        } catch (e: any) {
+          console.warn('Auto login background check failed:', e);
+          
+          const isAuthError = 
+            e.message?.toLowerCase().includes('unauthorized') || 
+            e.message?.toLowerCase().includes('invalid') || 
+            e.message?.toLowerCase().includes('expired') || 
+            e.message?.toLowerCase().includes('token');
+
+          if (isAuthError) {
+            console.error('Session expired, clearing credentials.');
+            localStorage.removeItem('yolnoma_access_token');
+            localStorage.removeItem('yolnoma_refresh_token');
+            localStorage.removeItem('yolnoma_user');
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
-  const login = (userData: UserProfile) => {
+  const login = (userData: UserProfile, accessToken: string, refreshToken: string) => {
     setUser(userData);
     setIsAuthenticated(true);
+    localStorage.setItem('yolnoma_access_token', accessToken);
+    localStorage.setItem('yolnoma_refresh_token', refreshToken);
     localStorage.setItem('yolnoma_user', JSON.stringify(userData));
   };
 
   const logout = async () => {
     try {
-      await invoke('db_logout');
-    } catch (error) {
-      console.error('Logout failed on backend:', error);
-    } finally {
-      setUser(null);
-      setIsAuthenticated(false);
-      localStorage.removeItem('yolnoma_user');
+      await api.post('/api/v2/auth/sign-out', {}).catch(() => {});
+    } catch {
+      // ignore
     }
+    setUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('yolnoma_access_token');
+    localStorage.removeItem('yolnoma_refresh_token');
+    localStorage.removeItem('yolnoma_user');
   };
 
   const updateUser = (updates: Partial<UserProfile>) => {
