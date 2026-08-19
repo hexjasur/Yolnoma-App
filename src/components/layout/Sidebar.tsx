@@ -7,13 +7,14 @@ import { canAccessPage } from '../../config/roles';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
-  { to: '/tools/currency', label: 'Valyuta kursi', icon: Coins, name: 'currency' },
+  { to: '/tools/currency', label: 'Exchange rate', icon: Coins, name: 'currency' },
   { to: '/tools/bg-remover', label: 'Background remover', icon: LayoutGrid, name: 'bg-remover' },
   { to: '/tools/steam-idler', label: 'Steam Idler', icon: Gamepad2, name: 'steam-idler' },
   { to: '/performances', label: 'Performance', icon: Drama, name: 'performances' },
   { to: '/videos', label: 'Stream', icon: Film, name: 'videos' },
   { to: '/users', label: 'Users', icon: Users, name: 'users' },
-  { to: '/profile', label: 'Profil', icon: CircleUser, name: 'profile' },
+  { to: '/profile', label: 'Profile', icon: CircleUser, name: 'profile' },
+  { to: '/settings', label: 'Settings', icon: Settings, name: 'settings' },
 ];
 
 export default function Sidebar() {
@@ -38,7 +39,7 @@ export default function Sidebar() {
           style={{ background: 'var(--accent)' }}
         />
         <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-faint)] mb-1 relative font-semibold">
-          Katalog
+          Catalog
         </p>
         <h1 className="relative font-serif text-2xl font-medium tracking-tight text-[var(--text-primary)]">
           Performance
@@ -86,22 +87,6 @@ export default function Sidebar() {
 
         {/* Separator */}
         <div className="h-px bg-[var(--border)] my-3 mx-2" />
-
-        {/* Static link for Settings */}
-        {canAccessPage(user?.role, 'settings') && (
-          <a
-            href="#"
-            className="group relative flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(242,237,230,0.04)] transition-colors duration-150 cursor-not-allowed opacity-60 mb-1"
-            onClick={(e) => e.preventDefault()}
-          >
-            <Settings
-              size={17}
-              strokeWidth={1.75}
-              className="text-[var(--text-faint)] group-hover:text-[var(--text-muted)]"
-            />
-            Sozlamalar (Tez orada)
-          </a>
-        )}
         
         {/* Logout Button */}
         <button

@@ -234,7 +234,7 @@ export default function PerformanceDetailPage() {
         {/* Info */}
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-[#D97757] font-semibold mb-3">
-            Ishtirokchi
+            Performers
           </p>
           <h1 className="font-serif text-5xl font-medium tracking-tight text-[#F2EDE6] mb-2">
             {item.full_name}
@@ -309,22 +309,22 @@ export default function PerformanceDetailPage() {
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
               <div className="flex items-center gap-2 text-white/40 mb-2">
                 <Fingerprint size={14} strokeWidth={1.75} />
-                <p className="text-xs uppercase tracking-wide">Supabase ID</p>
+                <p className="text-xs uppercase tracking-wide">P-ID</p>
               </div>
-              <p className="font-mono text-sm text-[#F2EDE6] break-all">{item.id}</p>
+              <p className="font-mono text-[0.6rem] text-[#F2EDE6] break-all">{item.id}</p>
             </div>
 
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-sm">
               <div className="flex items-center gap-2 text-white/40 mb-2">
                 <Clock size={14} strokeWidth={1.75} />
-                <p className="text-xs uppercase tracking-wide">Vaqt belgilari</p>
+                <p className="text-xs uppercase tracking-wide">Added</p>
               </div>
               <p className="text-white/70">
-                Yaratildi: <span className="text-[#F2EDE6]">{item.created_at || 'Noma\'lum'}</span>
+                Created@: <span className="text-[#F2EDE6]">{formatTimestamp(item.created_at)}</span>
               </p>
-              {item.updated_at && (
+              {item.updated_at && item.updated_at !== item.created_at && (
                 <p className="text-white/70 mt-1">
-                  Yangilandi: <span className="text-[#F2EDE6]">{item.updated_at}</span>
+                  Yangilandi: <span className="text-[#F2EDE6]">{formatTimestamp(item.updated_at)}</span>
                 </p>
               )}
             </div>
@@ -348,4 +348,26 @@ export default function PerformanceDetailPage() {
       />
     </div>
   );
+}
+
+/**
+ * Convert ISO/UTC timestamp to user-local date string.
+ * Shows "2026-08-19" format — clean and readable.
+ * Handles both UTC ISO (2026-08-19T09:38:55.228829+00:00) and plain date strings.
+ */
+function formatTimestamp(iso: string | null | undefined): string {
+  if (!iso) return 'Noma\'lum';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    // Show in local timezone: YYYY-MM-DD HH:mm
+    const yyyy = d.getFullYear();
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getDate()).padStart(2, '0');
+    const hh   = String(d.getHours()).padStart(2, '0');
+    const min  = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  } catch {
+    return iso;
+  }
 }

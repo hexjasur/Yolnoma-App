@@ -101,7 +101,7 @@ export default function CurrencyChart({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold tracking-wider uppercase text-[var(--accent)]">
-              Tarixiy dinamika
+              Historical dynamics
             </span>
             <span className="text-xs text-white/40">({base} / {quote})</span>
           </div>
@@ -147,14 +147,14 @@ export default function CurrencyChart({
         {loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#14110E]/80 backdrop-blur-sm z-20 rounded-xl">
             <Loader2 className="animate-spin text-[var(--accent)]" size={24} />
-            <span className="text-xs text-white/50">Grafik yuklanmoqda...</span>
+            <span className="text-xs text-white/50">Chart is loading...</span>
           </div>
         ) : null}
 
         {points.length === 0 && !loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/30 text-xs">
             <Calendar size={28} className="mb-2 opacity-40" />
-            Ushbu davr uchun grafik ma'lumotlari mavjud emas
+           No graphical data is available for this period.
           </div>
         ) : (
           <svg
@@ -239,19 +239,19 @@ export default function CurrencyChart({
       {/* Footer Mini Stats */}
       <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/[0.06] text-center">
         <div className="bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.04]">
-          <p className="text-[11px] text-white/40 mb-0.5">Eng past</p>
+          <p className="text-[11px] text-white/40 mb-0.5">Lowest</p>
           <p className="text-xs font-mono font-semibold text-white/90">
             {stats.min.toLocaleString('uz-UZ', { maximumFractionDigits: 4 })}
           </p>
         </div>
         <div className="bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.04]">
-          <p className="text-[11px] text-white/40 mb-0.5">O'rtacha</p>
+          <p className="text-[11px] text-white/40 mb-0.5">Average</p>
           <p className="text-xs font-mono font-semibold text-white/90">
             {stats.avg.toLocaleString('uz-UZ', { maximumFractionDigits: 4 })}
           </p>
         </div>
         <div className="bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.04]">
-          <p className="text-[11px] text-white/40 mb-0.5">Eng baland</p>
+          <p className="text-[11px] text-white/40 mb-0.5">The highest</p>
           <p className="text-xs font-mono font-semibold text-white/90">
             {stats.max.toLocaleString('uz-UZ', { maximumFractionDigits: 4 })}
           </p>

@@ -10,7 +10,7 @@ export const ROLES = {
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   [ROLES.OWNER]: ['dashboard', 'currency', 'bg-remover', 'steam-idler', 'performances', 'videos', 'users', 'settings', 'profile'],
   [ROLES.ADMIN]: ['dashboard', 'currency', 'bg-remover', 'steam-idler', 'videos', 'users', 'settings', 'profile'],
-  [ROLES.USER]: ['dashboard', 'currency', 'bg-remover', 'videos', 'settings', 'profile'],
+  [ROLES.USER]:  ['dashboard', 'currency', 'bg-remover', 'videos', 'settings', 'profile'],
 };
 
 // ===== PAGE ROLES (auto-generated from ROLE_PERMISSIONS) =====
