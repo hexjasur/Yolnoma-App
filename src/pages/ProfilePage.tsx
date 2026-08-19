@@ -81,10 +81,14 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 
 // ── Sessions Card ─────────────────────────────────────────────
 interface Session {
-  _id: string;
+  id: string;
+  _id?: string;
   ip: string;
   device: string;
-  createdAt: string;
+  user_agent?: string;
+  created_at?: string;
+  createdAt?: string;
+  last_used_at?: string;
   isCurrent: boolean;
 }
 
@@ -98,8 +102,15 @@ function SessionsCard() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.get('/api/auth/sessions');
-      setSessions(data.sessions || data || []);
+      const data = await api.get('/api/v2/sessions');
+      const list = data?.data?.sessions || data?.sessions || (Array.isArray(data) ? data : []);
+      const currentSessionId = localStorage.getItem('yolnoma_session_id');
+      const mapped = list.map((s: any) => ({
+        ...s,
+        id: s.id || s._id,
+        isCurrent: s.isCurrent ?? (currentSessionId ? (s.id || s._id) === currentSessionId : false),
+      }));
+      setSessions(mapped);
     } catch (e: any) {
       setError(e?.message || "Sessiyalarni yuklashda xatolik");
     } finally {
@@ -112,8 +123,8 @@ function SessionsCard() {
   const terminateSession = async (id: string) => {
     setTerminatingId(id);
     try {
-      await api.post('/api/auth/logout-session', { _id: id });
-      setSessions(prev => prev.filter(s => s._id !== id));
+      await api.delete(`/api/v2/sessions/${id}`);
+      setSessions(prev => prev.filter(s => (s.id || s._id) !== id));
     } catch (e: any) {
       setError(e?.message || "Sessiyani tugatishda xatolik");
     } finally {
@@ -121,7 +132,8 @@ function SessionsCard() {
     }
   };
 
-  const formatDate = (iso: string) => {
+  const formatDate = (iso?: string) => {
+    if (!iso) return '—';
     try {
       const d = new Date(iso);
       return d.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -149,7 +161,7 @@ function SessionsCard() {
         ) : (
           sessions.map(session => (
             <div
-              key={session._id}
+              key={session.id || session._id}
               className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]"
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -166,22 +178,24 @@ function SessionsCard() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-white/25 truncate mt-0.5" title={session.device}>
-                    {session.device.length > 50 ? session.device.slice(0, 50) + '...' : session.device}
+                  <p className="text-[10px] text-white/40 truncate mt-0.5" title={session.device}>
+                    {session.device}
                   </p>
-                  <p className="text-[10px] text-white/20 mt-0.5">{formatDate(session.createdAt)}</p>
+                  <p className="text-[10px] text-white/20 mt-0.5">
+                    Faollik: {formatDate(session.last_used_at || session.created_at || session.createdAt)}
+                  </p>
                 </div>
               </div>
               {!session.isCurrent && (
                 <button
-                  onClick={() => terminateSession(session._id)}
-                  disabled={terminatingId === session._id}
+                  onClick={() => terminateSession(session.id || session._id!)}
+                  disabled={terminatingId === (session.id || session._id)}
                   className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium
                              bg-red-500/10 text-red-400 border border-red-500/20
                              hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed
                              transition-colors duration-200"
                 >
-                  {terminatingId === session._id ? <Loader2 size={12} className="animate-spin" /> : 'Tugatish'}
+                  {terminatingId === (session.id || session._id) ? <Loader2 size={12} className="animate-spin" /> : 'Tugatish'}
                 </button>
               )}
             </div>

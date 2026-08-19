@@ -14,7 +14,7 @@ export interface UserProfile {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: UserProfile | null;
-  login: (userData: UserProfile, accessToken: string, refreshToken: string) => void;
+  login: (userData: UserProfile, accessToken: string, refreshToken: string, sessionId?: string) => void;
   logout: () => void;
   updateUser: (updates: Partial<UserProfile>) => void;
 }
@@ -68,12 +68,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             e.message?.toLowerCase().includes('unauthorized') || 
             e.message?.toLowerCase().includes('invalid') || 
             e.message?.toLowerCase().includes('expired') || 
+            e.message?.toLowerCase().includes('terminated') || 
+            e.message?.toLowerCase().includes('session') || 
             e.message?.toLowerCase().includes('token');
 
           if (isAuthError) {
-            console.error('Session expired, clearing credentials.');
+            console.error('Session expired or terminated, clearing credentials.');
             localStorage.removeItem('yolnoma_access_token');
             localStorage.removeItem('yolnoma_refresh_token');
+            localStorage.removeItem('yolnoma_session_id');
             localStorage.removeItem('yolnoma_user');
             setIsAuthenticated(false);
             setUser(null);
@@ -86,11 +89,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  const login = (userData: UserProfile, accessToken: string, refreshToken: string) => {
+  const login = (userData: UserProfile, accessToken: string, refreshToken: string, sessionId?: string) => {
     setUser(userData);
     setIsAuthenticated(true);
     localStorage.setItem('yolnoma_access_token', accessToken);
     localStorage.setItem('yolnoma_refresh_token', refreshToken);
+    if (sessionId) {
+      localStorage.setItem('yolnoma_session_id', sessionId);
+    }
     localStorage.setItem('yolnoma_user', JSON.stringify(userData));
   };
 
@@ -104,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
     localStorage.removeItem('yolnoma_access_token');
     localStorage.removeItem('yolnoma_refresh_token');
+    localStorage.removeItem('yolnoma_session_id');
     localStorage.removeItem('yolnoma_user');
   };
 

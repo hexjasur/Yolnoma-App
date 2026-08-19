@@ -65,6 +65,7 @@ export default function LoginPage() {
 
       const accessToken = response?.data?.accessToken || response?.accessToken;
       const refreshToken = response?.data?.refreshToken || response?.refreshToken;
+      const sessionId = response?.data?.sessionId || response?.sessionId;
 
       if (!accessToken || !refreshToken) {
         throw new Error('Serverdan tokenlar olinmadi.');
@@ -73,6 +74,9 @@ export default function LoginPage() {
       // Temporarily store token so get /me works
       localStorage.setItem('yolnoma_access_token', accessToken);
       localStorage.setItem('yolnoma_refresh_token', refreshToken);
+      if (sessionId) {
+        localStorage.setItem('yolnoma_session_id', sessionId);
+      }
 
       // Fetch user details
       const userRes = await api.get('/api/v2/auth/me');
@@ -89,12 +93,13 @@ export default function LoginPage() {
       };
 
       setSuccessMsg('Muvaffaqiyatli kirdingiz!');
-      login(formattedUser, accessToken, refreshToken);
+      login(formattedUser, accessToken, refreshToken, sessionId);
       navigate(from, { replace: true });
     } catch (err: any) {
       console.error('Desktop auth exchange error:', err);
       localStorage.removeItem('yolnoma_access_token');
       localStorage.removeItem('yolnoma_refresh_token');
+      localStorage.removeItem('yolnoma_session_id');
       setError(
         err?.message ||
         'Avtorizatsiya kodi eskirgan yoki noto\'g\'ri. Iltimos qaytadan urinib ko\'ring.'
