@@ -13,6 +13,7 @@ import CurrencyConverterPage from './CurrencyConverterPage';
 import LoginPage from './LoginPage';
 import UsersPage from './UsersPage';
 import ProfilePage from './ProfilePage';
+import SettingsPage from './SettingsPage';
 import ProtectedLayout from '../components/layout/ProtectedLayout';
 import { AuthProvider } from '../context/AuthContext';
 
@@ -44,8 +45,9 @@ export default function AppRoutes() {
               {/* USERS ROUTES */}
               <Route path="/users" element={<UsersPage />} />
 
-              {/* PROFILE ROUTE */}
+              {/* PROFILE & SETTINGS ROUTES */}
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>
         </Routes>

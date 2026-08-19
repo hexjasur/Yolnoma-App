@@ -109,6 +109,13 @@ function SessionsCard() {
         id: s.id || s._id,
         isCurrent: s.isCurrent ?? (currentSessionId ? (s.id || s._id) === currentSessionId : false),
       }));
+
+      let hasCurrent = mapped.some((s: any) => s.isCurrent);
+      if (!hasCurrent && mapped.length > 0) {
+        mapped[0].isCurrent = true;
+      }
+      mapped.sort((a: any, b: any) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0));
+
       setSessions(mapped);
     } catch (e: any) {
       setError(e?.message || "Sessiyalarni yuklashda xatolik");
@@ -161,19 +168,24 @@ function SessionsCard() {
           sessions.map(session => (
             <div
               key={session.id || session._id}
-              className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]"
+              className={`flex items-center justify-between gap-3 p-3.5 rounded-xl border transition-all ${
+                session.isCurrent
+                  ? 'bg-emerald-950/25 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.08)]'
+                  : 'bg-white/[0.03] border-white/[0.05]'
+              }`}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center
-                  ${session.isCurrent ? 'bg-[#D97757]/15' : 'bg-white/5'}`}>
-                  <Monitor size={13} className={session.isCurrent ? 'text-[#D97757]' : 'text-white/40'} />
+                  ${session.isCurrent ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-white/5 text-white/40'}`}>
+                  <Monitor size={13} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-white/70 font-mono">{session.ip}</p>
                     {session.isCurrent && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#D97757]/15 text-[#D97757] font-semibold border border-[#D97757]/20">
-                        Joriy
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 uppercase">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                        CURRENT (JORIY)
                       </span>
                     )}
                   </div>
@@ -181,11 +193,16 @@ function SessionsCard() {
                     {session.device}
                   </p>
                   <p className="text-[10px] text-white/20 mt-0.5">
-                    Faollik: {formatDate(session.last_used_at || session.created_at || session.createdAt)}
+                    {session.isCurrent ? 'Hozirda foydalanilmoqda' : `Faollik: ${formatDate(session.last_used_at || session.created_at || session.createdAt)}`}
                   </p>
                 </div>
               </div>
-              {!session.isCurrent && (
+              {session.isCurrent ? (
+                <div className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
+                  <Check size={12} className="text-emerald-400" />
+                  <span>Bu Qurilma</span>
+                </div>
+              ) : (
                 <button
                   onClick={() => terminateSession(session.id || session._id!)}
                   disabled={terminatingId === (session.id || session._id)}

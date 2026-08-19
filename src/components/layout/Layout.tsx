@@ -16,7 +16,7 @@ export default function Layout() {
       <main className="flex-1 flex flex-col overflow-hidden relative z-10">
         <Navbar />
 
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-8 relative z-10">
           <Outlet />
         </div>
       </main>

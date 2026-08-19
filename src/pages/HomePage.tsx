@@ -38,7 +38,7 @@ export default function HomePage() {
       {/* ── Welcome & Header ── */}
       <div>
         <p className="text-[11px] tracking-[0.18em] uppercase text-[var(--accent)] mb-2 font-semibold flex items-center gap-2">
-          <span>BOSHQARUV PANELI</span>
+          <span>CONTROL PANEL</span>
           {stats?.osName && (
             <span className="text-white/30 lowercase">• {stats.osName}</span>
           )}
@@ -47,7 +47,7 @@ export default function HomePage() {
           Yolnoma Dashboard
         </h1>
         <p className="mt-2 text-sm text-white/40 max-w-2xl">
-          Kompyuter tizim resurslari monitoringi va asosiy ishchi vositalar to'plami
+          Computer system resource monitoring and a set of essential tools
         </p>
       </div>
 
@@ -66,7 +66,7 @@ export default function HomePage() {
               <Activity size={18} />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">Tizim Resurslari (Local System)</h2>
+              <h2 className="text-base font-semibold text-white">System Resources (Local System)</h2>
               <p className="text-xs text-white/40 truncate max-w-md">
                 {stats?.cpuModel || 'Protsessor va operativ xotira holati'}
               </p>
@@ -150,9 +150,9 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors">
-                  Valyuta Konvertori
+                  Currency Converter
                 </p>
-                <p className="text-xs text-white/40">160+ valyuta & grafik</p>
+                <p className="text-xs text-white/40">160+ currencies & charts</p>
               </div>
             </div>
             <ArrowRight size={15} className="text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
@@ -168,9 +168,9 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors">
-                  Orqa fonni o'chirish
+                  Remove background
                 </p>
-                <p className="text-xs text-white/40">Sun'iy intellekt orqali</p>
+                <p className="text-xs text-white/40">Through ai</p>
               </div>
             </div>
             <ArrowRight size={15} className="text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
@@ -188,7 +188,7 @@ export default function HomePage() {
                 <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors">
                   Steam Idler
                 </p>
-                <p className="text-xs text-white/40">Avtomatlashtirilgan idling</p>
+                <p className="text-xs text-white/40">Automated idling</p>
               </div>
             </div>
             <ArrowRight size={15} className="text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
@@ -205,14 +205,14 @@ export default function HomePage() {
                 <Shield size={10} /> Owner
               </span>
               <h2 className="font-serif text-lg font-medium text-white m-0">
-                So'nggi qo'shilgan ishtirokchilar
+                Recently added performance
               </h2>
             </div>
             <Link
               to="/performances"
               className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)] hover:underline"
             >
-              Barchasini ko'rish <ArrowRight size={13} />
+              View all <ArrowRight size={13} />
             </Link>
           </div>
 
@@ -230,7 +230,7 @@ export default function HomePage() {
             </div>
           ) : recent.length === 0 ? (
             <div className="p-10 text-center text-white/40 text-xs">
-              Hali hech qanday ishtirokchi qo'shilmagan
+              No performance have joined yet.
             </div>
           ) : (
             <ul className="divide-y divide-white/[0.04] m-0 p-0 list-none">

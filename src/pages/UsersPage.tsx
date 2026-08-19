@@ -28,8 +28,8 @@ export default function UsersPage() {
     setError(null);
     try {
       const res = await api.get('/api/v2/users');
-      const data: UserItem[] = res?.data || (Array.isArray(res) ? res : []);
-      setUsers(data);
+      const data: UserItem[] = res?.data?.users || res?.data || (Array.isArray(res) ? res : []);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Foydalanuvchilarni yuklashda xatolik yuz berdi.');

@@ -70,7 +70,7 @@ impl IdlingState {
 fn locate_steam_utility() -> Result<std::path::PathBuf, String> {
     // 1. Exe yonidagi libs/ dan qidiramiz (production)
     let mut path = std::env::current_exe()
-        .map_err(|e| format!("current_exe xatosi: {e}"))?;
+        .map_err(|e| format!("current_exe error: {e}"))?;
     path.pop();
     path.push("libs");
     path.push("SteamUtility.exe");
@@ -85,7 +85,7 @@ fn locate_steam_utility() -> Result<std::path::PathBuf, String> {
             return Ok(dev_path);
         }
         return Err(format!(
-            "SteamUtility.exe topilmadi: {}. Iltimos, libs/ papkasini tekshiring.",
+            "SteamUtility.exe not found: {}. Please check the libs/ folder.",
             path.display()
         ));
     }
@@ -107,7 +107,7 @@ pub fn steam_is_running() -> bool {
 pub fn get_steam_accounts() -> Result<Vec<SteamUser>, String> {
     // Steam o'rnatilgan papkasini steamlocate orqali topamiz
     let steam_dir = steamlocate::SteamDir::locate()
-        .map_err(|e| format!("Steam topilmadi: {e}"))?;
+        .map_err(|e| format!("Steam not found: {e}"))?;
     let vdf_path = steam_dir.path().join("config").join("loginusers.vdf");
 
     let content = std::fs::read_to_string(&vdf_path)
@@ -164,7 +164,7 @@ fn parse_login_users(content: &str) -> Result<Vec<SteamUser>, String> {
 #[tauri::command]
 pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String> {
     let api_key = crate::embedded_api_key::decode()
-        .ok_or_else(|| "Steam API key topilmadi. Dasturni qayta build qiling.".to_string())?;
+        .ok_or_else(|| "Steam API key not found. Rebuild the program.".to_string())?;
 
     let url = format!(
         "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/\
@@ -183,17 +183,17 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         .map_err(|e| format!("Network xatosi: {e}"))?;
 
     if !resp.status().is_success() {
-        return Err(format!("Steam API xatosi: HTTP {}", resp.status()));
+        return Err(format!("Steam API error: HTTP {}", resp.status()));
     }
 
     let json: serde_json::Value = resp.json().await
-        .map_err(|e| format!("JSON parse xatosi: {e}"))?;
+        .map_err(|e| format!("JSON parse error: {e}"))?;
 
     // game_count yo'q = profil yopiq
     if json.pointer("/response/game_count").is_none() {
         return Err(
-            "Steam profili yopiq. Steam → Profil → Maxfiylik sozlamalari → \
-             O'yin ma'lumotlari: Hammaga ko'rinadigan qiling.".to_string()
+            "Steam profile is private. Steam → Profile → Privacy Settings → \
+             Game data: Make visible to everyone.".to_string()
         );
     }
 

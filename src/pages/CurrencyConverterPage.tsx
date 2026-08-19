@@ -125,19 +125,19 @@ export default function CurrencyConverterPage() {
       {/* Header */}
       <div>
         <p className="text-[11px] tracking-[0.18em] uppercase text-[var(--accent)] mb-1.5 font-semibold">
-          MOLIYAVIY ASBOBLAR
+          FINANCIAL INSTRUMENTS
         </p>
         <h1 className="font-serif text-4xl font-medium tracking-tight text-white m-0">
-          Valyuta Konvertori
+          Currency Converter
         </h1>
         <p className="mt-1.5 text-sm text-white/40">
-          Xalqaro rasmiy bank kurslari va real vaqtli ayirboshlash dinamikasi
+          Official international bank rates and real-time exchange rate dynamics
         </p>
       </div>
 
       {/* Popular Quick Pairs Strip */}
       <div className="flex flex-wrap gap-2">
-        <span className="text-xs text-white/35 self-center mr-1">Ommabop juftliklar:</span>
+        <span className="text-xs text-white/35 self-center mr-1">Popular pairs:</span>
         {popularPairs.map((p) => {
           const isActive = fromCurrency === p.from && toCurrency === p.to;
           return (
@@ -167,7 +167,7 @@ export default function CurrencyConverterPage() {
             <span>{error}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => doConvert(amount, fromCurrency, toCurrency)}>
-            Qayta urinish
+            Retry
           </Button>
         </div>
       )}
@@ -183,12 +183,12 @@ export default function CurrencyConverterPage() {
         {/* Big Rate Statement */}
         <div className="mb-7 pb-6 border-b border-white/[0.06]">
           <p className="text-sm font-medium text-white/60 mb-1">
-            {amount || '1'} {fromMeta.name} teng
+            {amount || '1'} {fromMeta.name} equal
           </p>
           <div className="flex flex-wrap items-baseline gap-3">
             <h2 className="text-3xl md:text-4xl font-bold font-serif tracking-tight text-white">
               {converting ? (
-                <span className="opacity-50 animate-pulse">Hisoblanmoqda…</span>
+                <span className="opacity-50 animate-pulse">Calculating…</span>
               ) : conversion ? (
                 conversion.result.toLocaleString('uz-UZ', { maximumFractionDigits: 4 })
               ) : (
@@ -209,8 +209,8 @@ export default function CurrencyConverterPage() {
             <span className="inline-flex items-center gap-1">
               <Clock size={12} />
               {conversion?.lastUpdated
-                ? `Yangilanish: ${conversion.lastUpdated}`
-                : 'Rasmiy ma\'lumotnoma kursi'}
+                ? `Reflesh: ${conversion.lastUpdated}`
+                : 'Official Reference Course'}
             </span>
           </div>
         </div>
@@ -259,7 +259,7 @@ export default function CurrencyConverterPage() {
           {/* TO Result Box */}
           <div className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-4 transition-all">
             <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider block mb-1">
-              Konvertatsiya natijasi ({toCurrency})
+              Conversion result ({toCurrency})
             </span>
             <div className="flex items-center gap-3">
               <div className="w-full text-2xl font-bold font-mono text-[var(--accent)] truncate">
@@ -326,7 +326,7 @@ export default function CurrencyConverterPage() {
               <input
                 type="text"
                 autoFocus
-                placeholder="Valyuta nomi, kodi yoki belgisi bo'yicha qidiring…"
+                placeholder="Currency name, kodi yoki belgisi bo'yicha qidiring…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-[var(--accent)] transition-colors"
@@ -337,7 +337,7 @@ export default function CurrencyConverterPage() {
             <div className="flex-1 overflow-y-auto divide-y divide-white/[0.04] pr-1 space-y-0.5">
               {filteredCurrencies.length === 0 ? (
                 <div className="py-12 text-center text-white/40 text-xs">
-                  Valyuta topilmadi
+                  Currency not found
                 </div>
               ) : (
                 filteredCurrencies.map(([code, item]) => {

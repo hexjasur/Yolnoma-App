@@ -388,6 +388,7 @@ export default function SteamIdlerPage() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<Tab>('all');
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ── Loading States
   const [accountsLoading, setAccountsLoading] = useState(false);
@@ -627,6 +628,16 @@ export default function SteamIdlerPage() {
     if (tab === 'favorites') return matchSearch && favorites.has(g.appId);
     return matchSearch;
   });
+
+  // ── Pagination constants
+  const GAMES_PER_PAGE = 60;
+  // When searching or on favorites tab, show all matches (no pagination)
+  const isPaginated = tab === 'all' && search.trim() === '';
+  const totalPages = isPaginated ? Math.ceil(filteredGames.length / GAMES_PER_PAGE) : 1;
+  const safePage = Math.max(1, Math.min(currentPage, totalPages || 1));
+  const displayedGames = isPaginated
+    ? filteredGames.slice((safePage - 1) * GAMES_PER_PAGE, safePage * GAMES_PER_PAGE)
+    : filteredGames;
 
   const cacheAgeMin = cacheAge !== null ? Math.floor(cacheAge / 60000) : null;
 
@@ -934,7 +945,7 @@ export default function SteamIdlerPage() {
         ).map(({ key, label, count }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => { setTab(key); setCurrentPage(1); }}
             style={{
               padding: '10px 16px',
               background: 'none',
@@ -1171,7 +1182,7 @@ export default function SteamIdlerPage() {
             type="text"
             placeholder="Search game titles..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             style={{
               width: '100%',
               background: '#181410',
@@ -1315,27 +1326,125 @@ export default function SteamIdlerPage() {
           </div>
         ) : (
           // Game Cards Grid
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-              gap: 12,
-              paddingBottom: 16,
-            }}
-          >
-            {filteredGames.map((game) => (
-              <GameCard
-                key={game.appId}
-                game={game}
-                isIdling={idlingIds.has(game.appId)}
-                isFavorite={favorites.has(game.appId)}
-                idleStartTime={idleStartTimesRef.current.get(game.appId)}
-                tick={tick}
-                onToggleFavorite={toggleFavorite}
-                onStop={stopOne}
-              />
-            ))}
-          </div>
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gap: 12,
+                paddingBottom: 16,
+              }}
+            >
+              {displayedGames.map((game) => (
+                <GameCard
+                  key={game.appId}
+                  game={game}
+                  isIdling={idlingIds.has(game.appId)}
+                  isFavorite={favorites.has(game.appId)}
+                  idleStartTime={idleStartTimesRef.current.get(game.appId)}
+                  tick={tick}
+                  onToggleFavorite={toggleFavorite}
+                  onStop={stopOne}
+                />
+              ))}
+            </div>
+
+            {/* ── Pagination Controls (only for All Games tab without search) */}
+            {isPaginated && totalPages > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingTop: 8,
+                  paddingBottom: 16,
+                  flexWrap: 'wrap',
+                }}
+              >
+                {/* Prev */}
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 10,
+                    background: safePage <= 1 ? 'rgba(242,237,230,0.04)' : 'rgba(217,119,87,0.1)',
+                    border: `1px solid ${safePage <= 1 ? 'rgba(242,237,230,0.08)' : 'rgba(217,119,87,0.25)'}`,
+                    color: safePage <= 1 ? 'rgba(242,237,230,0.3)' : '#D97757',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
+                    fontFamily: '"Inter", sans-serif',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  ← Oldingi
+                </button>
+
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+                  .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    p === '...' ? (
+                      <span key={`ellipsis-${idx}`} style={{ color: 'rgba(242,237,230,0.3)', fontSize: 13, padding: '0 4px' }}>
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p as number)}
+                        style={{
+                          minWidth: 36,
+                          padding: '6px 10px',
+                          borderRadius: 10,
+                          background: safePage === p ? '#D97757' : 'rgba(242,237,230,0.04)',
+                          border: `1px solid ${safePage === p ? '#D97757' : 'rgba(242,237,230,0.08)'}`,
+                          color: safePage === p ? '#fff' : 'rgba(242,237,230,0.6)',
+                          fontSize: 13,
+                          fontWeight: safePage === p ? 700 : 400,
+                          cursor: 'pointer',
+                          fontFamily: '"Inter", sans-serif',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+
+                {/* Next */}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 10,
+                    background: safePage >= totalPages ? 'rgba(242,237,230,0.04)' : 'rgba(217,119,87,0.1)',
+                    border: `1px solid ${safePage >= totalPages ? 'rgba(242,237,230,0.08)' : 'rgba(217,119,87,0.25)'}`,
+                    color: safePage >= totalPages ? 'rgba(242,237,230,0.3)' : '#D97757',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
+                    fontFamily: '"Inter", sans-serif',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Keyingi →
+                </button>
+
+                {/* Page info */}
+                <span style={{ fontSize: 12, color: 'rgba(242,237,230,0.35)', marginLeft: 8 }}>
+                  {safePage}/{totalPages} sahifa · {filteredGames.length} o'yin
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
