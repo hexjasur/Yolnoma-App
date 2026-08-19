@@ -8,6 +8,7 @@ import VideosPage from './VideosPage';
 import VideoDetailPage from './VideoDetailPage';
 import BgRemover from './BgRemover';
 import SteamIdlerPage from './SteamIdlerPage';
+import CurrencyConverterPage from './CurrencyConverterPage';
 
 import LoginPage from './LoginPage';
 import UsersPage from './UsersPage';
@@ -27,7 +28,8 @@ export default function AppRoutes() {
           <Route element={<ProtectedLayout />}>
             <Route element={<Layout />}>
               <Route path="/" element={<HomePage />} />
-              <Route path="/tools" element={<div>Tools Page</div>} />
+              <Route path="/tools" element={<CurrencyConverterPage />} />
+              <Route path="/tools/currency" element={<CurrencyConverterPage />} />
               <Route path="/tools/bg-remover" element={<BgRemover />} />
               <Route path="/tools/steam-idler" element={<SteamIdlerPage />} />
 

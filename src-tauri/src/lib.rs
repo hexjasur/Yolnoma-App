@@ -7,6 +7,7 @@ mod db;
 mod embedded_api_key;
 mod models;
 mod steam_idler;
+mod system_monitor;
 
 pub struct AuthState {
     pub user_id: Mutex<Option<String>>,
@@ -56,6 +57,7 @@ pub fn run() {
             user_id: Mutex::new(None),
         })
         .manage(steam_idler::IdlingState::new())
+        .manage(system_monitor::SystemMonitorState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
@@ -178,6 +180,8 @@ pub fn run() {
             commands::unsave_video,
             commands::get_video_save_status,
             commands::list_saved_videos,
+            // ── System Monitoring ──
+            system_monitor::get_system_stats,
             // ── Steam Idler ──
             steam_idler::steam_is_running,
             steam_idler::get_steam_accounts,
