@@ -157,24 +157,23 @@ export default function PerformanceDetailPage() {
   /* ── Detail ───────────────────────────────────────────────── */
   return (
     <div className="relative space-y-8 max-w-5xl mx-auto">
-      {/* ── Ambient Blurred Background (Cinematic / Premium Look) ── */}
+      {/* ── Dynamic Blurred Thumbnail Background ── */}
       {(item.thumbnail_url || item.image_url) && (
         <div
-          className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
-          style={{ opacity: 0.16 }}
-        >
-          <img
-            src={item.thumbnail_url || item.image_url}
-            alt=""
-            className="w-full h-full object-cover scale-125 filter blur-[90px] saturate-150"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'radial-gradient(circle at 50% 30%, transparent 20%, #14110E 80%)',
-            }}
-          />
-        </div>
+          className="performance-bg"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundImage: `url(${item.thumbnail_url || item.image_url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(40px) brightness(0.5) saturate(1.2)',
+            transform: 'scale(1.15)',
+            zIndex: 0,
+            pointerEvents: 'none',
+            opacity: 0.35,
+          }}
+        />
       )}
 
       {/* Back + Actions row */}

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
-import { LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser, Gamepad2 } from 'lucide-react';
+import { LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser, Gamepad2, Coins } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { canAccessPage } from '../../config/roles';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
+  { to: '/tools/currency', label: 'Valyuta kursi', icon: Coins, name: 'currency' },
   { to: '/tools/bg-remover', label: 'Background remover', icon: LayoutGrid, name: 'bg-remover' },
   { to: '/tools/steam-idler', label: 'Steam Idler', icon: Gamepad2, name: 'steam-idler' },
   { to: '/performances', label: 'Performance', icon: Drama, name: 'performances' },
