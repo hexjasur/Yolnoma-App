@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { api } from './api';
 import type { EpornerSearchResponse, EpornerVideo, SavedVideo } from '@/types/video';
 
 // Try multiple base URLs in order
@@ -23,27 +24,61 @@ async function proxyFetch(path: string): Promise<unknown> {
 }
 
 export const videoApi = {
+  /**
+   * Search videos by query & page.
+   * Uses thumbsize=big and thumbs=true to retrieve all snapshot thumbnails for hover & galleries.
+   */
   search: async (query: string, page = 1, perPage = 20): Promise<EpornerSearchResponse> => {
     const path = `/api/v2/video/search/?query=${encodeURIComponent(
       query
-    )}&per_page=${perPage}&page=${page}&thumbsize=medium&order=latest-uploaded&thumbs=true&format=json`;
+    )}&per_page=${perPage}&page=${page}&thumbsize=big&order=latest-uploaded&thumbs=true&format=json`;
     return proxyFetch(path) as Promise<EpornerSearchResponse>;
   },
 
+  /**
+   * Get full video details by ID including big thumbnails and thumbs array.
+   */
   getById: async (id: string): Promise<EpornerVideo> => {
-    const path = `/api/v2/video/id/?id=${id}&thumbsize=medium&thumbs=true&format=json`;
+    const path = `/api/v2/video/id/?id=${id}&thumbsize=big&thumbs=true&format=json`;
     return proxyFetch(path) as Promise<EpornerVideo>;
   },
 
-  save: (video: SavedVideo): Promise<void> =>
-    invoke<void>('save_video', { video }),
+  /**
+   * User-specific video bookmarking stored in Supabase `savev` table.
+   */
+  save: async (video: SavedVideo): Promise<void> => {
+    await api.post('/api/v2/saved-videos', video);
+  },
 
-  unsave: (videoId: string): Promise<void> =>
-    invoke<void>('unsave_video', { videoId }),
+  /**
+   * Remove video from current user's bookmarks.
+   */
+  unsave: async (videoId: string): Promise<void> => {
+    await api.delete(`/api/v2/saved-videos/${videoId}`);
+  },
 
-  getSaveStatus: (videoId: string): Promise<boolean> =>
-    invoke<boolean>('get_video_save_status', { videoId }),
+  /**
+   * Check if video is saved by current user.
+   */
+  getSaveStatus: async (videoId: string): Promise<boolean> => {
+    try {
+      const res = await api.get(`/api/v2/saved-videos/status/${videoId}`);
+      return Boolean(res?.data?.isSaved ?? res?.isSaved);
+    } catch {
+      return false;
+    }
+  },
 
-  listSaved: (): Promise<SavedVideo[]> =>
-    invoke<SavedVideo[]>('list_saved_videos'),
+  /**
+   * Get all saved videos for the authenticated user.
+   */
+  listSaved: async (): Promise<SavedVideo[]> => {
+    try {
+      const res = await api.get('/api/v2/saved-videos');
+      return res?.data || (Array.isArray(res) ? res : []);
+    } catch (err) {
+      console.error('Error fetching saved videos:', err);
+      return [];
+    }
+  },
 };

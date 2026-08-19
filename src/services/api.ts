@@ -46,7 +46,7 @@ async function refreshToken(): Promise<string | null> {
       method: 'POST',
       url: `${baseUrl}/api/v2/auth/refresh`,
       headers,
-      body: JSON.stringify({ refreshToken: currentRefreshToken, refresh_token: currentRefreshToken }),
+      body: { refreshToken: currentRefreshToken, refresh_token: currentRefreshToken },
     });
 
     if (res.status !== 200) {

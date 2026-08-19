@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import {
   User, Shield, Lock, Settings, Camera,
@@ -263,7 +262,7 @@ export default function ProfilePage() {
     setUploadingAvatar(true);
     try {
       const url = await uploadToImgBB(avatarBlob);
-      await invoke('update_profile', { userId: user.id, avatarUrl: url });
+      await api.patch('/api/v2/auth/profile', { avatarUrl: url });
       updateUser({ avatar_url: url });
       setAvatarBlob(null);
       showToast('Profil rasmi yangilandi!', 'success');
@@ -285,7 +284,7 @@ export default function ProfilePage() {
     setUploadingThumb(true);
     try {
       const url = await uploadToImgBB(thumbBlob);
-      await invoke('update_profile', { userId: user.id, thumbnailUrl: url });
+      await api.patch('/api/v2/auth/profile', { thumbnailUrl: url });
       updateUser({ thumbnail_url: url });
       setThumbBlob(null);
       showToast('Thumbnail yangilandi!', 'success');
@@ -301,13 +300,12 @@ export default function ProfilePage() {
     if (!user) return;
     setProfileSaving(true);
     try {
-      await invoke('update_profile', {
-        userId: user.id,
-        displayName: displayName || null,
+      await api.patch('/api/v2/auth/profile', {
+        displayName: displayName.trim() || null,
         isPrivate,
       });
-      updateUser({ display_name: displayName, is_private: isPrivate });
-      showToast('Profil saqlandi!', 'success');
+      updateUser({ display_name: displayName.trim(), is_private: isPrivate });
+      showToast('Profil muvaffaqiyatli saqlandi!', 'success');
     } catch (e: any) {
       showToast(e?.message ?? 'Xatolik yuz berdi', 'error');
     } finally {
@@ -322,7 +320,7 @@ export default function ProfilePage() {
     if (newPwd.length < 6) { showToast('Parol kamida 6 ta belgi bo\'lishi kerak', 'error'); return; }
     setPwdSaving(true);
     try {
-      await invoke('change_password', { userId: user.id, oldPassword: oldPwd, newPassword: newPwd });
+      await api.post('/api/v2/auth/change-password', { newPassword: newPwd });
       setOldPwd(''); setNewPwd(''); setConfirmPwd('');
       showToast('Parol muvaffaqiyatli o\'zgartirildi!', 'success');
     } catch (e: any) {

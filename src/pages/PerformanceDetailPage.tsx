@@ -156,9 +156,29 @@ export default function PerformanceDetailPage() {
 
   /* ── Detail ───────────────────────────────────────────────── */
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="relative space-y-8 max-w-5xl mx-auto">
+      {/* ── Ambient Blurred Background (Cinematic / Premium Look) ── */}
+      {(item.thumbnail_url || item.image_url) && (
+        <div
+          className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
+          style={{ opacity: 0.16 }}
+        >
+          <img
+            src={item.thumbnail_url || item.image_url}
+            alt=""
+            className="w-full h-full object-cover scale-125 filter blur-[90px] saturate-150"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'radial-gradient(circle at 50% 30%, transparent 20%, #14110E 80%)',
+            }}
+          />
+        </div>
+      )}
+
       {/* Back + Actions row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="relative z-10 flex items-center justify-between">
         <BackLink />
         <div style={{ display: 'flex', gap: 8 }}>
           <Link to={`/videos?query=${encodeURIComponent(item.full_name)}`}>
