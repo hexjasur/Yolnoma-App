@@ -25,3 +25,4 @@ pub struct SavedVideo {
     #[serde(default)]
     pub created_at: Option<String>,
 }
+

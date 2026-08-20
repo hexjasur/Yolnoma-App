@@ -6,6 +6,14 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "window-state:default"
+    "window-state:default",
+    "core:tray:default",
+    "core:event:default",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "deep-link:default"
   ]
 }

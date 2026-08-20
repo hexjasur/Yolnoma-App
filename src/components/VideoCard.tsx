@@ -1,5 +1,5 @@
 import { useState, memo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Clock, Eye, Star } from 'lucide-react';
 import HoverPreview from './HoverPreview';
 import type { EpornerVideo } from '@/types/video';
@@ -9,6 +9,7 @@ interface VideoCardProps {
 }
 
 function VideoCard({ video }: VideoCardProps) {
+  const location = useLocation();
   const [isHovered, setIsHovered] = useState(false);
 
   const thumbUrl = video.default_thumb?.src || '';
@@ -30,7 +31,11 @@ function VideoCard({ video }: VideoCardProps) {
       onMouseLeave={() => setIsHovered(false)}
       style={{ minHeight: 280 }}
     >
-      <Link to={`/videos/${video.id}`} className="block flex-1 flex flex-col text-decoration-none">
+      <Link
+        to={`/videos/${video.id}`}
+        state={{ from: location.pathname + location.search }}
+        className="block flex-1 flex flex-col text-decoration-none"
+      >
         {/* Aspect Ratio Container for Thumbnail */}
         <div className="relative aspect-video w-full overflow-hidden bg-[#14110E] border-b border-[var(--border)]">
           <HoverPreview

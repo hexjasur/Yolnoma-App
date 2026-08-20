@@ -16,6 +16,7 @@ export interface EpornerVideo {
   rate: string; // Eporner returns rate as a string, e.g. "0.00"
   keywords: string;
   embed: string;
+  added?: string;
   thumbs?: EpornerThumb[];
 }
 

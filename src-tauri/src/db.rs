@@ -11,4 +11,4 @@ pub async fn get_db() -> mongodb::error::Result<Database> {
     let client = Client::with_uri_str(uri).await?;
 
     Ok(client.database("Performance"))
-}
+}

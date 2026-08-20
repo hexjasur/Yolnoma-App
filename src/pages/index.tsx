@@ -7,28 +7,66 @@ import PerformanceDetailPage from './PerformanceDetailPage';
 import VideosPage from './VideosPage';
 import VideoDetailPage from './VideoDetailPage';
 import BgRemover from './BgRemover';
+import SteamIdlerPage from './SteamIdlerPage';
+import CurrencyConverterPage from './CurrencyConverterPage';
+
+import LoginPage from './LoginPage';
+import UsersPage from './UsersPage';
+import ProfilePage from './ProfilePage';
+import SettingsPage from './SettingsPage';
+import ProtectedLayout from '../components/layout/ProtectedLayout';
+import { AuthProvider } from '../context/AuthContext';
+import { usePluginRoutes } from '../plugins';
 
 export default function AppRoutes() {
+  const pluginRoutes = usePluginRoutes();
+
   return (
-    <HashRouter>
-      <Routes>
-        <Route element={<Layout />}>
+    <AuthProvider>
+      <HashRouter>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
 
-          <Route path="/" element={<HomePage />} />
+          {/* Protected Routes */}
+          <Route element={<ProtectedLayout />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/tools" element={<CurrencyConverterPage />} />
+              <Route path="/tools/currency" element={<CurrencyConverterPage />} />
+              <Route path="/tools/bg-remover" element={<BgRemover />} />
+              <Route path="/tools/steam-idler" element={<SteamIdlerPage />} />
 
-          <Route path="/tools" element={<div>Tools Page</div>} />
+              {/* PERFORMANCE ROUTES */}
+              <Route path="/performances" element={<PerformancePage />} />
+              <Route path="/performances/:id" element={<PerformanceDetailPage />} />
 
-          <Route path="/tools/bg-remover" element={<BgRemover />} />
+              {/* VIDEO ROUTES */}
+              <Route path="/videos" element={<VideosPage />} />
+              <Route path="/videos/:videoId" element={<VideoDetailPage />} />
 
-          {/* PERFORMANCE ROUTES */}
-          <Route path="/performances" element={<PerformancePage />} />
-          <Route path="/performances/:id" element={<PerformanceDetailPage />} />
+              {/* USERS ROUTES */}
+              <Route path="/users" element={<UsersPage />} />
 
-          {/* VIDEO ROUTES */}
-          <Route path="/videos" element={<VideosPage />} />
-          <Route path="/videos/:videoId" element={<VideoDetailPage />} />
-        </Route>
-      </Routes>
-    </HashRouter>
+              {/* PROFILE & SETTINGS ROUTES */}
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+
+              {/* PLUGIN DYNAMIC ROUTES */}
+              {pluginRoutes.map((route) => {
+                const Component = route.component;
+                return (
+                  <Route
+                    key={route.fullPath}
+                    path={route.fullPath}
+                    element={<Component />}
+                  />
+                );
+              })}
+            </Route>
+          </Route>
+        </Routes>
+      </HashRouter>
+    </AuthProvider>
   );
 }

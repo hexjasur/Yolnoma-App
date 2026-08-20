@@ -6,4 +6,11 @@
 # will have schema files for capabilities auto-completion
 /gen/schemas
 
+# Secrets
 .env
+
+# SteamUtility binary + dotnet runtime (large binary files)
+/libs/
+
+# Build logs
+build.log

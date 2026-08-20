@@ -1,6 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Eye, Star, ExternalLink, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Clock,
+  Eye,
+  Star,
+  ExternalLink,
+  Loader2,
+  Calendar,
+  Tag,
+  Server,
+} from 'lucide-react';
 import { videoApi } from '@/services/videoApi';
 import SaveVideoButton from '@/components/SaveVideoButton';
 import VideoGallery from '@/components/VideoGallery';
@@ -9,11 +19,19 @@ import type { EpornerVideo } from '@/types/video';
 
 export default function VideoDetailPage() {
   const { videoId } = useParams<{ videoId: string }>();
+  const location = useLocation();
 
   const [video, setVideo] = useState<EpornerVideo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [server, setServer] = useState<'www' | 'es'>('www');
+
+  // Compute back URL with preserved query parameters from navigation state or session storage
+  const backTarget =
+    location.state?.from ||
+    (sessionStorage.getItem('last_video_search_query')
+      ? `/videos?query=${encodeURIComponent(sessionStorage.getItem('last_video_search_query')!)}`
+      : '/videos');
 
   const loadVideo = useCallback(async () => {
     if (!videoId) return;
@@ -33,13 +51,35 @@ export default function VideoDetailPage() {
     loadVideo();
   }, [loadVideo]);
 
-  const defaultThumb = video?.default_thumb?.src || '';
+  // Normalize screenshots / thumbnails without duplicates
+  const screenshots = useMemo(() => {
+    if (!video) return [];
+    const defaultThumbSrc =
+      video.default_thumb?.src ||
+      (typeof video.default_thumb === 'string' ? video.default_thumb : '');
+
+    const thumbList = (video.thumbs || []).map((t: any) =>
+      typeof t === 'string' ? t : t?.src || ''
+    );
+
+    const combined = [defaultThumbSrc, ...thumbList].filter(Boolean);
+    return Array.from(new Set(combined));
+  }, [video]);
+
+  // Keywords / Tags array
+  const tags = useMemo(() => {
+    if (!video?.keywords) return [];
+    return video.keywords
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+  }, [video]);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-[var(--text-muted)]">
         <Loader2 size={36} className="animate-spin text-[var(--accent)] mb-4" />
-        <p className="text-sm">Video yuklanmoqda...</p>
+        <p className="text-sm">Video tafsilotlari yuklanmoqda...</p>
       </div>
     );
   }
@@ -48,11 +88,11 @@ export default function VideoDetailPage() {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <Link
-          to="/videos"
+          to={backTarget}
           className="inline-flex items-center gap-2 text-sm text-[var(--text-faint)] hover:text-[#F2EDE6] transition-colors"
         >
           <ArrowLeft size={15} />
-          Orqaga qaytish
+          Streams ga qaytish
         </Link>
 
         <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.06] p-6 text-center">
@@ -66,23 +106,47 @@ export default function VideoDetailPage() {
     );
   }
 
+  const formattedViews = video.views
+    ? video.views >= 1000000
+      ? `${(video.views / 1000000).toFixed(1)}M`
+      : video.views >= 1000
+      ? `${(video.views / 1000).toFixed(0)}K`
+      : String(video.views)
+    : '0';
+
+  const rating = parseFloat(video.rate || '0').toFixed(1);
+
   return (
     <div className="max-w-5xl mx-auto space-y-8" style={{ fontFamily: 'var(--font-sans)' }}>
-      {/* Navigation Row */}
-      <div className="flex items-center justify-between">
+      {/* Navigation & Action Row */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <Link
-          to="/videos"
+          to={backTarget}
           className="inline-flex items-center gap-2 text-sm text-[var(--text-faint)] hover:text-[#F2EDE6] transition-colors"
         >
           <ArrowLeft size={15} />
-          Return to the stream
+          Streams ga qaytish
         </Link>
-        <SaveVideoButton video={video} />
+
+        <div className="flex items-center gap-3">
+          {video.url && (
+            <a
+              href={video.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent-border)] transition-all text-decoration-none"
+            >
+              <ExternalLink size={13} />
+              Epornerda ko'rish
+            </a>
+          )}
+          <SaveVideoButton video={video} />
+        </div>
       </div>
 
       {/* Embed Player */}
       <div className="space-y-3">
-        <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-black shadow-lg">
+        <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-black shadow-2xl">
           <iframe
             src={`https://${server}.eporner.com/embed/${video.id}/`}
             title={video.title}
@@ -96,86 +160,96 @@ export default function VideoDetailPage() {
         </div>
 
         {/* Server Selector Buttons */}
-        <div className="flex gap-2 items-center justify-end">
-          <span className="text-xs text-[var(--text-faint)] font-mono">Server / Subdomen:</span>
-          <Button
-            variant={server === 'www' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setServer('www')}
-            className="h-8 py-0 px-3 text-xs"
-          >
-            WWW (Standard)
-          </Button>
-          <Button
-            variant={server === 'es' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setServer('es')}
-            className="h-8 py-0 px-3 text-xs"
-          >
-            ES (Subdomain)
-          </Button>
-        </div>
-      </div>
-
-      {/* Video Info Segment */}
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
-          <h1 className="font-serif text-3xl font-medium tracking-tight text-[var(--text-primary)]">
-            {video.title}
-          </h1>
-
-          <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--text-muted)]">
-            <div className="flex items-center gap-1.5">
-              <Clock size={16} />
-              <span>Davomiyligi: <strong className="text-[var(--text-primary)]">{video.length_min}</strong></span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <Star size={16} className="fill-[var(--accent)] stroke-[var(--accent)]" />
-              <span>Reyting: <strong className="text-[var(--text-primary)]">{parseFloat(video.rate || '0').toFixed(1)}</strong></span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <Eye size={16} />
-              <span>Ko'rishlar: <strong className="text-[var(--text-primary)]">{video.views?.toLocaleString()}</strong></span>
-            </div>
+        <div className="flex gap-2 items-center justify-between flex-wrap text-xs text-[var(--text-faint)]">
+          <div className="flex items-center gap-2">
+            <Server size={13} />
+            <span>Agar video ochilmasa, serverni almashtiring:</span>
           </div>
-        </div>
-
-        {/* Action Widgets / Metadata Panel */}
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6 space-y-5">
-          <div>
-            <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--text-faint)]">
-              Video ID
-            </span>
-            <p className="font-mono text-sm font-semibold text-[var(--text-primary)] mt-1">{video.id}</p>
-          </div>
-
-          <div className="h-px bg-[var(--border)]" />
-
-          {/* External links */}
-          <div className="space-y-3">
-            <a
-              href={`https://www.eporner.com/video-${video.id}/`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-full"
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => setServer('www')}
+              className={`px-3 py-1 rounded-md text-xs font-mono transition-all ${
+                server === 'www'
+                  ? 'bg-[var(--accent)] text-white font-bold'
+                  : 'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+              }`}
             >
-              <Button variant="primary" className="w-full justify-center gap-2">
-                <ExternalLink size={14} />
-                Eporner-da ko'rish
-              </Button>
-            </a>
+              Server 1 (WWW)
+            </button>
+            <button
+              onClick={() => setServer('es')}
+              className={`px-3 py-1 rounded-md text-xs font-mono transition-all ${
+                server === 'es'
+                  ? 'bg-[var(--accent)] text-white font-bold'
+                  : 'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+              }`}
+            >
+              Server 2 (ES)
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Screenshot gallery */}
-      {defaultThumb && (
-        <div className="border-t border-[var(--border)] pt-8">
-          <VideoGallery defaultThumbUrl={defaultThumb} />
+      {/* Video Details & Meta Badges */}
+      <div className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6">
+        <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-[var(--text-primary)]">
+          {video.title}
+        </h1>
+
+        {/* Metadata stats bar */}
+        <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)] border-t border-b border-[var(--border)] py-3">
+          {/* Rating */}
+          <div className="flex items-center gap-1.5">
+            <Star size={14} className="fill-[var(--accent)] stroke-[var(--accent)]" />
+            <span className="font-bold text-[var(--text-primary)]">{rating}</span>
+            <span>/ 5.0</span>
+          </div>
+
+          {/* Views */}
+          <div className="flex items-center gap-1.5">
+            <Eye size={14} className="text-[var(--accent)]" />
+            <span>{formattedViews} marta ko'rildi</span>
+          </div>
+
+          {/* Duration */}
+          <div className="flex items-center gap-1.5">
+            <Clock size={14} className="text-[var(--accent)]" />
+            <span>Davomiyligi: <strong className="text-[var(--text-primary)]">{video.length_min || '0:00'}</strong></span>
+          </div>
+
+          {/* Added Date */}
+          {video.added && (
+            <div className="flex items-center gap-1.5">
+              <Calendar size={14} className="text-[var(--accent)]" />
+              <span>Qo'shilgan: {video.added}</span>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Tags / Keywords */}
+        {tags.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center gap-1.5 text-xs text-[var(--text-faint)] uppercase tracking-wider font-semibold">
+              <Tag size={12} />
+              <span>Teglar va kalit so'zlar:</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <Link
+                  key={tag}
+                  to={`/videos?query=${encodeURIComponent(tag)}`}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/[0.04] border border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent-border)] hover:bg-[var(--accent-glow)] transition-all text-decoration-none"
+                >
+                  {tag}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Screenshots & Thumbnail Gallery */}
+      <VideoGallery screenshots={screenshots} title={video.title} />
     </div>
   );
 }

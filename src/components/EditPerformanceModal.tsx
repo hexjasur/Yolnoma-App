@@ -24,10 +24,13 @@ export default function EditPerformanceModal({
   useEffect(() => {
     if (item) {
       setForm({
-        full_name:     item.full_name,
-        image_url:     item.image_url,
-        thumbnail_url: item.thumbnail_url,
-        description:   item.description ?? '',
+        full_name:    item.full_name,
+        image_url:    item.image_url,
+        thumbnail_url: item.thumbnail_url ?? '',
+        bio:          item.bio ?? item.description ?? '',
+        birth_date:   item.birth_date ?? '',
+        nationality:  item.nationality ?? '',
+        profession:   item.profession ?? '',
       });
     }
   }, [item]);
@@ -44,16 +47,20 @@ export default function EditPerformanceModal({
     setError(null);
 
     try {
-      const updated = await performanceService.update(item.id, {
-        full_name:     form.full_name?.trim(),
-        image_url:     form.image_url?.trim(),
-        thumbnail_url: form.thumbnail_url?.trim(),
-        description:   form.description?.trim(),
-      });
+      const payload: PerformanceUpdateInput = {};
+      if (form.full_name?.trim())    payload.full_name    = form.full_name.trim();
+      if (form.image_url?.trim())    payload.image_url    = form.image_url.trim();
+      if (form.thumbnail_url !== undefined) payload.thumbnail_url = form.thumbnail_url?.trim() || undefined;
+      if (form.bio !== undefined)    payload.bio          = form.bio?.trim() || undefined;
+      if (form.birth_date !== undefined)    payload.birth_date   = form.birth_date?.trim() || undefined;
+      if (form.nationality !== undefined)   payload.nationality  = form.nationality?.trim() || undefined;
+      if (form.profession !== undefined)    payload.profession   = form.profession?.trim() || undefined;
+
+      const updated = await performanceService.update(item.id, payload);
       onUpdated?.(updated);
       onClose();
-    } catch (err) {
-      setError(String(err));
+    } catch (err: any) {
+      setError(err?.message || String(err));
     } finally {
       setLoading(false);
     }
@@ -95,6 +102,31 @@ export default function EditPerformanceModal({
           required
         />
 
+        <Input
+          id="edit-profession"
+          label="Kasb / Lavozim"
+          value={form.profession ?? ''}
+          onChange={(e) => set('profession', e.target.value)}
+          placeholder="Masalan: Aktyor, Rejissyor"
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Input
+            id="edit-nationality"
+            label="Millati / Fuqaroligi"
+            value={form.nationality ?? ''}
+            onChange={(e) => set('nationality', e.target.value)}
+          />
+          <Input
+            id="edit-birth-date"
+            label="Tug'ilgan sana"
+            type="date"
+            value={form.birth_date ?? ''}
+            onChange={(e) => set('birth_date', e.target.value)}
+          />
+        </div>
+
+        {/* ImageUpload: avval ImgBB ga yuklaydi, so'ng URL ni set qiladi */}
         <ImageUpload
           label="Asosiy rasm"
           value={form.image_url ?? ''}
@@ -108,10 +140,10 @@ export default function EditPerformanceModal({
         />
 
         <Textarea
-          id="edit-description"
-          label="Tavsif"
-          value={form.description ?? ''}
-          onChange={(e) => set('description', e.target.value)}
+          id="edit-bio"
+          label="Bio / Tavsif"
+          value={form.bio ?? ''}
+          onChange={(e) => set('bio', e.target.value)}
           rows={3}
         />
 

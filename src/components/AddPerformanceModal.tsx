@@ -11,13 +11,24 @@ interface AddPerformanceModalProps {
 }
 
 interface FormState {
-  full_name:     string;
-  image_url:     string;
+  full_name:    string;
+  image_url:    string;
   thumbnail_url: string;
-  description:   string;
+  bio:          string;
+  birth_date:   string;
+  nationality:  string;
+  profession:   string;
 }
 
-const EMPTY: FormState = { full_name: '', image_url: '', thumbnail_url: '', description: '' };
+const EMPTY: FormState = {
+  full_name: '',
+  image_url: '',
+  thumbnail_url: '',
+  bio: '',
+  birth_date: '',
+  nationality: '',
+  profession: '',
+};
 
 export default function AddPerformanceModal({ open, onClose, onCreated }: AddPerformanceModalProps) {
   const [form, setForm]       = useState<FormState>(EMPTY);
@@ -36,30 +47,22 @@ export default function AddPerformanceModal({ open, onClose, onCreated }: AddPer
     setError(null);
 
     try {
-      // Step 1: add with all fields
-      const newId = await performanceService.add({
-        full_name: form.full_name.trim(),
-        image_url: form.image_url.trim(),
+      // Step 1: create via backend (image_url is already an ImgBB URL at this point)
+      const created = await performanceService.add({
+        full_name:    form.full_name.trim(),
+        image_url:    form.image_url.trim(),
         thumbnail_url: form.thumbnail_url.trim() || undefined,
-        description: form.description.trim() || undefined,
+        bio:          form.bio.trim() || undefined,
+        birth_date:   form.birth_date.trim() || undefined,
+        nationality:  form.nationality.trim() || undefined,
+        profession:   form.profession.trim() || undefined,
       });
 
-      // Step 2: Build a minimal Performance object for optimistic UI
-      const final: Performance = {
-        id:            newId,
-        full_name:     form.full_name.trim(),
-        image_url:     form.image_url.trim(),
-        thumbnail_url: form.thumbnail_url.trim() || form.image_url.trim(),
-        description:   form.description.trim() || undefined,
-        created_at:    new Date().toISOString(),
-        updated_at:    new Date().toISOString(),
-      };
-
-      onCreated?.(final);
+      onCreated?.(created);
       setForm(EMPTY);
       onClose();
-    } catch (err) {
-      setError(String(err));
+    } catch (err: any) {
+      setError(err?.message || String(err));
     } finally {
       setLoading(false);
     }
@@ -104,6 +107,32 @@ export default function AddPerformanceModal({ open, onClose, onCreated }: AddPer
           autoFocus
         />
 
+        <Input
+          id="add-profession"
+          label="Kasb / Lavozim"
+          value={form.profession}
+          onChange={(e) => set('profession', e.target.value)}
+          placeholder="Masalan: Aktyor, Rejissyor"
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Input
+            id="add-nationality"
+            label="Millati / Fuqaroligi"
+            value={form.nationality}
+            onChange={(e) => set('nationality', e.target.value)}
+            placeholder="O'zbek"
+          />
+          <Input
+            id="add-birth-date"
+            label="Tug'ilgan sana"
+            type="date"
+            value={form.birth_date}
+            onChange={(e) => set('birth_date', e.target.value)}
+          />
+        </div>
+
+        {/* ImageUpload: avval ImgBB ga yuklaydi, so'ng URL ni set qiladi */}
         <ImageUpload
           label="Asosiy rasm *"
           value={form.image_url}
@@ -119,11 +148,11 @@ export default function AddPerformanceModal({ open, onClose, onCreated }: AddPer
         />
 
         <Textarea
-          id="add-description"
-          label="Tavsif (ixtiyoriy)"
-          value={form.description}
-          onChange={(e) => set('description', e.target.value)}
-          placeholder="Ishtirokchi haqida qisqacha…"
+          id="add-bio"
+          label="Bio / Tavsif (ixtiyoriy)"
+          value={form.bio}
+          onChange={(e) => set('bio', e.target.value)}
+          placeholder="Ishtirokchi haqida qisqacha ma'lumot…"
           rows={3}
         />
 
