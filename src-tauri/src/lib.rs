@@ -180,6 +180,9 @@ pub fn run() {
             commands::unsave_video,
             commands::get_video_save_status,
             commands::list_saved_videos,
+            // ── Plugins System ──
+            commands::list_local_plugins,
+            commands::read_plugin_source,
             // ── System Monitoring ──
             system_monitor::get_system_stats,
             // ── Steam Idler ──

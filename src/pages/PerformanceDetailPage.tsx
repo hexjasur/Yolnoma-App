@@ -203,7 +203,7 @@ export default function PerformanceDetailPage() {
           <img
             src={item.thumbnail_url || item.image_url}
             alt={item.full_name}
-            className="w-full max-h-72 object-cover opacity-90"
+            className="w-full max-h-[30rem] object-cover opacity-90"
           />
           <div
             className="pointer-events-none absolute inset-0"

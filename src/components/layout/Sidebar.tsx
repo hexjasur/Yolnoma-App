@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
-import { LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser, Gamepad2, Coins } from 'lucide-react';
+import { LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser, Gamepad2, Coins, Blocks } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { canAccessPage } from '../../config/roles';
+import { usePluginNavigation } from '../../plugins';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
-  { to: '/tools/currency', label: 'Exchange rate', icon: Coins, name: 'currency' },
+  { to: '/tools/currency', label: 'Currency Converter', icon: Coins, name: 'currency' },
   { to: '/tools/bg-remover', label: 'Background remover', icon: LayoutGrid, name: 'bg-remover' },
   { to: '/tools/steam-idler', label: 'Steam Idler', icon: Gamepad2, name: 'steam-idler' },
   { to: '/performances', label: 'Performance', icon: Drama, name: 'performances' },
@@ -20,6 +21,7 @@ const links = [
 export default function Sidebar() {
   const [version, setVersion] = useState<string>('');
   const { logout, user } = useAuth();
+  const pluginNavItems = usePluginNavigation();
 
   useEffect(() => {
     getVersion()
@@ -47,7 +49,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-1 flex flex-col">
+      <nav className="flex-1 p-3 space-y-1 flex flex-col overflow-y-auto">
         {filteredLinks.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -82,6 +84,54 @@ export default function Sidebar() {
             )}
           </NavLink>
         ))}
+
+        {/* Plugin Navigation Section */}
+        {pluginNavItems.length > 0 && (
+          <div className="pt-3">
+            <div className="px-4 py-1.5 text-[10px] uppercase tracking-[0.18em] text-[var(--text-faint)] font-semibold">
+              Plugins
+            </div>
+            <div className="space-y-1 mt-1">
+              {pluginNavItems.map((item) => (
+                <NavLink
+                  key={item.fullPath}
+                  to={item.fullPath}
+                  className={({ isActive }) =>
+                    `group relative flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                      isActive
+                        ? 'bg-[var(--accent-glow)] text-[var(--text-primary)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(242,237,230,0.04)]'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full transition-opacity duration-150 ${
+                          isActive ? 'opacity-100 bg-[var(--accent)]' : 'opacity-0'
+                        }`}
+                      />
+                      {item.icon && typeof item.icon !== 'string' ? (
+                        item.icon
+                      ) : (
+                        <Blocks
+                          size={17}
+                          strokeWidth={1.75}
+                          className={
+                            isActive
+                              ? 'text-[var(--accent)]'
+                              : 'text-[var(--text-faint)] group-hover:text-[var(--text-muted)]'
+                          }
+                        />
+                      )}
+                      <span className="truncate">{item.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex-1" /> {/* Spacer */}
 

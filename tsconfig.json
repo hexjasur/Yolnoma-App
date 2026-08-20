@@ -19,7 +19,8 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@yolnoma/plugin-sdk": ["../YolnomaPluginSystem/yolnoma-plugin-sdk/dist/index.d.ts"],
     },
 
     /* Linting */

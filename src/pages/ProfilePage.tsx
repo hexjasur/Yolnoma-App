@@ -425,7 +425,7 @@ export default function ProfilePage() {
           <SectionCard title="Profil Ma'lumotlari" icon={User}>
             <div className="pt-5 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-white/40 mb-2">Ko'rsatma ism</label>
+                <label className="block text-xs font-medium text-white/40 mb-2">Instruction name</label>
                 <input
                   type="text"
                   value={displayName}
@@ -435,7 +435,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/40 mb-2">Email (o'zgartirilmaydi)</label>
+                <label className="block text-xs font-medium text-white/40 mb-2">Email (cannot be changed)</label>
                 <input
                   type="email"
                   value={user?.email ?? ''}
@@ -447,8 +447,8 @@ export default function ProfilePage() {
               {/* Private toggle */}
               <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
                 <div>
-                  <p className="text-sm font-medium text-white/80">Shaxsiy profil</p>
-                  <p className="text-xs text-white/35 mt-0.5">Profil boshqalarga ko'rinmaydi</p>
+                  <p className="text-sm font-medium text-white/80">Personal profile</p>
+                  <p className="text-xs text-white/35 mt-0.5">The profile is not visible to others.</p>
                 </div>
                 <button
                   onClick={() => setIsPrivate(p => !p)}
@@ -464,7 +464,7 @@ export default function ProfilePage() {
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-[#D97757] hover:bg-[#c96a48] text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {profileSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                Saqlash
+                Save
               </button>
             </div>
           </SectionCard>
@@ -474,7 +474,7 @@ export default function ProfilePage() {
             <div className="pt-5 space-y-4">
               {/* Old password */}
               <div className="relative">
-                <label className="block text-xs font-medium text-white/40 mb-2">Eski parol</label>
+                <label className="block text-xs font-medium text-white/40 mb-2">Old Password</label>
                 <div className="relative">
                   <input
                     type={showOld ? 'text' : 'password'}
@@ -491,7 +491,7 @@ export default function ProfilePage() {
 
               {/* New password */}
               <div>
-                <label className="block text-xs font-medium text-white/40 mb-2">Yangi parol</label>
+                <label className="block text-xs font-medium text-white/40 mb-2">New Password</label>
                 <div className="relative">
                   <input
                     type={showNew ? 'text' : 'password'}
@@ -521,7 +521,7 @@ export default function ProfilePage() {
 
               {/* Confirm */}
               <div>
-                <label className="block text-xs font-medium text-white/40 mb-2">Yangi parolni tasdiqlang</label>
+                <label className="block text-xs font-medium text-white/40 mb-2">Confirm the new password</label>
                 <div className="relative">
                   <input
                     type={showConfirm ? 'text' : 'password'}
@@ -536,7 +536,7 @@ export default function ProfilePage() {
                   </button>
                 </div>
                 {confirmPwd && newPwd !== confirmPwd && (
-                  <p className="text-xs text-red-400 mt-1.5">Parollar mos kelmadi</p>
+                  <p className="text-xs text-red-400 mt-1.5">Passwords did not match.</p>
                 )}
               </div>
 
@@ -546,7 +546,7 @@ export default function ProfilePage() {
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-white/8 hover:bg-white/12 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 hover:border-white/20"
               >
                 {pwdSaving ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
-                Parolni yangilash
+                Reset password
               </button>
             </div>
           </SectionCard>
@@ -560,7 +560,7 @@ export default function ProfilePage() {
             <div className="pt-5 space-y-4 flex flex-col items-center">
               <ImageCropper
                 aspectRatio={1}
-                label="Logo rasmi yuklang (kvadrat)"
+                label="Upload a logo image (square)"
                 currentUrl={user?.avatar_url ?? undefined}
                 onCropped={handleAvatarCropped}
               />
@@ -571,7 +571,7 @@ export default function ProfilePage() {
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-[#D97757] hover:bg-[#c96a48] text-white transition-colors disabled:opacity-60"
                 >
                   {uploadingAvatar ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Yuklash
+                  Upload
                 </button>
               )}
             </div>
@@ -607,7 +607,7 @@ export default function ProfilePage() {
                   <Package size={14} className="text-white/50" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-white/35 uppercase tracking-wider font-medium">Dastur versiyasi</p>
+                  <p className="text-[11px] text-white/35 uppercase tracking-wider font-medium">Program version</p>
                   <p className="text-sm text-white/80 font-mono mt-0.5">v{appVersion}</p>
                 </div>
               </div>

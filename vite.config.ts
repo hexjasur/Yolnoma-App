@@ -14,6 +14,7 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@yolnoma/plugin-sdk": path.resolve(__dirname, "../Yolnoma Plugin System/yolnoma-plugin-sdk/src/index.ts"),
     },
   },
 

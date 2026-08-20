@@ -161,10 +161,10 @@ export default function PerformancePage() {
           <Lock size={28} strokeWidth={1.5} style={{ color: '#D97757' }} />
         </div>
         <p style={{ fontSize: 16, color: 'var(--text-primary)', margin: 0 }}>
-          Bu sahifaga kirish taqiqlangan
+          This page has been accessed
         </p>
         <p style={{ fontSize: 13, margin: 0 }}>
-          Faqat <strong style={{ color: '#D97757' }}>owner</strong> roli uchun mavjud.
+          Only <strong style={{ color: '#D97757' }}>owner</strong> available for the role.
         </p>
       </div>
     );
@@ -203,7 +203,7 @@ export default function PerformancePage() {
               fontWeight: 600,
             }}
           >
-            KATALOG
+            CATALOG
           </p>
           <h1
             style={{
@@ -219,8 +219,8 @@ export default function PerformancePage() {
           </h1>
           <p style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 14 }}>
             {loading
-              ? 'Yuklanmoqda…'
-              : `Jami: ${pagination.total} ta ishtirokchi · Sahifa ${currentPage} / ${pagination.totalPages}`}
+              ? 'Loading…'
+              : `Total: ${pagination.total} performance · Page ${currentPage} / ${pagination.totalPages}`}
           </p>
         </div>
 
@@ -229,14 +229,14 @@ export default function PerformancePage() {
             variant="ghost"
             onClick={() => loadData(currentPage, currentLimit, searchParam)}
             disabled={loading}
-            title="Yangilash"
+            title="Reflesh"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Yangilash
+            Reflesh
           </Button>
           <Button variant="primary" onClick={() => addModal.open()}>
             <Plus size={15} strokeWidth={2} />
-            Qo'shish
+            New
           </Button>
         </div>
       </header>
@@ -260,20 +260,20 @@ export default function PerformancePage() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Ism yoki kalit so'z bo'yicha qidirish…"
+              placeholder="Search by name or keyword…"
               className="form-input"
               style={{ paddingLeft: 36, width: '100%' }}
             />
           </div>
-          <Button type="submit" variant="ghost">Qidirish</Button>
+          <Button type="submit" variant="ghost">Search</Button>
           {searchParam && (
-            <Button type="button" variant="ghost" onClick={handleClearSearch}>Tozalash</Button>
+            <Button type="button" variant="ghost" onClick={handleClearSearch}>Clear</Button>
           )}
         </form>
 
         {/* Limit Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
-          <span>Har sahifada:</span>
+          <span>On every page:</span>
           {[15, 20, 40].map((l) => (
             <button
               key={l}
@@ -332,19 +332,19 @@ export default function PerformancePage() {
           {searchParam ? (
             <>
               <p style={{ fontSize: 16, color: 'var(--text-primary)', marginBottom: 4 }}>
-                «{searchParam}» bo'yicha hech narsa topilmadi
+                Nothing was found for... «{searchParam}»
               </p>
-              <p style={{ fontSize: 13 }}>Qidiruv so'zini o'zgartirib ko'ring.</p>
+              <p style={{ fontSize: 13 }}>Try changing the search term.</p>
               <Button variant="ghost" onClick={handleClearSearch} style={{ marginTop: 12 }}>
-                Qidiruvni tozalash
+                Clear search
               </Button>
             </>
           ) : (
             <>
               <p style={{ fontSize: 16, marginBottom: 6, color: 'var(--text-primary)' }}>
-                Hozircha hech kim qo'shilmagan
+                No one has joined yet.
               </p>
-              <p style={{ fontSize: 13 }}>«Qo'shish» tugmasini bosing.</p>
+              <p style={{ fontSize: 13 }}>Press the button «Add».</p>
             </>
           )}
         </div>
@@ -389,7 +389,7 @@ export default function PerformancePage() {
         >
           {/* Status */}
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Ko'rsatilmoqda: <strong style={{ color: 'var(--text-primary)' }}>{startCount} - {endCount}</strong> (Jami: <strong>{pagination.total}</strong> ta)
+            Showing: <strong style={{ color: 'var(--text-primary)' }}>{startCount} - {endCount}</strong> (Total: <strong>{pagination.total}</strong> items)
           </div>
 
           {/* Controls */}
@@ -415,7 +415,7 @@ export default function PerformancePage() {
               }}
             >
               <ChevronLeft size={15} />
-              Oldingi
+              Previous
             </button>
 
             {/* Page buttons */}
@@ -470,7 +470,7 @@ export default function PerformancePage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              Keyingi
+              Next
               <ChevronRight size={15} />
             </button>
           </div>
