@@ -11,12 +11,12 @@ import type { Performance } from '@/types';
 
 const VALID_ORDERS: VideoOrder[] = [
   'latest',
+  'longest',
+  'shortest',
   'most-popular',
   'top-rated',
   'top-weekly',
   'top-monthly',
-  'longest',
-  'shortest',
 ];
 
 export default function VideosPage() {
@@ -149,7 +149,7 @@ export default function VideosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <p className="text-[11px] letter-spacing-[0.18em] uppercase text-[var(--accent)] font-semibold mb-1">
-            Modul
+            Module
           </p>
           <h1 className="font-serif text-4xl font-medium tracking-tight text-[var(--text-primary)]">
             Streams
@@ -167,7 +167,7 @@ export default function VideosPage() {
             }`}
           >
             <Film size={14} />
-            Qidirish
+            Search
           </button>
           <button
             onClick={() => setActiveTab('saved')}
@@ -178,7 +178,7 @@ export default function VideosPage() {
             }`}
           >
             <Bookmark size={14} />
-            Saqlanganlar ({savedVideos.length})
+            Saved ({savedVideos.length})
           </button>
         </div>
       </div>
@@ -195,14 +195,14 @@ export default function VideosPage() {
               />
               <input
                 type="text"
-                placeholder="Video nomi, model yoki kalit so'z bo'yicha qidirish…"
+                placeholder="Search by video title, model, or keyword…"
                 value={queryInput}
                 onChange={(e) => setQueryInput(e.target.value)}
                 className="form-input w-full pl-10"
               />
             </div>
             <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? 'Qidirilmoqda…' : 'Qidirish'}
+              {loading ? 'Searching…' : 'Search'}
             </Button>
           </form>
 
@@ -210,7 +210,7 @@ export default function VideosPage() {
           {topPerformers.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-xs text-[var(--text-faint)] uppercase tracking-wider font-semibold">
-                Katalog ishtirokchilari (Top 10):
+                Catalog performance (Top 10):
               </span>
               <div className="flex flex-wrap gap-2">
                 {topPerformers.map((p) => (
@@ -223,13 +223,13 @@ export default function VideosPage() {
                         : 'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent-border)]'
                     }`}
                   >
-                    {p.thumbnail_url && (
+                    {/* {p.thumbnail_url && (
                       <img
                         src={p.thumbnail_url}
                         alt={p.full_name}
                         className="w-4 h-4 rounded-full object-cover"
                       />
-                    )}
+                    )} */}
                     {p.full_name}
                   </button>
                 ))}
@@ -250,12 +250,12 @@ export default function VideosPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[var(--text-faint)] border-b border-[var(--border)] pb-3">
               <div className="flex items-center gap-3">
                 <span>
-                  «<strong className="text-[var(--text-primary)]">{queryParam}</strong>» bo'yicha topildi:{' '}
-                  {totalVideos} ta video
+                  «<strong className="text-[var(--text-primary)]">{queryParam}</strong>» found for:{' '}
+                  {totalVideos} videos
                 </span>
                 {totalPages > 1 && (
                   <span className="text-[var(--text-muted)]">
-                    • Sahifa {currentPage} / {totalPages}
+                    • Page {currentPage} / {totalPages}
                   </span>
                 )}
               </div>
@@ -264,22 +264,22 @@ export default function VideosPage() {
               <div className="flex items-center gap-2 self-start sm:self-auto">
                 <span className="text-[var(--text-faint)] flex items-center gap-1">
                   <ArrowUpDown size={12} />
-                  Saralash:
+                  Sorting:
                 </span>
                 <select
                   value={currentOrder}
                   onChange={(e) => handleOrderChange(e.target.value as VideoOrder)}
                   disabled={loading}
-                  aria-label="Videolarni saralash tartibi"
+                  aria-label="Procedure for sorting videos"
                   className="bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[var(--accent)] transition-colors cursor-pointer"
                 >
-                  <option value="latest">Eng yangi (Latest)</option>
-                  <option value="most-popular">Eng ommabop (Most Popular)</option>
-                  <option value="top-rated">Yuqori baholangan (Top Rated)</option>
-                  <option value="top-weekly">Haftalik top (Top Weekly)</option>
-                  <option value="top-monthly">Oylik top (Top Monthly)</option>
-                  <option value="longest">Eng uzun (Longest)</option>
-                  <option value="shortest">Eng qisqa (Shortest)</option>
+                  <option value="latest">Latest</option>
+                  <option value="longest">Longest</option>
+                  <option value="shortest">Shortest</option>
+                  <option value="most-popular">Most Popular</option>
+                  <option value="top-rated">Top Rated</option>
+                  <option value="top-weekly">Top Weekly</option>
+                  <option value="top-monthly">Top Monthly</option>
                 </select>
               </div>
             </div>
@@ -304,14 +304,14 @@ export default function VideosPage() {
           ) : queryParam ? (
             <div className="py-16 text-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
               <Film size={32} className="mx-auto mb-2 opacity-30 text-[var(--accent)]" />
-              <p className="text-base text-[var(--text-primary)]">Hech qanday video topilmadi</p>
-              <p className="text-xs mt-1">Boshqa so'z yoki ism bilan qidirib ko'ring.</p>
+              <p className="text-base text-[var(--text-primary)]">No video found.</p>
+              <p className="text-xs mt-1">Try searching with another word or name.</p>
             </div>
           ) : (
             <div className="py-20 text-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
               <Search size={36} className="mx-auto mb-3 opacity-30 text-[var(--accent)]" />
-              <p className="text-base text-[var(--text-primary)] font-medium">Videolarni qidirish</p>
-              <p className="text-xs mt-1">Qidiruv satriga yozing yoki yuqoridagi ishtirokchilardan birini tanlang.</p>
+              <p className="text-base text-[var(--text-primary)] font-medium">Search for videos</p>
+              <p className="text-xs mt-1">Type in the search bar or select one of the performance above.</p>
             </div>
           )}
 
@@ -319,7 +319,7 @@ export default function VideosPage() {
           {!loading && totalPages > 1 && (
             <div className="flex items-center justify-between flex-wrap gap-4 pt-6 border-t border-[var(--border)] mt-8">
               <div className="text-xs text-[var(--text-faint)]">
-                Ko'rsatilmoqda: {(currentPage - 1) * 20 + 1} - {Math.min(currentPage * 20, totalVideos)} (Jami: {totalVideos} ta)
+                Showing: {(currentPage - 1) * 20 + 1} - {Math.min(currentPage * 20, totalVideos)} (Total: {totalVideos} ta)
               </div>
 
               <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ export default function VideosPage() {
                   onClick={() => handlePageChange(currentPage - 1)}
                   className="gap-1"
                 >
-                  <ChevronLeft size={14} /> Oldingi
+                  <ChevronLeft size={14} /> Previous
                 </Button>
 
                 {/* Page numbers */}
@@ -371,7 +371,7 @@ export default function VideosPage() {
                   onClick={() => handlePageChange(currentPage + 1)}
                   className="gap-1"
                 >
-                  Keyingi <ChevronRight size={14} />
+                  Next <ChevronRight size={14} />
                 </Button>
               </div>
             </div>
@@ -382,11 +382,11 @@ export default function VideosPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-[var(--text-muted)]">
-              Siz saqlagan videolar to'plami ({savedVideos.length})
+              The collection of videos you saved ({savedVideos.length})
             </h2>
             <Button variant="ghost" size="sm" onClick={() => loadSaved()} disabled={savedLoading}>
               <RefreshCw size={13} className={savedLoading ? 'animate-spin' : ''} />
-              Yangilash
+              Reflesh
             </Button>
           </div>
 
@@ -427,9 +427,9 @@ export default function VideosPage() {
           ) : (
             <div className="py-20 text-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
               <Bookmark size={36} className="mx-auto mb-3 opacity-30 text-[var(--accent)]" />
-              <p className="text-base text-[var(--text-primary)] font-medium">Saqlangan videolar yo'q</p>
+              <p className="text-base text-[var(--text-primary)] font-medium">No saved videos</p>
               <p className="text-xs mt-1">
-                Videolarni tomosha qilish paytida «Saqlash» tugmasini bosib shu yerga qo'shishingiz mumkin.
+                You can add videos here by pressing the "Save" button while watching them.
               </p>
             </div>
           )}
