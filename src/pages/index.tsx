@@ -16,8 +16,11 @@ import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
 import ProtectedLayout from '../components/layout/ProtectedLayout';
 import { AuthProvider } from '../context/AuthContext';
+import { usePluginRoutes } from '../plugins';
 
 export default function AppRoutes() {
+  const pluginRoutes = usePluginRoutes();
+
   return (
     <AuthProvider>
       <HashRouter>
@@ -48,6 +51,18 @@ export default function AppRoutes() {
               {/* PROFILE & SETTINGS ROUTES */}
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/settings" element={<SettingsPage />} />
+
+              {/* PLUGIN DYNAMIC ROUTES */}
+              {pluginRoutes.map((route) => {
+                const Component = route.component;
+                return (
+                  <Route
+                    key={route.fullPath}
+                    path={route.fullPath}
+                    element={<Component />}
+                  />
+                );
+              })}
             </Route>
           </Route>
         </Routes>

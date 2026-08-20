@@ -186,7 +186,7 @@ export default function CurrencyConverterPage() {
             {amount || '1'} {fromMeta.name} equal
           </p>
           <div className="flex flex-wrap items-baseline gap-3">
-            <h2 className="text-3xl md:text-4xl font-bold font-serif tracking-tight text-white">
+            <h2 className="text-3xl md:text-4xl font-bold font-mono tracking-tight text-white">
               {converting ? (
                 <span className="opacity-50 animate-pulse">Calculating…</span>
               ) : conversion ? (

@@ -291,14 +291,14 @@ export default function SettingsPage() {
             <Info size={18} className="text-blue-400" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-[#F2EDE6]">Dastur Haqida</h2>
-            <p className="text-xs text-white/45">Mijoz tizim ma'lumotlari</p>
+            <h2 className="text-base font-semibold text-[#F2EDE6]">About the Program</h2>
+            <p className="text-xs text-white/45">Client system information</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-            <p className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">Versiya</p>
+            <p className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">Version</p>
             <p className="text-sm font-mono text-[#F2EDE6] mt-1">v{appVersion}</p>
           </div>
 
