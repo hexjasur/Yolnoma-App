@@ -1,12 +1,23 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Film, Bookmark, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Film, Bookmark, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, ArrowUpDown } from 'lucide-react';
 import { videoApi } from '@/services/videoApi';
 import { performanceService } from '@/services/performance.service';
+import { useSavedVideos } from '@/hooks/useSavedVideos';
 import VideoCard from '@/components/VideoCard';
 import { Button } from '@/components/ui';
-import type { EpornerVideo, SavedVideo } from '@/types/video';
+import type { EpornerVideo, VideoOrder } from '@/types/video';
 import type { Performance } from '@/types';
+
+const VALID_ORDERS: VideoOrder[] = [
+  'latest',
+  'most-popular',
+  'top-rated',
+  'top-weekly',
+  'top-monthly',
+  'longest',
+  'shortest',
+];
 
 export default function VideosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -15,6 +26,11 @@ export default function VideosPage() {
   const queryParam = searchParams.get('query') || '';
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
   const currentPage = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+
+  const orderParamRaw = searchParams.get('order');
+  const currentOrder: VideoOrder = VALID_ORDERS.includes(orderParamRaw as VideoOrder)
+    ? (orderParamRaw as VideoOrder)
+    : 'latest';
 
   // Lightweight Top 10 Performers
   const [topPerformers, setTopPerformers] = useState<Performance[]>([]);
@@ -38,9 +54,8 @@ export default function VideosPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Saved videos state (User-Specific Collection)
-  const [savedVideos, setSavedVideos] = useState<SavedVideo[]>([]);
-  const [savedLoading, setSavedLoading] = useState(false);
+  // Cached Saved Videos Hook (no unnecessary refetch on navigation)
+  const { savedVideos, savedLoading, refresh: loadSaved } = useSavedVideos(activeTab === 'saved');
 
   // Synchronize local search input when URL query changes
   useEffect(() => {
@@ -51,7 +66,7 @@ export default function VideosPage() {
   }, [queryParam]);
 
   // Load Eporner videos
-  const fetchVideos = useCallback(async (searchQuery: string, pageNum: number) => {
+  const fetchVideos = useCallback(async (searchQuery: string, pageNum: number, sortOrder: VideoOrder) => {
     if (!searchQuery.trim()) {
       setVideos([]);
       setTotalVideos(0);
@@ -60,7 +75,7 @@ export default function VideosPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await videoApi.search(searchQuery, pageNum, 20);
+      const res = await videoApi.search(searchQuery, pageNum, 20, sortOrder);
       setVideos(res.videos || []);
       setTotalVideos(parseInt(String(res.total_count || 0), 10));
     } catch (err) {
@@ -70,37 +85,34 @@ export default function VideosPage() {
     }
   }, []);
 
-  // Fetch when queryParam, currentPage or tab changes
+  // Fetch when queryParam, currentPage, currentOrder or tab changes
   useEffect(() => {
     if (activeTab === 'search') {
-      fetchVideos(queryParam, currentPage);
+      fetchVideos(queryParam, currentPage, currentOrder);
     }
-  }, [queryParam, currentPage, activeTab, fetchVideos]);
+  }, [queryParam, currentPage, currentOrder, activeTab, fetchVideos]);
 
-  // Load User-Specific Saved Videos
-  const loadSaved = useCallback(async () => {
-    setSavedLoading(true);
-    try {
-      const list = await videoApi.listSaved();
-      setSavedVideos(list);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSavedLoading(false);
+  const handleOrderChange = (newOrder: VideoOrder) => {
+    if (newOrder === currentOrder) return;
+    const nextParams = new URLSearchParams(searchParams);
+    if (queryParam) nextParams.set('query', queryParam);
+    if (newOrder === 'latest') {
+      nextParams.delete('order');
+    } else {
+      nextParams.set('order', newOrder);
     }
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'saved') {
-      loadSaved();
-    }
-  }, [activeTab, loadSaved]);
+    nextParams.set('page', '1');
+    setSearchParams(nextParams);
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const nextParams = new URLSearchParams();
     if (queryInput.trim()) {
       nextParams.set('query', queryInput.trim());
+      if (currentOrder !== 'latest') {
+        nextParams.set('order', currentOrder);
+      }
       nextParams.set('page', '1');
       sessionStorage.setItem('last_video_search_query', queryInput.trim());
     }
@@ -111,6 +123,9 @@ export default function VideosPage() {
     setQueryInput(name);
     const nextParams = new URLSearchParams();
     nextParams.set('query', name);
+    if (currentOrder !== 'latest') {
+      nextParams.set('order', currentOrder);
+    }
     nextParams.set('page', '1');
     sessionStorage.setItem('last_video_search_query', name);
     setSearchParams(nextParams);
@@ -120,6 +135,7 @@ export default function VideosPage() {
     if (newPage < 1 || newPage === currentPage) return;
     const nextParams = new URLSearchParams(searchParams);
     if (queryParam) nextParams.set('query', queryParam);
+    if (currentOrder !== 'latest') nextParams.set('order', currentOrder);
     nextParams.set('page', String(newPage));
     setSearchParams(nextParams);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -229,18 +245,43 @@ export default function VideosPage() {
             </div>
           )}
 
-          {/* Loading Skeleton / Results Info */}
+          {/* Loading Skeleton / Results Info & Sort Controls */}
           {queryParam && !error && (
-            <div className="flex items-center justify-between text-xs text-[var(--text-faint)] border-b border-[var(--border)] pb-3">
-              <span>
-                «<strong className="text-[var(--text-primary)]">{queryParam}</strong>» bo'yicha topildi:{' '}
-                {totalVideos} ta video
-              </span>
-              {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[var(--text-faint)] border-b border-[var(--border)] pb-3">
+              <div className="flex items-center gap-3">
                 <span>
-                  Sahifa {currentPage} / {totalPages}
+                  «<strong className="text-[var(--text-primary)]">{queryParam}</strong>» bo'yicha topildi:{' '}
+                  {totalVideos} ta video
                 </span>
-              )}
+                {totalPages > 1 && (
+                  <span className="text-[var(--text-muted)]">
+                    • Sahifa {currentPage} / {totalPages}
+                  </span>
+                )}
+              </div>
+
+              {/* Order / Sort Selector */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <span className="text-[var(--text-faint)] flex items-center gap-1">
+                  <ArrowUpDown size={12} />
+                  Saralash:
+                </span>
+                <select
+                  value={currentOrder}
+                  onChange={(e) => handleOrderChange(e.target.value as VideoOrder)}
+                  disabled={loading}
+                  aria-label="Videolarni saralash tartibi"
+                  className="bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[var(--accent)] transition-colors cursor-pointer"
+                >
+                  <option value="latest">Eng yangi (Latest)</option>
+                  <option value="most-popular">Eng ommabop (Most Popular)</option>
+                  <option value="top-rated">Yuqori baholangan (Top Rated)</option>
+                  <option value="top-weekly">Haftalik top (Top Weekly)</option>
+                  <option value="top-monthly">Oylik top (Top Monthly)</option>
+                  <option value="longest">Eng uzun (Longest)</option>
+                  <option value="shortest">Eng qisqa (Shortest)</option>
+                </select>
+              </div>
             </div>
           )}
 
@@ -343,7 +384,7 @@ export default function VideosPage() {
             <h2 className="text-sm font-medium text-[var(--text-muted)]">
               Siz saqlagan videolar to'plami ({savedVideos.length})
             </h2>
-            <Button variant="ghost" size="sm" onClick={loadSaved} disabled={savedLoading}>
+            <Button variant="ghost" size="sm" onClick={() => loadSaved()} disabled={savedLoading}>
               <RefreshCw size={13} className={savedLoading ? 'animate-spin' : ''} />
               Yangilash
             </Button>

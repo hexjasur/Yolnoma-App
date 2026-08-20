@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -20,8 +20,28 @@ export default function HomePage() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
 
-  // Native local system stats with 2s visibility-aware polling
-  const { stats, loading: statsLoading, isPaused } = useSystemStats(true);
+  // Real-time system monitoring toggle (default: false / OFF)
+  const [monitoringEnabled, setMonitoringEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('yolnoma_system_monitoring_enabled');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleMonitoring = () => {
+    setMonitoringEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('yolnoma_system_monitoring_enabled', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Native local system stats with 2s visibility-aware polling (only when enabled)
+  const { stats, loading: statsLoading, isPaused } = useSystemStats(monitoringEnabled);
 
   // Performances only fetched for owner
   const { items, loading: perfLoading } = usePerformances();
@@ -60,7 +80,7 @@ export default function HomePage() {
         />
 
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-5 border-b border-white/[0.06]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[var(--accent-glow)] flex items-center justify-center text-[var(--accent)] border border-[var(--accent-border)]">
               <Activity size={18} />
@@ -68,21 +88,55 @@ export default function HomePage() {
             <div>
               <h2 className="text-base font-semibold text-white">System Resources (Local System)</h2>
               <p className="text-xs text-white/40 truncate max-w-md">
-                {stats?.cpuModel || 'Protsessor va operativ xotira holati'}
+                {monitoringEnabled
+                  ? stats?.cpuModel || 'Protsessor va operativ xotira holati'
+                  : 'Monitoring o\'chirilgan (yoqish uchun o\'ngdagi tugmani bosing)'}
               </p>
             </div>
           </div>
 
-          {/* Live Polling Status Indicator */}
-          <div className="flex items-center gap-2 text-xs font-mono self-start sm:self-auto">
-            <span className={`w-2 h-2 rounded-full ${
-              isPaused
-                ? 'bg-amber-400 opacity-60'
-                : 'bg-emerald-400 animate-ping'
-            }`} />
-            <span className={isPaused ? 'text-amber-300/70' : 'text-emerald-400'}>
-              {isPaused ? 'To\'xtatildi (fon rejimi)' : 'Real-time (2s)'}
-            </span>
+          {/* Live Polling Status Indicator & Toggle Switch */}
+          <div className="flex items-center gap-4 self-start sm:self-auto">
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className={`w-2 h-2 rounded-full ${
+                !monitoringEnabled
+                  ? 'bg-zinc-500/60'
+                  : isPaused
+                  ? 'bg-amber-400 opacity-60'
+                  : 'bg-emerald-400 animate-ping'
+              }`} />
+              <span className={
+                !monitoringEnabled
+                  ? 'text-zinc-400'
+                  : isPaused
+                  ? 'text-amber-300/70'
+                  : 'text-emerald-400'
+              }>
+                {!monitoringEnabled
+                  ? "O'chirilgan"
+                  : isPaused
+                  ? 'To\'xtatildi (fon)'
+                  : 'Real-time (2s)'}
+              </span>
+            </div>
+
+            {/* Toggle Switch */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={monitoringEnabled}
+              onClick={toggleMonitoring}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                monitoringEnabled ? 'bg-[var(--accent)]' : 'bg-white/10 hover:bg-white/15'
+              }`}
+              title={monitoringEnabled ? "Monitoringni to'xtatish" : "Monitoringni yoqish"}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  monitoringEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
         </div>
 
@@ -92,8 +146,8 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<Cpu size={18} />}
             name="CPU"
-            value={statsLoading ? '—' : `${stats?.cpuPercent ?? 0}%`}
-            detail={stats?.cpuCores ? `${stats.cpuCores} ta yadro` : 'Usage'}
+            value={statsLoading ? '—' : stats ? `${stats.cpuPercent}%` : '—'}
+            detail={stats?.cpuCores ? `${stats.cpuCores} ta yadro` : monitoringEnabled ? 'Usage' : 'Nofaol'}
             percent={stats?.cpuPercent ?? 0}
             color="from-amber-500 to-orange-500"
             loading={statsLoading}
@@ -103,8 +157,8 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<Layers size={18} />}
             name="RAM"
-            value={statsLoading ? '—' : `${stats?.ramUsedGb ?? 0} GB`}
-            detail={stats?.ramTotalGb ? `${stats.ramUsedGb ?? 0} / ${stats.ramTotalGb} GB` : 'Memory'}
+            value={statsLoading ? '—' : stats ? `${stats.ramUsedGb} GB` : '—'}
+            detail={stats?.ramTotalGb ? `${stats.ramUsedGb} / ${stats.ramTotalGb} GB` : monitoringEnabled ? 'Memory' : 'Nofaol'}
             percent={stats ? Math.round((stats.ramUsedGb / (stats.ramTotalGb || 1)) * 100) : 0}
             color="from-blue-500 to-cyan-500"
             loading={statsLoading}
@@ -114,8 +168,8 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<HardDrive size={18} />}
             name="DISK"
-            value={statsLoading ? '—' : `${stats?.diskUsedGb ?? 0} GB`}
-            detail={stats?.diskTotalGb ? `${stats.diskUsedGb ?? 0} / ${stats.diskTotalGb} GB` : 'Storage'}
+            value={statsLoading ? '—' : stats ? `${stats.diskUsedGb} GB` : '—'}
+            detail={stats?.diskTotalGb ? `${stats.diskUsedGb} / ${stats.diskTotalGb} GB` : monitoringEnabled ? 'Storage' : 'Nofaol'}
             percent={stats ? Math.round((stats.diskUsedGb / (stats.diskTotalGb || 1)) * 100) : 0}
             color="from-violet-500 to-indigo-500"
             loading={statsLoading}
@@ -125,8 +179,8 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<Monitor size={18} />}
             name="GPU"
-            value={stats?.gpuPercent != null ? `${stats.gpuPercent}%` : 'N/A'}
-            detail={stats?.gpuPercent != null ? 'Active' : 'Integrated / Standby'}
+            value={statsLoading ? '—' : stats?.gpuPercent != null ? `${stats.gpuPercent}%` : monitoringEnabled ? 'N/A' : '—'}
+            detail={stats?.gpuPercent != null ? 'Active' : monitoringEnabled ? 'Integrated / Standby' : 'Nofaol'}
             percent={stats?.gpuPercent ?? 0}
             color="from-emerald-500 to-teal-500"
             loading={statsLoading}

@@ -1,4 +1,4 @@
-﻿import type { RouteDefinition, NavigationItem } from '@yolnoma/plugin-sdk';
+import type { RouteDefinition, NavigationItem } from '@yolnoma/plugin-sdk';
 import type { RuntimePlugin, ResolvedPluginRoute, ResolvedPluginNavigationItem } from '../types/index.js';
 
 /**
@@ -72,7 +72,7 @@ export class PluginRegistry {
       fullPath,
       label: item.label,
       icon: item.icon,
-      children: item.children?.map((child) => this.resolveNavigationItem(pluginId, child)),
+      children: item.children?.map((child: NavigationItem) => this.resolveNavigationItem(pluginId, child)),
     };
   }
 

@@ -16,9 +16,9 @@ export interface SystemStats {
 
 const DEFAULT_POLL_INTERVAL_MS = 2000;
 
-export function useSystemStats(enabled: boolean = true) {
+export function useSystemStats(enabled: boolean = false) {
   const [stats, setStats] = useState<SystemStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -43,10 +43,16 @@ export function useSystemStats(enabled: boolean = true) {
 
   useEffect(() => {
     if (!enabled) {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setIsPaused(false);
+      setLoading(false);
       return;
     }
 
+    setLoading(true);
     // Initial fetch
     fetchStats();
 

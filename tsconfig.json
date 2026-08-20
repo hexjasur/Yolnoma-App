@@ -20,7 +20,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@yolnoma/plugin-sdk": ["../YolnomaPluginSystem/yolnoma-plugin-sdk/dist/index.d.ts"],
+      "@yolnoma/plugin-sdk": ["../Yolnoma Plugin System/yolnoma-plugin-sdk/src/index.ts", "../Yolnoma Plugin System/yolnoma-plugin-sdk/dist/index.d.ts"]
     },
 
     /* Linting */

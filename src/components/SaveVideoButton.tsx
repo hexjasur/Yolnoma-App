@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
 import { videoApi } from '@/services/videoApi';
+import { savedVideosStore } from '@/services/savedVideosStore';
 import { Button } from '@/components/ui';
 import type { EpornerVideo, SavedVideo } from '@/types/video';
 
@@ -9,29 +10,47 @@ interface SaveVideoButtonProps {
 }
 
 export default function SaveVideoButton({ video }: SaveVideoButtonProps) {
-  const [isSaved, setIsSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
-
   const videoId = 'id' in video ? video.id : video.videoId;
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    videoApi.getSaveStatus(videoId)
-      .then((status) => {
-        if (active) {
-          setIsSaved(status);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching save status:', err);
-        if (active) setLoading(false);
-      });
+  const [isSaved, setIsSaved] = useState<boolean>(() => {
+    if (savedVideosStore.isInitialized()) {
+      return savedVideosStore.isSaved(videoId);
+    }
+    return false;
+  });
+  const [loading, setLoading] = useState<boolean>(() => !savedVideosStore.isInitialized());
 
-    return () => {
-      active = false;
-    };
+  useEffect(() => {
+    // Subscribe to store updates
+    const unsubscribe = savedVideosStore.subscribe(() => {
+      if (savedVideosStore.isInitialized()) {
+        setIsSaved(savedVideosStore.isSaved(videoId));
+      }
+    });
+
+    // If store not initialized yet, query backend status once
+    if (!savedVideosStore.isInitialized()) {
+      let active = true;
+      setLoading(true);
+      videoApi.getSaveStatus(videoId)
+        .then((status) => {
+          if (active) {
+            setIsSaved(status);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.error('Error fetching save status:', err);
+          if (active) setLoading(false);
+        });
+
+      return () => {
+        active = false;
+        unsubscribe();
+      };
+    }
+
+    return unsubscribe;
   }, [videoId]);
 
   const handleToggle = useCallback(async () => {
@@ -39,6 +58,7 @@ export default function SaveVideoButton({ video }: SaveVideoButtonProps) {
     try {
       if (isSaved) {
         await videoApi.unsave(videoId);
+        savedVideosStore.remove(videoId);
         setIsSaved(false);
       } else {
         const isEporner = 'id' in video;
@@ -59,6 +79,7 @@ export default function SaveVideoButton({ video }: SaveVideoButtonProps) {
         };
 
         await videoApi.save(payload);
+        savedVideosStore.add(payload);
         setIsSaved(true);
       }
     } catch (err) {

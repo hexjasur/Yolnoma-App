@@ -27,6 +27,15 @@ export interface EpornerSearchResponse {
   videos: EpornerVideo[];
 }
 
+export type VideoOrder =
+  | 'latest'
+  | 'longest'
+  | 'shortest'
+  | 'top-rated'
+  | 'most-popular'
+  | 'top-weekly'
+  | 'top-monthly';
+
 export interface SavedVideo {
   videoId: string;
   title: string;

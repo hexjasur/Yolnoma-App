@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { api } from './api';
-import type { EpornerSearchResponse, EpornerVideo, SavedVideo } from '@/types/video';
+import type { EpornerSearchResponse, EpornerVideo, SavedVideo, VideoOrder } from '@/types/video';
 
 // Try multiple base URLs in order
 const BASE_URLS = [
@@ -25,13 +25,21 @@ async function proxyFetch(path: string): Promise<unknown> {
 
 export const videoApi = {
   /**
-   * Search videos by query & page.
+   * Search videos by query, page & order.
    * Uses thumbsize=big and thumbs=true to retrieve all snapshot thumbnails for hover & galleries.
    */
-  search: async (query: string, page = 1, perPage = 20): Promise<EpornerSearchResponse> => {
+  search: async (
+    query: string,
+    page = 1,
+    perPage = 20,
+    order: VideoOrder = 'latest'
+  ): Promise<EpornerSearchResponse> => {
+    const orderParam = order || 'latest';
     const path = `/api/v2/video/search/?query=${encodeURIComponent(
       query
-    )}&per_page=${perPage}&page=${page}&thumbsize=big&order=latest-uploaded&thumbs=true&format=json`;
+    )}&per_page=${perPage}&page=${page}&thumbsize=big&order=${encodeURIComponent(
+      orderParam
+    )}&thumbs=true&format=json`;
     return proxyFetch(path) as Promise<EpornerSearchResponse>;
   },
 
