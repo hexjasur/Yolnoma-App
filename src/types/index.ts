@@ -65,4 +65,4 @@ export interface ImgBBResponse {
   status: number;
 }
 
-export * from './video';
+export * from '@/features/videos/types/video';
