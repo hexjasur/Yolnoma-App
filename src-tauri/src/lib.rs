@@ -3,9 +3,7 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 mod commands;
-mod db;
 mod embedded_api_key;
-mod models;
 mod steam_idler;
 mod system_monitor;
 
@@ -170,16 +168,7 @@ pub fn run() {
             hide_window,
             get_idling_count,
             commands::proxy_request,
-            commands::add_performance,
-            commands::list_performances,
-            commands::get_performance,
-            commands::update_performance,
-            commands::delete_performance,
             commands::proxy_eporner,
-            commands::save_video,
-            commands::unsave_video,
-            commands::get_video_save_status,
-            commands::list_saved_videos,
             // ── Plugins System ──
             commands::list_local_plugins,
             commands::read_plugin_source,
