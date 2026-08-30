@@ -224,7 +224,7 @@ export default function ImageCropper({
                   <Upload size={16} className="text-white/80" />
                 </div>
                 <p className="text-xs text-white/70 text-center font-medium bg-black/30 px-3 py-1 rounded-lg backdrop-blur">
-                  Yangisini yuklash uchun bosing
+                  Click to load a new one
                 </p>
               </div>
             </>

@@ -155,7 +155,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="p-4 border-t border-[var(--border)]">
         <p className="text-[11px] text-[var(--text-faint)] px-2 font-mono">
-          {version ? `v${version} — CS` : 'Loading…'}
+          {version ? `v${version} — JK Software` : 'Loading…'}
         </p>
       </div>
     </aside>

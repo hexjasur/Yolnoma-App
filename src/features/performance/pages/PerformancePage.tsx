@@ -192,10 +192,10 @@ export default function PerformancePage() {
             variant="ghost"
             onClick={() => performanceQuery.refetch()}
             disabled={loading}
-            title="Reflesh"
+            title="Refresh"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Reflesh
+            Refresh
           </Button>
           <Button variant="primary" onClick={() => addModal.open()}>
             <Plus size={15} strokeWidth={2} />

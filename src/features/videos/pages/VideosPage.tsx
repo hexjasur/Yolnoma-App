@@ -348,7 +348,7 @@ export default function VideosPage() {
             </h2>
             <Button variant="ghost" size="sm" onClick={() => loadSaved()} disabled={savedLoading}>
               <RefreshCw size={13} className={savedLoading ? 'animate-spin' : ''} />
-              Reflesh
+              Refresh
             </Button>
           </div>
 

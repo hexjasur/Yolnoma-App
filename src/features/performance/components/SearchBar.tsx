@@ -3,8 +3,8 @@ import { Search, SlidersHorizontal } from 'lucide-react';
 import type { SortKey } from '@/types';
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'newest',    label: 'Yangi → Eski'  },
-  { value: 'oldest',   label: 'Eski → Yangi'  },
+  { value: 'newest',    label: 'New → Old'  },
+  { value: 'oldest',   label: 'Old → New'  },
   { value: 'name_asc', label: 'A → Z'          },
   { value: 'name_desc',label: 'Z → A'          },
 ];

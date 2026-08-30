@@ -172,7 +172,7 @@ export default function SettingsPage() {
               onClick={loadSessions}
               disabled={loading}
               className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.08] disabled:opacity-50 transition-colors"
-              title="Sessiyalarni yangilash"
+              title="Refreshing sessions"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             </button>

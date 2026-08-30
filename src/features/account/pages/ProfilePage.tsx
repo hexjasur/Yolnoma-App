@@ -283,7 +283,7 @@ export default function ProfilePage() {
       await api.patch('/api/v2/auth/profile', { avatarUrl: url });
       updateUser({ avatar_url: url });
       setAvatarBlob(null);
-      showToast('Profil rasmi yangilandi!', 'success');
+      showToast('Profile picture updated.', 'success');
     } catch (e: any) {
       showToast(e?.message ?? 'Xatolik yuz berdi', 'error');
     } finally {
@@ -305,9 +305,9 @@ export default function ProfilePage() {
       await api.patch('/api/v2/auth/profile', { thumbnailUrl: url });
       updateUser({ thumbnail_url: url });
       setThumbBlob(null);
-      showToast('Thumbnail yangilandi!', 'success');
+      showToast('Thumbnail updated!', 'success');
     } catch (e: any) {
-      showToast(e?.message ?? 'Xatolik yuz berdi', 'error');
+      showToast(e?.message ?? 'An error occurred.', 'error');
     } finally {
       setUploadingThumb(false);
     }
@@ -323,9 +323,9 @@ export default function ProfilePage() {
         isPrivate,
       });
       updateUser({ display_name: displayName.trim(), is_private: isPrivate });
-      showToast('Profil muvaffaqiyatli saqlandi!', 'success');
+      showToast('Profile successfully saved!', 'success');
     } catch (e: any) {
-      showToast(e?.message ?? 'Xatolik yuz berdi', 'error');
+      showToast(e?.message ?? 'An error occurred.', 'error');
     } finally {
       setProfileSaving(false);
     }
@@ -334,15 +334,15 @@ export default function ProfilePage() {
   // ── Password change ────────────────────────────────────────
   const changePassword = async () => {
     if (!user) return;
-    if (newPwd !== confirmPwd) { showToast('Yangi parollar mos kelmadi', 'error'); return; }
-    if (newPwd.length < 6) { showToast('Parol kamida 6 ta belgi bo\'lishi kerak', 'error'); return; }
+    if (newPwd !== confirmPwd) { showToast('The new passwords did not match.', 'error'); return; }
+    if (newPwd.length < 6) { showToast('The password must be at least 6 characters long.', 'error'); return; }
     setPwdSaving(true);
     try {
       await api.post('/api/v2/auth/change-password', { newPassword: newPwd });
       setOldPwd(''); setNewPwd(''); setConfirmPwd('');
-      showToast('Parol muvaffaqiyatli o\'zgartirildi!', 'success');
+      showToast('Password successfully changed!', 'success');
     } catch (e: any) {
-      showToast(e?.message ?? 'Parol o\'zgartirilmadi', 'error');
+      showToast(e?.message ?? 'Password was not changed', 'error');
     } finally {
       setPwdSaving(false);
     }
@@ -471,7 +471,7 @@ export default function ProfilePage() {
           </SectionCard>
 
           {/* ── Password ──────────────────────────────── */}
-          <SectionCard title="Parolni Yangilash" icon={Lock} collapsible>
+          <SectionCard title="Reset Password" icon={Lock} collapsible>
             <div className="pt-5 space-y-4">
               {/* Old password */}
               <div className="relative">

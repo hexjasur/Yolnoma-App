@@ -1,5 +1,5 @@
 # ============================================
-# Yolnoma Desktop Utility App
+# Yolnoma: Desktop Ultimate Utility App
 # Author: Jasurbek Haydarov
 # Backend: Rust + Tauri v2
 # ============================================
@@ -7,7 +7,7 @@
 
 [package]
 name = "yolnoma-app"
-version = "0.6.5"
+version = "0.6.7"
 description = "Yolnoma Desktop Utility App"
 authors = ["Jasurbek Haydarov"]
 edition = "2021"

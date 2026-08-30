@@ -283,7 +283,7 @@ export default function PerformanceDetailPage() {
               </p>
               {item.updated_at && item.updated_at !== item.created_at && (
                 <p className="text-white/70 mt-1">
-                  Yangilandi: <span className="text-[#F2EDE6]">{formatTimestamp(item.updated_at)}</span>
+                  Updated: <span className="text-[#F2EDE6]">{formatTimestamp(item.updated_at)}</span>
                 </p>
               )}
             </div>

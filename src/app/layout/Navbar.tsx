@@ -79,7 +79,7 @@ export default function Navbar() {
           onClick={handleRefresh}
           className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] active:bg-white/[0.1] transition-all"
           title="Reload the page"
-          aria-label="Yangilash"
+          aria-label="Refresh"
         >
           <RotateCw size={14} strokeWidth={2} />
         </button>

@@ -16,30 +16,30 @@ fn ping() -> String {
     "pong".to_string()
 }
 
-/// Barcha idlingni to'xtatib dasturdan chiqish
+/// Stop all idle processes and exit the program.
 #[tauri::command]
 async fn exit_app(
     state: tauri::State<'_, steam_idler::IdlingState>,
     app: tauri::AppHandle,
 ) -> Result<(), String> {
-    // Barcha idling jarayonlarini to'xtatamiz
+    // Stop all idling processes
     let mut processes = state.processes.lock().await;
     for (_, mut h) in processes.drain() {
         let _ = h.child.kill().await;
     }
     drop(processes);
-    // Dasturdan chiqamiz
+    // Exiting the program
     app.exit(0);
     Ok(())
 }
 
-/// Oynani yashirish (minimize to tray)
+/// Hide window (minimize to tray)
 #[tauri::command]
 fn hide_window(window: tauri::WebviewWindow) -> Result<(), String> {
     window.hide().map_err(|e| e.to_string())
 }
 
-/// Idling holatini tekshirish (tray tooltip uchun)
+/// Check idle state (for tray tooltip)
 #[tauri::command]
 async fn get_idling_count(
     state: tauri::State<'_, steam_idler::IdlingState>,
@@ -174,10 +174,12 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // X tugmasi bosilganda oynani avtomatik trayga yashiramiz (faqat tray menu 'Exit' dan to'liq chiqadi)
+            // The main window is hidden to the tray when 'X' is clicked, while secondary (tab/popup) windows are fully closed.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -187,6 +189,7 @@ pub fn run() {
             get_idling_count,
             commands::proxy_request,
             commands::proxy_eporner,
+            commands::open_in_new_window,
             // ── Plugins System ──
             commands::list_local_plugins,
             commands::read_plugin_source,

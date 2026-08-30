@@ -209,7 +209,7 @@ export default function CurrencyConverterPage() {
             <span className="inline-flex items-center gap-1">
               <Clock size={12} />
               {conversion?.lastUpdated
-                ? `Reflesh: ${conversion.lastUpdated}`
+                ? `Refresh: ${conversion.lastUpdated}`
                 : 'Official Reference Course'}
             </span>
           </div>

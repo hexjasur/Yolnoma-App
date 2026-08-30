@@ -191,7 +191,7 @@ export default function HomePage() {
       {/* ── 2. QUICK TOOLS SHORTCUTS ── */}
       <section className="space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40">
-          Asosiy Vositalar
+          Tools
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link

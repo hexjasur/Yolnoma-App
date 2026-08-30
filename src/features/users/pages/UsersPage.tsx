@@ -51,10 +51,10 @@ export default function UsersPage() {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole as any } : u))
       );
-      setSuccessMsg('Foydalanuvchi roli yangilandi!');
+      setSuccessMsg('User role updated!');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setError(err?.message || 'Rolni o\'zgartirishda xatolik yuz berdi.');
+      setError(err?.message || 'An error occurred while changing the role.');
     } finally {
       setUpdatingId(null);
     }
@@ -104,7 +104,7 @@ export default function UsersPage() {
 
         <Button variant="ghost" onClick={fetchUsers} disabled={loading} className="gap-2">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Yangilash
+          Refresh
         </Button>
       </header>
 

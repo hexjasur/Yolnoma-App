@@ -237,7 +237,7 @@ pub async fn start_idling(
     let desired: HashSet<u32> = targets.iter().map(|t| t.app_id).collect();
     let mut processes = state.processes.lock().await;
 
-    // Kerak bo'lmagan jarayonlarni to'xtatamiz
+    // Stop unnecessary processes.
     let to_remove: Vec<u32> = processes.keys()
         .filter(|id| !desired.contains(*id))
         .copied()
@@ -250,10 +250,10 @@ pub async fn start_idling(
 
     let mut failed = Vec::new();
 
-    // Yangi o'yinlarni ishga tushiramiz
+    // Launching new games.
     for target in &targets {
         if processes.contains_key(&target.app_id) {
-            continue; // allaqachon ishlayapti
+            continue; // It is already working.
         }
 
         match spawn_idle(&exe, target).await {

@@ -156,3 +156,70 @@ pub async fn read_plugin_source(file_path: String) -> Result<String, String> {
 
     std::fs::read_to_string(path).map_err(|e| format!("Failed to read plugin source: {}", e))
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AddTabPayload {
+    pub url: String,
+    pub title: String,
+}
+
+#[tauri::command]
+pub async fn open_in_new_window(
+    app: tauri::AppHandle,
+    url: String,
+    title: Option<String>,
+) -> Result<(), String> {
+    use tauri::{Emitter, Manager};
+
+    let clean_url = url.trim();
+    if clean_url.is_empty() {
+        return Err("URL cannot be empty".to_string());
+    }
+
+    // Process hash route or local app route
+    let hash_path = if let Some(stripped) = clean_url.strip_prefix("yolnoma://app/") {
+        format!("#/{}", stripped)
+    } else if let Some(stripped) = clean_url.strip_prefix("yolnoma://") {
+        format!("#/{}", stripped)
+    } else if let Some(idx) = clean_url.find('#') {
+        clean_url[idx..].to_string()
+    } else if clean_url.starts_with('/') {
+        format!("#{}", clean_url)
+    } else {
+        format!("#/{}", clean_url)
+    };
+
+    let tab_window_label = "tabs-window";
+
+    // If the tabs window is already open, bring it to front and dispatch the new tab event
+    if let Some(tab_win) = app.get_webview_window(tab_window_label) {
+        let _ = tab_win.show();
+        let _ = tab_win.unminimize();
+        let _ = tab_win.set_focus();
+
+        let payload = AddTabPayload {
+            url: hash_path,
+            title: title.unwrap_or_default(),
+        };
+
+        let _ = app.emit_to(tab_window_label, "add-new-tab", payload);
+    } else {
+        // Create the unified Tab Window
+        let target_app_path = format!("index.html{}", hash_path);
+        let webview_url = tauri::WebviewUrl::App(target_app_path.into());
+
+        let builder = tauri::WebviewWindowBuilder::new(&app, tab_window_label, webview_url)
+            .title("Yolnoma")
+            .inner_size(1150.0, 750.0)
+            .min_inner_size(800.0, 500.0)
+            .center()
+            .decorations(true)
+            .resizable(true);
+
+        builder.build().map_err(|e| format!("Failed to create tabs window: {}", e))?;
+    }
+
+    Ok(())
+}
+
+
