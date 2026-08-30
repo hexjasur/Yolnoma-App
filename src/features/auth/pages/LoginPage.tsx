@@ -48,6 +48,14 @@ export default function LoginPage() {
     let cleanCode = code.trim();
     if (!cleanCode) return;
 
+    // Check if the input is a session-limit deep link or temp_code
+    if (cleanCode.includes('temp_code=') || cleanCode.includes('session-limit')) {
+      const match = cleanCode.match(/[?&]temp_code=([^&#]+)/);
+      const tempCode = match && match[1] ? decodeURIComponent(match[1]) : cleanCode;
+      navigate('/session-limit', { state: { tempCode } });
+      return;
+    }
+
     // Extract code if user or deep link passed full URL (e.g. yolnoma://auth?code=XXXX)
     if (cleanCode.includes('code=')) {
       const match = cleanCode.match(/[?&]code=([^&#]+)/);
@@ -117,22 +125,35 @@ export default function LoginPage() {
     }
   };
 
-  // Listen for deep link event from Tauri ("yolnoma://auth?code=XXXX")
+  // Listen for deep link events from Tauri
   useEffect(() => {
-    let unlisten: (() => void) | null = null;
+    let unlistenAuth: (() => void) | null = null;
+    let unlistenSessionLimit: (() => void) | null = null;
 
+    // Normal auth deep link: yolnoma://auth?code=XXXX
     listen<string>('auth-code-received', (event) => {
       if (event.payload) {
         handleExchangeCode(event.payload);
       }
     }).then((fn) => {
-      unlisten = fn;
+      unlistenAuth = fn;
+    });
+
+    // Session limit deep link: yolnoma://session-limit?temp_code=XXXX
+    listen<string>('session-limit-reached', (event) => {
+      if (event.payload) {
+        setIsWaitingForBrowser(false);
+        navigate('/session-limit', { state: { tempCode: event.payload } });
+      }
+    }).then((fn) => {
+      unlistenSessionLimit = fn;
     });
 
     return () => {
-      if (unlisten) unlisten();
+      if (unlistenAuth) unlistenAuth();
+      if (unlistenSessionLimit) unlistenSessionLimit();
     };
-  }, []);
+  }, [navigate]);
 
   const handleStartGoogleSignIn = async () => {
     setError('');

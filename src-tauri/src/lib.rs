@@ -48,6 +48,28 @@ async fn get_idling_count(
     Ok(processes.len())
 }
 
+/// Dispatch a parsed `yolnoma://` URL to the appropriate Tauri event.
+///
+/// | URL host        | Emitted event          | Payload             |
+/// |-----------------|------------------------|---------------------|
+/// | `auth`          | `auth-code-received`   | one-time code       |
+/// | `session-limit` | `session-limit-reached`| temp_code           |
+fn handle_yolnoma_url(app: &tauri::AppHandle, url: &url::Url) {
+    match url.host_str().unwrap_or("") {
+        "auth" => {
+            if let Some((_, code)) = url.query_pairs().find(|(k, _)| k == "code") {
+                let _ = app.emit("auth-code-received", code.to_string());
+            }
+        }
+        "session-limit" => {
+            if let Some((_, temp_code)) = url.query_pairs().find(|(k, _)| k == "temp_code") {
+                let _ = app.emit("session-limit-reached", temp_code.to_string());
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -67,9 +89,7 @@ pub fn run() {
             for arg in args {
                 if arg.starts_with("yolnoma://") {
                     if let Ok(parsed_url) = url::Url::parse(&arg) {
-                        if let Some((_, code)) = parsed_url.query_pairs().find(|(k, _)| k == "code") {
-                            let _ = app.emit("auth-code-received", code.to_string());
-                        }
+                        handle_yolnoma_url(app, &parsed_url);
                     }
                 }
             }
@@ -86,9 +106,7 @@ pub fn run() {
             app.deep_link().on_open_url(move |event| {
                 for parsed_url in event.urls() {
                     if parsed_url.scheme() == "yolnoma" {
-                        if let Some((_, code)) = parsed_url.query_pairs().find(|(k, _)| k == "code") {
-                            let _ = handle.emit("auth-code-received", code.to_string());
-                        }
+                        handle_yolnoma_url(&handle, &parsed_url);
                     }
                 }
             });

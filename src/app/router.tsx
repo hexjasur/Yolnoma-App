@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/app/layout/Layout';
 import ProtectedLayout from '@/app/layout/ProtectedLayout';
 import LoginPage from '@/features/auth/pages/LoginPage';
+import SessionManagementPage from '@/features/auth/pages/SessionManagementPage';
 import ProfilePage from '@/features/account/pages/ProfilePage';
 import SettingsPage from '@/features/account/pages/SettingsPage';
 import BackgroundRemoverPage from '@/features/background-remover/pages/BackgroundRemoverPage';
@@ -24,6 +25,7 @@ export default function AppRoutes() {
       <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/session-limit" element={<SessionManagementPage />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedLayout />}>
