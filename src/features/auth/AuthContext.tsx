@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '@/shared/api/http';
 import { clearAuthSession } from '@/shared/lib/authSession';
 import { isUnauthorizedError, reportError } from '@/shared/lib/errors';
@@ -8,6 +8,12 @@ export interface UserProfile {
   id: string;
   email: string;
   role: string;
+  // camelCase (canonical — matches backend DTO)
+  displayName?: string;
+  avatarUrl?: string;
+  thumbnailUrl?: string;
+  isPrivate?: boolean;
+  // snake_case aliases kept for backward compatibility during migration
   display_name?: string;
   avatar_url?: string;
   thumbnail_url?: string;
@@ -51,14 +57,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const res = await api.get('/api/v2/auth/me');
           const rawUser = res?.data?.user || res?.user || res;
           if (rawUser && (rawUser.id || rawUser._id)) {
+            // Support both camelCase (new DTO) and snake_case (legacy) fields
+            const displayName = rawUser.displayName || rawUser.display_name || rawUser.name || null;
+            const avatarUrl = rawUser.avatarUrl || rawUser.avatar_url || rawUser.avatar || rawUser.picture || null;
+            const thumbnailUrl = rawUser.thumbnailUrl || rawUser.thumbnail_url || null;
+            const isPrivate = rawUser.isPrivate ?? rawUser.is_private ?? false;
+
             const formattedUser: UserProfile = {
               id: rawUser.id || rawUser._id,
               email: rawUser.email,
               role: rawUser.role || 'user',
-              display_name: rawUser.name || rawUser.display_name || rawUser.displayName,
-              avatar_url: rawUser.avatar || rawUser.avatar_url || rawUser.picture,
-              thumbnail_url: rawUser.thumbnail_url,
-              is_private: rawUser.is_private ?? false,
+              // camelCase (canonical)
+              displayName: displayName ?? undefined,
+              avatarUrl: avatarUrl ?? undefined,
+              thumbnailUrl: thumbnailUrl ?? undefined,
+              isPrivate,
+              // snake_case aliases for backward compat
+              display_name: displayName ?? undefined,
+              avatar_url: avatarUrl ?? undefined,
+              thumbnail_url: thumbnailUrl ?? undefined,
+              is_private: isPrivate,
             };
             setUser(formattedUser);
             setIsAuthenticated(true);

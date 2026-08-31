@@ -7,6 +7,7 @@ import SessionManagementPage from '@/features/auth/pages/SessionManagementPage';
 import ProfilePage from '@/features/account/pages/ProfilePage';
 import SettingsPage from '@/features/account/pages/SettingsPage';
 import BackgroundRemoverPage from '@/features/background-remover/pages/BackgroundRemoverPage';
+import MarketplacePage from '@/features/marketplace/pages/MarketplacePage';
 import CurrencyConverterPage from '@/features/currency/pages/CurrencyConverterPage';
 import DashboardPage from '@/features/dashboard/pages/DashboardPage';
 import PerformanceDetailPage from '@/features/performance/pages/PerformanceDetailPage';
@@ -31,7 +32,7 @@ export default function AppRoutes() {
           <Route element={<ProtectedLayout />}>
             <Route element={<Layout />}>
               <Route path="/" element={<DashboardPage />} />
-              <Route path="/tools" element={<CurrencyConverterPage />} />
+              <Route path="/marketplace" element={<MarketplacePage />} />
               <Route path="/tools/currency" element={<CurrencyConverterPage />} />
               <Route path="/tools/bg-remover" element={<BackgroundRemoverPage />} />
               <Route path="/tools/steam-idler" element={<SteamIdlerPage />} />

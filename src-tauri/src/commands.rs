@@ -45,6 +45,7 @@ pub async fn proxy_request(
     let mut req = match method.to_uppercase().as_str() {
         "POST" => client.post(&url),
         "PUT" => client.put(&url),
+        "PATCH" => client.patch(&url),
         "DELETE" => client.delete(&url),
         _ => client.get(&url),
     };

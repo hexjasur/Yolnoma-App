@@ -145,7 +145,7 @@ export default function Navbar() {
 
         <button
           type="button"
-          onClick={() => navigate('/profile')}
+          onClick={() => navigate('/settings')}
           className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
           title="Profile and Settings"
         >

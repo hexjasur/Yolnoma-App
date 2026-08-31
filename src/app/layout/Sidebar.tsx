@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
-import { LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser, Gamepad2, Coins, Blocks } from 'lucide-react';
+import { LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser, Gamepad2, Coins, Blocks, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
 import { usePluginNavigation } from '@/plugins';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
+
+  { to: '/performances', label: 'Performance', icon: Drama, name: 'performances' },
+  { to: '/videos', label: 'Stream', icon: Film, name: 'videos' },
+
   { to: '/tools/currency', label: 'Currency Converter', icon: Coins, name: 'currency' },
   { to: '/tools/bg-remover', label: 'Background remover', icon: LayoutGrid, name: 'bg-remover' },
   { to: '/tools/steam-idler', label: 'Steam Idler', icon: Gamepad2, name: 'steam-idler' },
-  { to: '/performances', label: 'Performance', icon: Drama, name: 'performances' },
-  { to: '/videos', label: 'Stream', icon: Film, name: 'videos' },
+
   { to: '/users', label: 'Users', icon: Users, name: 'users' },
   { to: '/profile', label: 'Profile', icon: CircleUser, name: 'profile' },
   { to: '/settings', label: 'Settings', icon: Settings, name: 'settings' },
+
+  { to: '/marketplace', label: 'Marketplace', icon: ShoppingCart, name: 'marketplace' }
 ];
 
 export default function Sidebar() {
