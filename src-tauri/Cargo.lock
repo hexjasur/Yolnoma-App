@@ -6163,8 +6163,9 @@ dependencies = [
 
 [[package]]
 name = "yolnoma-app"
-version = "0.6.7"
+version = "0.6.9"
 dependencies = [
+ "base64 0.22.1",
  "bcrypt",
  "bson",
  "dirs",
@@ -6185,6 +6186,7 @@ dependencies = [
  "tauri-plugin-window-state",
  "tokio",
  "url",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

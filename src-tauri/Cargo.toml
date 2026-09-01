@@ -7,7 +7,7 @@
 
 [package]
 name = "yolnoma-app"
-version = "0.6.8"
+version = "0.6.9"
 description = "Yolnoma Desktop Utility App"
 authors = ["Jasurbek Haydarov"]
 edition = "2021"
@@ -46,6 +46,14 @@ sysinfo = "0.30"
 regex = "1"
 steamlocate = "2"
 dirs = "6.0.0"
+base64 = "0.22"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+] }
 
 [profile.dev]
 codegen-units = 1

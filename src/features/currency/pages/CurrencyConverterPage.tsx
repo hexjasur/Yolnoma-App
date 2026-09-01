@@ -305,9 +305,9 @@ export default function CurrencyConverterPage() {
             <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
               <div>
                 <h3 className="text-base font-semibold text-white">
-                  {modalType === 'from' ? 'Chiqish valyutasini tanlang' : 'Qabul valyutasini tanlang'}
+                  {modalType === 'from' ? 'Exit valyutasini tanlang' : 'Select the receiving currency'}
                 </h3>
-                <p className="text-xs text-white/40">160+ dan ortiq global valyutalar</p>
+                <p className="text-xs text-white/40">Over 160+ global currencies</p>
               </div>
               <button
                 onClick={() => {
@@ -326,7 +326,7 @@ export default function CurrencyConverterPage() {
               <input
                 type="text"
                 autoFocus
-                placeholder="Currency name, kodi yoki belgisi bo'yicha qidiring…"
+                placeholder="Search by currency name, code, or symbol…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-[var(--accent)] transition-colors"

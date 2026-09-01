@@ -1,16 +1,18 @@
-// ===== ROLES =====
+﻿// ===== ROLES =====
 export const ROLES = {
   OWNER: 'owner',
   ADMIN: 'admin',
+  TESTER: 'tester',
   USER: 'user',
 };
 
 // ===== ROLE PERMISSIONS =====
 // List of pages/features each role can access
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
-  [ROLES.OWNER]: ['dashboard', 'currency', 'bg-remover', 'steam-idler', 'performances', 'videos', 'users', 'settings', 'profile'],
-  [ROLES.ADMIN]: ['dashboard', 'currency', 'bg-remover', 'steam-idler', 'videos', 'users', 'settings', 'profile'],
-  [ROLES.USER]:  ['dashboard', 'currency', 'bg-remover', 'videos', 'settings', 'profile'],
+  [ROLES.OWNER]: ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'performances', 'videos', 'users', 'settings', 'profile'],
+  [ROLES.ADMIN]: ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'users', 'settings', 'profile'],
+  [ROLES.TESTER]: ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'settings', 'profile'],
+  [ROLES.USER]:  ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'settings', 'profile'],
 };
 
 // ===== PAGE ROLES (auto-generated from ROLE_PERMISSIONS) =====

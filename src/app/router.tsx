@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route } from 'react-router-dom';
+﻿import { HashRouter, Routes, Route } from 'react-router-dom';
 
 import Layout from '@/app/layout/Layout';
 import ProtectedLayout from '@/app/layout/ProtectedLayout';
@@ -13,10 +13,13 @@ import DashboardPage from '@/features/dashboard/pages/DashboardPage';
 import PerformanceDetailPage from '@/features/performance/pages/PerformanceDetailPage';
 import PerformancePage from '@/features/performance/pages/PerformancePage';
 import SteamIdlerPage from '@/features/steam-idler/pages/SteamIdlerPage';
+import SteamSamPage from '@/features/steam-sam/pages/SteamSamPage';
 import UsersPage from '@/features/users/pages/UsersPage';
 import VideoDetailPage from '@/features/videos/pages/VideoDetailPage';
 import VideosPage from '@/features/videos/pages/VideosPage';
 import { usePluginRoutes } from '@/plugins';
+import CleanerPage from '@/features/cleaner/pages/CleanerPage';
+import DevelopmentGuard from '@/shared/ui/DevelopmentGuard';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -32,10 +35,30 @@ export default function AppRoutes() {
           <Route element={<ProtectedLayout />}>
             <Route element={<Layout />}>
               <Route path="/" element={<DashboardPage />} />
-              <Route path="/marketplace" element={<MarketplacePage />} />
+
+              {/* IN-DEVELOPMENT PROTECTED ROUTES */}
+              <Route
+                path="/marketplace"
+                element={
+                  <DevelopmentGuard featureName="marketplace">
+                    <MarketplacePage />
+                  </DevelopmentGuard>
+                }
+              />
+              <Route
+                path="/tools/steam/sam"
+                element={
+                  <DevelopmentGuard featureName="steam-sam">
+                    <SteamSamPage />
+                  </DevelopmentGuard>
+                }
+              />
+
+              {/* STABLE TOOLS */}
               <Route path="/tools/currency" element={<CurrencyConverterPage />} />
               <Route path="/tools/bg-remover" element={<BackgroundRemoverPage />} />
-              <Route path="/tools/steam-idler" element={<SteamIdlerPage />} />
+              <Route path='/tools/cleaner' element={<CleanerPage />}/>
+              <Route path="/tools/steam/steam-idler" element={<SteamIdlerPage />} />
 
               {/* PERFORMANCE ROUTES */}
               <Route path="/performances" element={<PerformancePage />} />

@@ -3,6 +3,7 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 mod commands;
+mod cleaner;
 mod embedded_api_key;
 mod steam_idler;
 mod system_monitor;
@@ -195,6 +196,8 @@ pub fn run() {
             commands::read_plugin_source,
             // ── System Monitoring ──
             system_monitor::get_system_stats,
+            // ── Cleaner ──
+            cleaner::run_cleaner,
             // ── Steam Idler ──
             steam_idler::steam_is_running,
             steam_idler::get_steam_accounts,

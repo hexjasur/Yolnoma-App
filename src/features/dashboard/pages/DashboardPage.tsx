@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -15,6 +15,7 @@ import {
 import { usePerformances } from '@/features/performance/hooks/usePerformances';
 import { useSystemStats } from '@/features/system-monitor/hooks/useSystemStats';
 import { useAuth } from '@/features/auth/AuthContext';
+import { handleDevFeatureClick } from '@/config/features';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -196,6 +197,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link
             to="/tools/currency"
+            onClick={(e) => handleDevFeatureClick(e, 'currency', user?.role)}
             className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center justify-between shadow-lg"
           >
             <div className="flex items-center gap-3.5">
@@ -214,6 +216,7 @@ export default function HomePage() {
 
           <Link
             to="/tools/bg-remover"
+            onClick={(e) => handleDevFeatureClick(e, 'bg-remover', user?.role)}
             className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center justify-between shadow-lg"
           >
             <div className="flex items-center gap-3.5">
@@ -231,7 +234,8 @@ export default function HomePage() {
           </Link>
 
           <Link
-            to="/tools/steam-idler"
+            to="/tools/steam/steam-idler"
+            onClick={(e) => handleDevFeatureClick(e, 'steam-idler', user?.role)}
             className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center justify-between shadow-lg"
           >
             <div className="flex items-center gap-3.5">
