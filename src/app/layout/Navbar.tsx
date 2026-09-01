@@ -45,8 +45,6 @@ export default function Navbar() {
     window.location.reload();
   };
 
-  const isOwner = user?.role === 'owner';
-
   return (
     <header
       className="h-14 shrink-0 border-b px-4 sm:px-6 flex items-center justify-between gap-4 select-none relative z-20 backdrop-blur-md bg-[#14110E]/85"
@@ -132,13 +130,22 @@ export default function Navbar() {
       {/* Right: Role & Status */}
       <div className="flex items-center gap-3 shrink-0">
         {/* Role Badge */}
-        {isOwner ? (
+        {user?.role === 'owner' ? (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#D97757]/15 border border-[#D97757]/30 text-[#D97757] text-xs font-semibold">
             <ShieldCheck size={13} strokeWidth={2.5} />
             <span>OWNER</span>
           </div>
+        ) : user?.role === 'admin' ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+            <ShieldCheck size={13} strokeWidth={2.5} />
+            <span>ADMIN</span>
+          </div>
+        ) : user?.role === 'tester' ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+            <span>TESTER</span>
+          </div>
         ) : (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/60 text-xs">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/60 text-xs font-medium">
             <span>USER</span>
           </div>
         )}

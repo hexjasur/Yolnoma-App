@@ -1,4 +1,4 @@
-﻿import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 
 import Layout from '@/app/layout/Layout';
 import ProtectedLayout from '@/app/layout/ProtectedLayout';
@@ -20,6 +20,7 @@ import VideosPage from '@/features/videos/pages/VideosPage';
 import { usePluginRoutes } from '@/plugins';
 import CleanerPage from '@/features/cleaner/pages/CleanerPage';
 import DevelopmentGuard from '@/shared/ui/DevelopmentGuard';
+import RoleGuard from '@/shared/ui/RoleGuard';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -60,16 +61,51 @@ export default function AppRoutes() {
               <Route path='/tools/cleaner' element={<CleanerPage />}/>
               <Route path="/tools/steam/steam-idler" element={<SteamIdlerPage />} />
 
-              {/* PERFORMANCE ROUTES */}
-              <Route path="/performances" element={<PerformancePage />} />
-              <Route path="/performances/:id" element={<PerformanceDetailPage />} />
+              {/* PERFORMANCE ROUTES — Owner only */}
+              <Route
+                path="/performances"
+                element={
+                  <RoleGuard page="performances" message="Access restricted: Performances section is available to Owner only.">
+                    <PerformancePage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/performances/:id"
+                element={
+                  <RoleGuard page="performances" message="Access restricted: Performances section is available to Owner only.">
+                    <PerformanceDetailPage />
+                  </RoleGuard>
+                }
+              />
 
-              {/* VIDEO ROUTES */}
-              <Route path="/videos" element={<VideosPage />} />
-              <Route path="/videos/:videoId" element={<VideoDetailPage />} />
+              {/* VIDEO ROUTES — Owner only */}
+              <Route
+                path="/videos"
+                element={
+                  <RoleGuard page="videos" message="Access restricted: Stream section is available to Owner only.">
+                    <VideosPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/videos/:videoId"
+                element={
+                  <RoleGuard page="videos" message="Access restricted: Stream section is available to Owner only.">
+                    <VideoDetailPage />
+                  </RoleGuard>
+                }
+              />
 
-              {/* USERS ROUTES */}
-              <Route path="/users" element={<UsersPage />} />
+              {/* USERS ROUTES — Owner & Admin only */}
+              <Route
+                path="/users"
+                element={
+                  <RoleGuard page="users" message="You do not have permission to access the Users management page.">
+                    <UsersPage />
+                  </RoleGuard>
+                }
+              />
 
               {/* PROFILE & SETTINGS ROUTES */}
               <Route path="/profile" element={<ProfilePage />} />

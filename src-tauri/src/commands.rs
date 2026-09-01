@@ -205,9 +205,20 @@ pub async fn open_in_new_window(
 
         let _ = app.emit_to(tab_window_label, "add-new-tab", payload);
     } else {
-        // Create the unified Tab Window
-        let target_app_path = format!("index.html{}", hash_path);
-        let webview_url = tauri::WebviewUrl::App(target_app_path.into());
+        // Create the unified Tab Window with the exact same base origin as the main window
+        // so that localStorage, cookies, and authentication state are 100% shared.
+        let webview_url = if let Some(main_win) = app.get_webview_window("main") {
+            if let Ok(main_url) = main_win.url() {
+                let mut target_url = main_url.clone();
+                let hash_clean = hash_path.trim_start_matches('#');
+                target_url.set_fragment(Some(hash_clean));
+                tauri::WebviewUrl::External(target_url)
+            } else {
+                tauri::WebviewUrl::App(format!("index.html{}", hash_path).into())
+            }
+        } else {
+            tauri::WebviewUrl::App(format!("index.html{}", hash_path).into())
+        };
 
         let builder = tauri::WebviewWindowBuilder::new(&app, tab_window_label, webview_url)
             .title("Yolnoma")

@@ -17,7 +17,7 @@ interface UserItem {
   avatarUrl?: string | null;
   thumbnailUrl?: string | null;
   isPrivate?: boolean;
-  role: 'owner' | 'admin' | 'user';
+  role: 'owner' | 'admin' | 'tester' | 'user';
   createdAt?: string;
   lastSignInAt?: string;
 }
@@ -34,7 +34,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  const [editRole, setEditRole] = useState<'owner' | 'admin' | 'user'>('user');
+  const [editRole, setEditRole] = useState<'owner' | 'admin' | 'tester' | 'user'>('user');
   const [editIsPrivate, setEditIsPrivate] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -160,6 +160,13 @@ export default function UsersPage() {
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <Shield size={12} />
             Admin
+          </span>
+        );
+      case 'tester':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Shield size={12} />
+            Tester
           </span>
         );
       default:
@@ -316,15 +323,17 @@ export default function UsersPage() {
 
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Edit Button */}
-                        <button
-                          onClick={() => openEditModal(u)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-white/80 border border-white/10 hover:border-white/25 hover:bg-white/[0.08] transition-all inline-flex items-center gap-1.5"
-                          title="Tahrirlash"
-                        >
-                          <Edit2 size={12} className="text-[var(--accent)]" />
-                          <span>Tahrirlash</span>
-                        </button>
+                        {/* Edit Button — Owner can edit anyone; Admin can only edit users/testers and self */}
+                        {(isOwner || isSelf || (currentUser?.role === 'admin' && u.role !== 'owner' && u.role !== 'admin')) && (
+                          <button
+                            onClick={() => openEditModal(u)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-white/80 border border-white/10 hover:border-white/25 hover:bg-white/[0.08] transition-all inline-flex items-center gap-1.5"
+                            title="Tahrirlash"
+                          >
+                            <Edit2 size={12} className="text-[var(--accent)]" />
+                            <span>Tahrirlash</span>
+                          </button>
+                        )}
 
                         {/* Delete Button (Owner only, cannot delete self) */}
                         {isOwner && !isSelf && (
@@ -421,6 +430,7 @@ export default function UsersPage() {
               >
                 <option value="owner" className="bg-[#181410] text-white">Owner (Tizim egasi)</option>
                 <option value="admin" className="bg-[#181410] text-white">Admin (Administrator)</option>
+                <option value="tester" className="bg-[#181410] text-white">Tester (Sinov foydalanuvchisi)</option>
                 <option value="user" className="bg-[#181410] text-white">User (Oddiy foydalanuvchi)</option>
               </select>
             </div>
