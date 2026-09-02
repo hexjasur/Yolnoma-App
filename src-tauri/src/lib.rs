@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+﻿use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
@@ -198,7 +198,7 @@ pub fn run() {
             system_monitor::get_system_stats,
             // ── Cleaner ──
             cleaner::run_cleaner,
-            // ── Steam Idler ──
+            // ── Steam Idler & SAM ──
             steam_idler::steam_is_running,
             steam_idler::get_steam_accounts,
             steam_idler::get_steam_games,
@@ -206,6 +206,12 @@ pub fn run() {
             steam_idler::stop_idling,
             steam_idler::stop_all_idling,
             steam_idler::get_idle_state,
+            steam_idler::get_achievement_data,
+            steam_idler::set_achievement,
+            steam_idler::unlock_all_achievements,
+            steam_idler::lock_all_achievements,
+            steam_idler::update_stats,
+            steam_idler::reset_all_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

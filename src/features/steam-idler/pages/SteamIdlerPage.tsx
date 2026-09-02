@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Gamepad2, Play, Square, StopCircle, RefreshCw,
   AlertTriangle, Wifi, WifiOff, Users, Star, Clock,
-  ChevronRight, Loader2,
+  ChevronRight, Loader2, Trophy, Flame
 } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────────────────
-// TYPES & INTERFACES — Data shapes
+// TYPES & INTERFACES
 // ────────────────────────────────────────────────────────────────────────────
 
 interface SteamUser {
@@ -33,13 +34,15 @@ interface GamesCache {
   timestamp: number;
 }
 
+type Tab = 'favorites' | 'idling' | 'all';
+
 // ────────────────────────────────────────────────────────────────────────────
-// CACHE LAYER — LocalStorage management for game lists
+// CACHE & STORAGE
 // ────────────────────────────────────────────────────────────────────────────
 
 const CACHE_KEY = 'yolnoma_steam_games_cache';
 const FAVORITES_KEY = 'yolnoma_steam_favorites';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes before stale
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function getCachedGames(steamId: string): { games: SteamGame[]; age: number } | null {
   try {
@@ -73,12 +76,12 @@ function saveFavorites(ids: Set<number>) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// FORMATTERS — Display helpers
+// FORMATTERS
 // ────────────────────────────────────────────────────────────────────────────
 
 function formatPlaytime(minutes: number): string {
   if (minutes === 0) return '—';
-  if (minutes < 60) return `${minutes}d`;
+  if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
   return `${h}h`;
 }
@@ -92,7 +95,7 @@ function formatElapsed(startMs: number): string {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// GAME CARD COMPONENT — Beautiful game tile with idling state
+// GAME CARD COMPONENT
 // ────────────────────────────────────────────────────────────────────────────
 
 interface GameCardProps {
@@ -103,6 +106,7 @@ interface GameCardProps {
   tick: number;
   onToggleFavorite: (id: number) => void;
   onStop: (id: number) => void;
+  onOpenSam: (id: number) => void;
 }
 
 function GameCard({
@@ -113,9 +117,10 @@ function GameCard({
   tick,
   onToggleFavorite,
   onStop,
+  onOpenSam,
 }: GameCardProps) {
   const [imgError, setImgError] = useState(false);
-  void tick; // Suppress linter warning — used for re-render trigger
+  void tick;
 
   return (
     <div
@@ -137,10 +142,9 @@ function GameCard({
         transition: 'all 0.2s ease',
         position: 'relative',
         boxShadow: isIdling ? '0 4px 16px rgba(34,197,94,0.1)' : 'none',
-        cursor: 'default',
       }}
     >
-      {/* ── Idling Badge with Timer ── */}
+      {/* Idling Badge with Timer */}
       {isIdling && (
         <div
           style={{
@@ -151,10 +155,10 @@ function GameCard({
             background: 'rgba(34,197,94,0.12)',
             border: '1px solid rgba(34,197,94,0.3)',
             borderRadius: 12,
-            padding: '6px 10px',
+            padding: '4px 8px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 3,
+            gap: 2,
             backdropFilter: 'blur(8px)',
           }}
         >
@@ -172,10 +176,9 @@ function GameCard({
             />
             <span
               style={{
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 700,
                 color: '#4ade80',
-                fontFamily: '"Inter", sans-serif',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
               }}
@@ -187,9 +190,8 @@ function GameCard({
             <span
               style={{
                 fontSize: 10,
-                color: 'rgba(74,222,128,0.8)',
+                color: 'rgba(74,222,128,0.9)',
                 fontFamily: '"JetBrains Mono", monospace',
-                letterSpacing: '0.05em',
                 paddingLeft: 11,
               }}
             >
@@ -199,44 +201,66 @@ function GameCard({
         </div>
       )}
 
-      {/* ── Favorite Toggle Button ── */}
-      <button
-        onClick={() => onToggleFavorite(game.appId)}
+      {/* Top Actions: SAM & Favorite */}
+      <div
         style={{
           position: 'absolute',
           top: 8,
           right: 8,
           zIndex: 2,
-          background: isFavorite ? 'rgba(217,119,87,0.2)' : 'rgba(0,0,0,0.35)',
-          border: `1px solid ${
-            isFavorite ? 'rgba(217,119,87,0.4)' : 'rgba(255,255,255,0.1)'
-          }`,
-          borderRadius: 8,
-          width: 34,
-          height: 34,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.15s ease',
-          backdropFilter: 'blur(8px)',
+          gap: 6,
         }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.18)';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
-        }}
-        title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
       >
-        <Star
-          size={15}
-          fill={isFavorite ? '#D97757' : 'none'}
-          color={isFavorite ? '#D97757' : 'rgba(242,237,230,0.45)'}
-        />
-      </button>
+        <button
+          onClick={() => onOpenSam(game.appId)}
+          style={{
+            background: 'rgba(0,0,0,0.45)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 8,
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            backdropFilter: 'blur(8px)',
+            color: '#fbbf24',
+          }}
+          title="Open Achievement Manager (SAM)"
+        >
+          <Trophy size={14} />
+        </button>
 
-      {/* ── Game Cover Image ── */}
+        <button
+          onClick={() => onToggleFavorite(game.appId)}
+          style={{
+            background: isFavorite ? 'rgba(217,119,87,0.25)' : 'rgba(0,0,0,0.45)',
+            border: `1px solid ${
+              isFavorite ? 'rgba(217,119,87,0.5)' : 'rgba(255,255,255,0.12)'
+            }`,
+            borderRadius: 8,
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            backdropFilter: 'blur(8px)',
+          }}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Star
+            size={14}
+            fill={isFavorite ? '#D97757' : 'none'}
+            color={isFavorite ? '#D97757' : 'rgba(242,237,230,0.5)'}
+          />
+        </button>
+      </div>
+
+      {/* Cover Image */}
       <div
         style={{
           height: 100,
@@ -254,7 +278,6 @@ function GameCard({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              transition: 'transform 0.3s ease',
             }}
           />
         ) : (
@@ -273,7 +296,7 @@ function GameCard({
         )}
       </div>
 
-      {/* ── Game Info Section ── */}
+      {/* Info Section */}
       <div
         style={{
           padding: '12px 14px',
@@ -289,17 +312,16 @@ function GameCard({
             fontSize: 13,
             fontWeight: 600,
             color: '#F2EDE6',
-            fontFamily: '"Inter", sans-serif',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             lineHeight: 1.4,
           }}
+          title={game.name}
         >
           {game.name}
         </p>
 
-        {/* ── Playtime + App ID ── */}
         <div
           style={{
             display: 'flex',
@@ -309,36 +331,30 @@ function GameCard({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Clock size={10} color="rgba(242,237,230,0.35)" />
-            <span
-              style={{
-                color: 'rgba(242,237,230,0.4)',
-                fontFamily: '"Inter", sans-serif',
-              }}
-            >
+            <Clock size={11} color="rgba(242,237,230,0.35)" />
+            <span style={{ color: 'rgba(242,237,230,0.5)' }}>
               {formatPlaytime(game.playtimeForever)}
             </span>
           </div>
           <span
             style={{
-              color: 'rgba(242,237,230,0.2)',
+              color: 'rgba(242,237,230,0.25)',
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: 10,
-              letterSpacing: '0.02em',
             }}
           >
             #{game.appId}
           </span>
         </div>
 
-        {/* ── Stop Button (visible when idling) ── */}
+        {/* Action Button: Stop if Idling */}
         {isIdling && (
           <button
             onClick={() => onStop(game.appId)}
             style={{
-              marginTop: 6,
-              background: 'rgba(239,68,68,0.08)',
-              border: '1px solid rgba(239,68,68,0.2)',
+              marginTop: 4,
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.25)',
               borderRadius: 8,
               padding: '6px 10px',
               color: '#f87171',
@@ -349,21 +365,12 @@ function GameCard({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 5,
-              fontFamily: '"Inter", sans-serif',
               transition: 'all 0.15s ease',
               width: '100%',
             }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                'rgba(239,68,68,0.15)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                'rgba(239,68,68,0.08)';
-            }}
           >
             <Square size={11} fill="#f87171" />
-            Stop
+            Stop Idling
           </button>
         )}
       </div>
@@ -372,13 +379,13 @@ function GameCard({
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// MAIN PAGE COMPONENT — Full application state & UI
+// MAIN COMPONENT
 // ────────────────────────────────────────────────────────────────────────────
 
-type Tab = 'all' | 'favorites';
-
 export default function SteamIdlerPage() {
-  // ── UI State
+  const navigate = useNavigate();
+
+  // ── State
   const [steamRunning, setSteamRunning] = useState<boolean | null>(null);
   const [accounts, setAccounts] = useState<SteamUser[]>([]);
   const [selectedSteamId, setSelectedSteamId] = useState('');
@@ -390,7 +397,7 @@ export default function SteamIdlerPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ── Loading States
+  // ── Loading
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -400,21 +407,17 @@ export default function SteamIdlerPage() {
   const [cacheAge, setCacheAge] = useState<number | null>(null);
   const [canRefresh, setCanRefresh] = useState(false);
 
-  // ── Timers (for UI updates)
+  // ── Timers
   const [tick, setTick] = useState(0);
   const idleStartTimesRef = useRef<Map<number, number>>(new Map());
 
-  // ────────────────────────────────────────────────────────────────────────
-  // EFFECT: Render ticker (updates every 1s for elapsed time display)
-  // ────────────────────────────────────────────────────────────────────────
+  // Timer ticker
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // ────────────────────────────────────────────────────────────────────────
-  // EFFECT: Polling Steam status & idling state (3s interval)
-  // ────────────────────────────────────────────────────────────────────────
+  // Polling Steam status & idling processes
   const checkSteam = useCallback(async () => {
     try {
       const running = await invoke<boolean>('steam_is_running');
@@ -430,14 +433,12 @@ export default function SteamIdlerPage() {
       const idSet = new Set(ids);
       const now = Date.now();
 
-      // Track start times for newly idling games
       ids.forEach((id) => {
         if (!idleStartTimesRef.current.has(id)) {
           idleStartTimesRef.current.set(id, now);
         }
       });
 
-      // Clean up games that stopped idling
       for (const id of idleStartTimesRef.current.keys()) {
         if (!idSet.has(id)) {
           idleStartTimesRef.current.delete(id);
@@ -446,7 +447,7 @@ export default function SteamIdlerPage() {
 
       setIdlingIds(idSet);
     } catch {
-      /* Silently fail on polling error */
+      // ignore
     }
   }, []);
 
@@ -460,9 +461,7 @@ export default function SteamIdlerPage() {
     return () => clearInterval(interval);
   }, [checkSteam, refreshIdleState]);
 
-  // ────────────────────────────────────────────────────────────────────────
-  // EFFECT: Cache refresh cooldown (5 minutes between API calls)
-  // ────────────────────────────────────────────────────────────────────────
+  // Cooldown countdown
   useEffect(() => {
     if (secondsLeft <= 0) return;
     const interval = setInterval(() => {
@@ -477,9 +476,7 @@ export default function SteamIdlerPage() {
     return () => clearInterval(interval);
   }, [secondsLeft]);
 
-  // ────────────────────────────────────────────────────────────────────────
-  // EFFECT: Load Steam accounts on mount
-  // ────────────────────────────────────────────────────────────────────────
+  // Load Steam accounts on mount
   useEffect(() => {
     (async () => {
       setAccountsLoading(true);
@@ -496,20 +493,16 @@ export default function SteamIdlerPage() {
     })();
   }, []);
 
-  // ────────────────────────────────────────────────────────────────────────
-  // HANDLER: Load games (from cache or API)
-  // ────────────────────────────────────────────────────────────────────────
+  // Load games from cache or backend
   const loadGames = useCallback(
     async (forceRefresh = false) => {
       if (!selectedSteamId) return;
 
-      // Try cache first (if not forcing refresh)
       if (!forceRefresh) {
         const cached = getCachedGames(selectedSteamId);
         if (cached) {
           setGames(cached.games);
           setCacheAge(cached.age);
-
           const ageMs = cached.age;
           if (ageMs < CACHE_TTL) {
             setCanRefresh(false);
@@ -522,7 +515,6 @@ export default function SteamIdlerPage() {
         }
       }
 
-      // Fetch from backend
       setGamesLoading(true);
       setError(null);
       setCanRefresh(false);
@@ -534,7 +526,7 @@ export default function SteamIdlerPage() {
         setGames(list);
         setCacheAge(0);
         setCachedGames(selectedSteamId, list);
-        setSecondsLeft(300); // 5 min cooldown
+        setSecondsLeft(300);
       } catch (e: unknown) {
         setError(String(e));
         setCanRefresh(true);
@@ -549,9 +541,7 @@ export default function SteamIdlerPage() {
     if (selectedSteamId) loadGames(false);
   }, [selectedSteamId, loadGames]);
 
-  // ────────────────────────────────────────────────────────────────────────
-  // HANDLER: Toggle favorite status
-  // ────────────────────────────────────────────────────────────────────────
+  // Favorites toggle
   const toggleFavorite = (id: number) => {
     setFavorites((prev) => {
       const next = new Set(prev);
@@ -565,9 +555,7 @@ export default function SteamIdlerPage() {
     });
   };
 
-  // ────────────────────────────────────────────────────────────────────────
-  // HANDLER: Start idling all favorited games
-  // ────────────────────────────────────────────────────────────────────────
+  // Start idling favorites
   const startIdling = async () => {
     const targets = games.filter((g) => favorites.has(g.appId));
     if (targets.length === 0) return;
@@ -579,9 +567,7 @@ export default function SteamIdlerPage() {
       setIdlingIds(new Set(result.running));
       await refreshIdleState();
       if (result.failed.length > 0) {
-        setError(
-          `${result.failed.length} games failed to start idling. Is Steam running?`
-        );
+        setError(`${result.failed.length} games failed to start idling. Please make sure Steam is running.`);
       }
     } catch (e: unknown) {
       setError(String(e));
@@ -590,9 +576,6 @@ export default function SteamIdlerPage() {
     }
   };
 
-  // ────────────────────────────────────────────────────────────────────────
-  // HANDLER: Stop idling a single game
-  // ────────────────────────────────────────────────────────────────────────
   const stopOne = async (appId: number) => {
     try {
       await invoke('stop_idling', { appId });
@@ -607,9 +590,6 @@ export default function SteamIdlerPage() {
     }
   };
 
-  // ────────────────────────────────────────────────────────────────────────
-  // HANDLER: Stop all idling
-  // ────────────────────────────────────────────────────────────────────────
   const stopAll = async () => {
     try {
       await invoke('stop_all_idling');
@@ -620,18 +600,20 @@ export default function SteamIdlerPage() {
     }
   };
 
-  // ────────────────────────────────────────────────────────────────────────
-  // COMPUTED: Filtered game list based on tab & search
-  // ────────────────────────────────────────────────────────────────────────
+  const handleOpenSam = (appId: number) => {
+    navigate(`/steam-sam?appId=${appId}`);
+  };
+
+  // Filter games based on current active tab & search query
   const filteredGames = games.filter((g) => {
     const matchSearch = g.name.toLowerCase().includes(search.toLowerCase());
     if (tab === 'favorites') return matchSearch && favorites.has(g.appId);
+    if (tab === 'idling') return matchSearch && idlingIds.has(g.appId);
     return matchSearch;
   });
 
-  // ── Pagination constants
+  // Pagination for "All Games" tab without search
   const GAMES_PER_PAGE = 60;
-  // When searching or on favorites tab, show all matches (no pagination)
   const isPaginated = tab === 'all' && search.trim() === '';
   const totalPages = isPaginated ? Math.ceil(filteredGames.length / GAMES_PER_PAGE) : 1;
   const safePage = Math.max(1, Math.min(currentPage, totalPages || 1));
@@ -641,9 +623,6 @@ export default function SteamIdlerPage() {
 
   const cacheAgeMin = cacheAge !== null ? Math.floor(cacheAge / 60000) : null;
 
-  // ════════════════════════════════════════════════════════════════════════
-  // RENDER
-  // ════════════════════════════════════════════════════════════════════════
   return (
     <div
       style={{
@@ -652,13 +631,10 @@ export default function SteamIdlerPage() {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 0,
       }}
     >
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* HEADER */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      <div style={{ marginBottom: 24 }}>
+      {/* ── HEADER ── */}
+      <div style={{ marginBottom: 20 }}>
         <p
           style={{
             fontSize: 11,
@@ -666,29 +642,28 @@ export default function SteamIdlerPage() {
             textTransform: 'uppercase',
             color: '#D97757',
             fontWeight: 700,
-            marginBottom: 8,
+            margin: '0 0 6px 0',
           }}
         >
-          Tools
+          Steam Toolkit
         </p>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <h1
-            style={{
-              fontFamily: '"Georgia", serif',
-              fontSize: 36,
-              fontWeight: 500,
-              margin: 0,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Steam Idler
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1
+              style={{
+                fontFamily: '"Georgia", serif',
+                fontSize: 32,
+                fontWeight: 500,
+                margin: 0,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Steam Game Idler
+            </h1>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(242,237,230,0.45)' }}>
+              Simulate game hours and manage achievement unlocking seamlessly.
+            </p>
+          </div>
 
           {/* Steam Status Badge */}
           <div
@@ -714,12 +689,12 @@ export default function SteamIdlerPage() {
           >
             {steamRunning ? (
               <>
-                <Wifi size={13} />
+                <Wifi size={14} />
                 Steam Running
               </>
             ) : (
               <>
-                <WifiOff size={13} />
+                <WifiOff size={14} />
                 Steam Offline
               </>
             )}
@@ -727,26 +702,23 @@ export default function SteamIdlerPage() {
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* ERROR BANNER */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ── ERROR BANNER ── */}
       {error && (
         <div
           style={{
             display: 'flex',
             alignItems: 'flex-start',
             gap: 10,
-            background: 'rgba(239,68,68,0.07)',
-            border: '1px solid rgba(239,68,68,0.18)',
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.22)',
             borderRadius: 12,
             padding: '12px 16px',
             marginBottom: 16,
             fontSize: 13,
             color: '#f87171',
-            backdropFilter: 'blur(8px)',
           }}
         >
-          <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
           <span style={{ flex: 1 }}>{error}</span>
           <button
             onClick={() => setError(null)}
@@ -755,7 +727,7 @@ export default function SteamIdlerPage() {
               border: 'none',
               color: '#f87171',
               cursor: 'pointer',
-              fontSize: 15,
+              fontSize: 16,
               padding: 0,
             }}
           >
@@ -764,15 +736,13 @@ export default function SteamIdlerPage() {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* ACCOUNT SELECTOR & REFRESH CONTROLS */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ── ACCOUNT SELECTOR & REFRESH BAR ── */}
       <div
         style={{
           background: '#181410',
           border: '1px solid rgba(242,237,230,0.08)',
           borderRadius: 14,
-          padding: '16px 20px',
+          padding: '14px 18px',
           marginBottom: 16,
           display: 'flex',
           alignItems: 'center',
@@ -780,11 +750,11 @@ export default function SteamIdlerPage() {
           flexWrap: 'wrap',
         }}
       >
-        <Users size={17} color="#D97757" style={{ flexShrink: 0 }} />
+        <Users size={18} color="#D97757" style={{ flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 160 }}>
           <p
             style={{
-              margin: '0 0 6px',
+              margin: '0 0 4px',
               fontSize: 10,
               color: 'rgba(242,237,230,0.3)',
               textTransform: 'uppercase',
@@ -792,15 +762,15 @@ export default function SteamIdlerPage() {
               fontWeight: 600,
             }}
           >
-            Steam Account
+            Active Steam Account
           </p>
           {accountsLoading ? (
             <p style={{ margin: 0, fontSize: 13, color: 'rgba(242,237,230,0.4)' }}>
-              Loading...
+              Detecting accounts...
             </p>
           ) : accounts.length === 0 ? (
             <p style={{ margin: 0, fontSize: 13, color: 'rgba(242,237,230,0.4)' }}>
-              No accounts found
+              No Steam accounts detected on this PC
             </p>
           ) : (
             <select
@@ -808,9 +778,9 @@ export default function SteamIdlerPage() {
               onChange={(e) => setSelectedSteamId(e.target.value)}
               style={{
                 background: '#1B1713',
-                border: '1px solid rgba(242,237,230,0.1)',
+                border: '1px solid rgba(242,237,230,0.12)',
                 borderRadius: 8,
-                padding: '8px 10px',
+                padding: '6px 12px',
                 color: '#F2EDE6',
                 fontSize: 13,
                 cursor: 'pointer',
@@ -820,36 +790,34 @@ export default function SteamIdlerPage() {
             >
               {accounts.map((u) => (
                 <option key={u.steamId} value={u.steamId}>
-                  {u.personaName} {u.mostRecent ? '✓' : ''}
+                  {u.personaName} {u.mostRecent ? '(Active)' : ''}
                 </option>
               ))}
             </select>
           )}
         </div>
 
-        {/* Cache Status Info */}
+        {/* Cache status info */}
         {cacheAgeMin !== null && games.length > 0 && (
           <div
             style={{
               fontSize: 12,
-              color: 'rgba(242,237,230,0.3)',
+              color: 'rgba(242,237,230,0.35)',
               display: 'flex',
               alignItems: 'center',
               gap: 6,
             }}
           >
             <Clock size={12} />
-            {cacheAgeMin === 0
-              ? 'Just updated'
-              : `Updated ${cacheAgeMin} min ago`}
+            {cacheAgeMin === 0 ? 'Just updated' : `Updated ${cacheAgeMin} min ago`}
             {secondsLeft > 0 && (
               <span
                 style={{
-                  background: 'rgba(217,119,87,0.06)',
-                  border: '1px solid rgba(217,119,87,0.15)',
+                  background: 'rgba(217,119,87,0.08)',
+                  border: '1px solid rgba(217,119,87,0.18)',
                   borderRadius: 20,
-                  padding: '2px 10px',
-                  color: 'rgba(217,119,87,0.6)',
+                  padding: '2px 8px',
+                  color: 'rgba(217,119,87,0.7)',
                   fontSize: 11,
                 }}
               >
@@ -858,30 +826,13 @@ export default function SteamIdlerPage() {
                 {secondsLeft % 60})
               </span>
             )}
-            {canRefresh && secondsLeft === 0 && (
-              <span
-                style={{
-                  background: 'rgba(217,119,87,0.12)',
-                  border: '1px solid rgba(217,119,87,0.25)',
-                  borderRadius: 20,
-                  padding: '2px 10px',
-                  color: '#D97757',
-                  fontSize: 11,
-                  animation: 'refreshPulse 2s ease-in-out infinite',
-                }}
-              >
-                Ready to refresh
-              </span>
-            )}
           </div>
         )}
 
-        {/* Refresh Button */}
+        {/* Refresh button */}
         <button
           onClick={() => loadGames(true)}
-          disabled={
-            gamesLoading || !selectedSteamId || secondsLeft > 0
-          }
+          disabled={gamesLoading || !selectedSteamId || secondsLeft > 0}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -896,19 +847,12 @@ export default function SteamIdlerPage() {
                 : 'rgba(242,237,230,0.1)'
             }`,
             borderRadius: 10,
-            padding: '8px 16px',
-            color:
-              canRefresh && secondsLeft === 0
-                ? '#D97757'
-                : 'rgba(242,237,230,0.4)',
+            padding: '7px 15px',
+            color: canRefresh && secondsLeft === 0 ? '#D97757' : 'rgba(242,237,230,0.45)',
             fontSize: 13,
             fontWeight: 500,
-            cursor:
-              gamesLoading || !selectedSteamId || secondsLeft > 0
-                ? 'not-allowed'
-                : 'pointer',
-            opacity:
-              gamesLoading || !selectedSteamId || secondsLeft > 0 ? 0.5 : 1,
+            cursor: gamesLoading || !selectedSteamId || secondsLeft > 0 ? 'not-allowed' : 'pointer',
+            opacity: gamesLoading || !selectedSteamId || secondsLeft > 0 ? 0.5 : 1,
             transition: 'all 0.15s ease',
           }}
         >
@@ -917,42 +861,36 @@ export default function SteamIdlerPage() {
           ) : (
             <RefreshCw size={14} />
           )}
-          {gamesLoading
-            ? 'Loading...'
-            : secondsLeft > 0
-            ? `Locked (${Math.floor(secondsLeft / 60)}:${(secondsLeft % 60) < 10 ? '0' : ''}${secondsLeft % 60})`
-            : 'Refresh'}
+          {gamesLoading ? 'Loading Library...' : 'Refresh'}
         </button>
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* TABS & CONTROLS */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ── 3 TABS: Favorites | Now Idling | All Games ── */}
       <div
         style={{
           display: 'flex',
-          gap: 4,
+          gap: 6,
           borderBottom: '1px solid rgba(242,237,230,0.08)',
           marginBottom: 16,
           alignItems: 'center',
         }}
       >
-        {(
-          [
-            { key: 'all', label: 'All Games', count: games.length },
-            { key: 'favorites', label: 'Favorites & Idling', count: favorites.size },
-          ] as const
-        ).map(({ key, label, count }) => (
+        {[
+          { key: 'favorites', label: 'Favorite Games', count: favorites.size, icon: Star },
+          { key: 'idling', label: 'Now Idling', count: idlingIds.size, icon: Flame },
+          { key: 'all', label: 'All Games', count: games.length, icon: Gamepad2 },
+        ].map(({ key, label, count, icon: TabIcon }) => (
           <button
             key={key}
-            onClick={() => { setTab(key); setCurrentPage(1); }}
+            onClick={() => {
+              setTab(key as Tab);
+              setCurrentPage(1);
+            }}
             style={{
               padding: '10px 16px',
               background: 'none',
               border: 'none',
-              borderBottom: `2px solid ${
-                tab === key ? '#D97757' : 'transparent'
-              }`,
+              borderBottom: `2px solid ${tab === key ? '#D97757' : 'transparent'}`,
               color: tab === key ? '#F2EDE6' : 'rgba(242,237,230,0.4)',
               fontFamily: '"Inter", sans-serif',
               fontSize: 13,
@@ -960,35 +898,26 @@ export default function SteamIdlerPage() {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: 7,
               transition: 'all 0.15s ease',
               marginBottom: -1,
             }}
           >
-            {key === 'favorites' && (
-              <Star
-                size={13}
-                fill={favorites.size > 0 ? '#D97757' : 'none'}
-                color="#D97757"
-              />
-            )}
+            <TabIcon
+              size={14}
+              color={tab === key ? '#D97757' : 'rgba(242,237,230,0.4)'}
+              fill={key === 'favorites' && favorites.size > 0 ? '#D97757' : 'none'}
+            />
             {label}
             {count > 0 && (
               <span
                 style={{
-                  background:
-                    tab === key
-                      ? 'rgba(217,119,87,0.15)'
-                      : 'rgba(242,237,230,0.07)',
-                  border: `1px solid ${
-                    tab === key
-                      ? 'rgba(217,119,87,0.25)'
-                      : 'rgba(242,237,230,0.1)'
-                  }`,
+                  background: tab === key ? 'rgba(217,119,87,0.15)' : 'rgba(242,237,230,0.07)',
+                  border: `1px solid ${tab === key ? 'rgba(217,119,87,0.3)' : 'rgba(242,237,230,0.1)'}`,
                   borderRadius: 20,
-                  padding: '2px 10px',
+                  padding: '2px 8px',
                   fontSize: 11,
-                  color: tab === key ? '#D97757' : 'rgba(242,237,230,0.4)',
+                  color: tab === key ? '#D97757' : 'rgba(242,237,230,0.5)',
                   fontWeight: 500,
                 }}
               >
@@ -998,17 +927,9 @@ export default function SteamIdlerPage() {
           </button>
         ))}
 
-        {/* Active Idle Status (Right side) */}
+        {/* Global Stop All Button */}
         {idlingIds.size > 0 && (
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              paddingBottom: 8,
-            }}
-          >
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8 }}>
             <span
               style={{
                 display: 'flex',
@@ -1033,7 +954,7 @@ export default function SteamIdlerPage() {
                   display: 'inline-block',
                 }}
               />
-              {idlingIds.size} idling
+              {idlingIds.size} Idling
             </span>
             <button
               onClick={stopAll}
@@ -1041,74 +962,50 @@ export default function SteamIdlerPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
-                background: 'rgba(239,68,68,0.07)',
-                border: '1px solid rgba(239,68,68,0.18)',
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)',
                 borderRadius: 20,
                 padding: '4px 12px',
                 color: '#f87171',
                 fontSize: 12,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
                 fontWeight: 500,
               }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background =
-                  'rgba(239,68,68,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background =
-                  'rgba(239,68,68,0.07)';
-              }}
             >
-              <StopCircle size={12} />
+              <StopCircle size={13} />
               Stop All
             </button>
           </div>
         )}
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* FAVORITES TAB — IDLING CONTROL PANEL */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ── FAVORITES TAB: BATCH IDLING BAR ── */}
       {tab === 'favorites' && (
         <div
           style={{
             background: '#181410',
             border: '1px solid rgba(242,237,230,0.08)',
             borderRadius: 14,
-            padding: '16px 20px',
+            padding: '14px 20px',
             marginBottom: 16,
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: 14,
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ flex: 1 }}>
-            <p
-              style={{
-                margin: '0 0 4px',
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#F2EDE6',
-              }}
-            >
-              Idling Control
+          <div>
+            <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: '#F2EDE6' }}>
+              Batch Idling Control
             </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 12,
-                color: 'rgba(242,237,230,0.4)',
-              }}
-            >
+            <p style={{ margin: 0, fontSize: 12, color: 'rgba(242,237,230,0.45)' }}>
               {favorites.size === 0
-                ? 'Add games to favorites (⭐) to start idling'
-                : `${favorites.size} game(s) selected — all will idle`}
+                ? 'Mark games with ⭐ to queue them for idling (up to 32 concurrent games)'
+                : `${favorites.size} favorite game(s) queued for idling`}
             </p>
           </div>
 
-          {/* Start Idle Button */}
           <button
             onClick={startIdling}
             disabled={favorites.size === 0 || !steamRunning || actionLoading}
@@ -1126,63 +1023,35 @@ export default function SteamIdlerPage() {
                   : 'rgba(242,237,230,0.1)'
               }`,
               borderRadius: 12,
-              padding: '10px 20px',
-              color:
-                favorites.size > 0 && steamRunning && !actionLoading
-                  ? '#fff'
-                  : 'rgba(242,237,230,0.3)',
+              padding: '9px 20px',
+              color: favorites.size > 0 && steamRunning && !actionLoading ? '#fff' : 'rgba(242,237,230,0.3)',
               fontSize: 13,
               fontWeight: 600,
-              cursor:
-                favorites.size > 0 && steamRunning && !actionLoading
-                  ? 'pointer'
-                  : 'not-allowed',
+              cursor: favorites.size > 0 && steamRunning && !actionLoading ? 'pointer' : 'not-allowed',
               transition: 'all 0.15s ease',
-              opacity: actionLoading ? 0.7 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (
-                favorites.size > 0 &&
-                steamRunning &&
-                !actionLoading
-              ) {
-                (e.currentTarget as HTMLButtonElement).style.transform =
-                  'translateY(-2px)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.transform =
-                'translateY(0)';
             }}
           >
             {actionLoading ? (
-              <Loader2
-                size={15}
-                style={{ animation: 'spin 1s linear infinite' }}
-              />
+              <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
             ) : (
-              <Play
-                size={15}
-                fill={
-                  favorites.size > 0 && steamRunning ? '#fff' : 'transparent'
-                }
-              />
+              <Play size={15} fill={favorites.size > 0 && steamRunning ? '#fff' : 'transparent'} />
             )}
-            {idlingIds.size > 0 ? 'Restart Idling' : 'Start Idling'}
+            {idlingIds.size > 0 ? 'Restart Favorites Idling' : 'Start Idling Favorites'}
           </button>
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* SEARCH BAR */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ── SEARCH BAR ── */}
       {games.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <input
             type="text"
-            placeholder="Search game titles..."
+            placeholder="Search game titles or App ID..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             style={{
               width: '100%',
               background: '#181410',
@@ -1194,26 +1063,14 @@ export default function SteamIdlerPage() {
               fontFamily: '"Inter", sans-serif',
               outline: 'none',
               boxSizing: 'border-box',
-              transition: 'border-color 0.15s ease',
-            }}
-            onFocus={(e) => {
-              (e.currentTarget as HTMLInputElement).style.borderColor =
-                'rgba(217,119,87,0.25)';
-            }}
-            onBlur={(e) => {
-              (e.currentTarget as HTMLInputElement).style.borderColor =
-                'rgba(242,237,230,0.08)';
             }}
           />
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* GAMES GRID */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ── GAMES GRID ── */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {gamesLoading ? (
-          // Skeleton Loader
           <div
             style={{
               display: 'grid',
@@ -1232,28 +1089,14 @@ export default function SteamIdlerPage() {
                 }}
               >
                 <div className="skeleton" style={{ height: 100 }} />
-                <div
-                  style={{
-                    padding: '10px 12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                  }}
-                >
-                  <div
-                    className="skeleton"
-                    style={{ height: 13, width: '75%', borderRadius: 6 }}
-                  />
-                  <div
-                    className="skeleton"
-                    style={{ height: 11, width: '40%', borderRadius: 6 }}
-                  />
+                <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="skeleton" style={{ height: 13, width: '75%', borderRadius: 6 }} />
+                  <div className="skeleton" style={{ height: 11, width: '40%', borderRadius: 6 }} />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredGames.length === 0 ? (
-          // Empty State
           <div
             style={{
               display: 'flex',
@@ -1268,17 +1111,11 @@ export default function SteamIdlerPage() {
             {tab === 'favorites' ? (
               <>
                 <Star size={40} style={{ marginBottom: 16, opacity: 0.3 }} />
-                <p
-                  style={{
-                    fontSize: 15,
-                    margin: '0 0 8px',
-                    color: 'rgba(242,237,230,0.5)',
-                  }}
-                >
-                  No Favorites
+                <p style={{ fontSize: 15, margin: '0 0 6px', color: 'rgba(242,237,230,0.6)' }}>
+                  No Favorite Games
                 </p>
-                <p style={{ fontSize: 13, margin: 0, marginBottom: 16 }}>
-                  Go to "All Games" tab and click ⭐ to add favorites
+                <p style={{ fontSize: 13, margin: '0 0 16px' }}>
+                  Switch to "All Games" and click the ⭐ icon to add favorites.
                 </p>
                 <button
                   onClick={() => setTab('all')}
@@ -1293,39 +1130,35 @@ export default function SteamIdlerPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    fontFamily: '"Inter", sans-serif',
                     fontWeight: 500,
                   }}
                 >
-                  View All Games <ChevronRight size={14} />
+                  Browse All Games <ChevronRight size={14} />
                 </button>
               </>
-            ) : games.length === 0 ? (
+            ) : tab === 'idling' ? (
               <>
-                <Gamepad2 size={40} style={{ marginBottom: 16, opacity: 0.3 }} />
-                <p
-                  style={{
-                    fontSize: 15,
-                    margin: '0 0 8px',
-                    color: 'rgba(242,237,230,0.5)',
-                  }}
-                >
-                  No Games Loaded
+                <Flame size={40} style={{ marginBottom: 16, opacity: 0.3 }} />
+                <p style={{ fontSize: 15, margin: '0 0 6px', color: 'rgba(242,237,230,0.6)' }}>
+                  No Games Currently Idling
                 </p>
                 <p style={{ fontSize: 13, margin: 0 }}>
-                  Select account & click "Refresh" to load your game library
+                  Start idling from the "Favorite Games" tab.
                 </p>
               </>
             ) : (
               <>
-                <p style={{ fontSize: 15, margin: 0 }}>
-                  No games match your search
+                <Gamepad2 size={40} style={{ marginBottom: 16, opacity: 0.3 }} />
+                <p style={{ fontSize: 15, margin: '0 0 6px', color: 'rgba(242,237,230,0.6)' }}>
+                  {games.length === 0 ? 'No Games Loaded' : 'No matching games found'}
+                </p>
+                <p style={{ fontSize: 13, margin: 0 }}>
+                  {games.length === 0 ? 'Select a Steam account and click Refresh.' : 'Try adjusting your search query.'}
                 </p>
               </>
             )}
           </div>
         ) : (
-          // Game Cards Grid
           <>
             <div
               style={{
@@ -1345,11 +1178,12 @@ export default function SteamIdlerPage() {
                   tick={tick}
                   onToggleFavorite={toggleFavorite}
                   onStop={stopOne}
+                  onOpenSam={handleOpenSam}
                 />
               ))}
             </div>
 
-            {/* ── Pagination Controls (only for All Games tab without search) */}
+            {/* Pagination Controls (All Games tab) */}
             {isPaginated && totalPages > 1 && (
               <div
                 style={{
@@ -1358,13 +1192,12 @@ export default function SteamIdlerPage() {
                   justifyContent: 'center',
                   gap: 8,
                   paddingTop: 8,
-                  paddingBottom: 16,
+                  paddingBottom: 20,
                   flexWrap: 'wrap',
                 }}
               >
-                {/* Prev */}
                 <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={safePage <= 1}
                   style={{
                     padding: '6px 14px',
@@ -1375,16 +1208,13 @@ export default function SteamIdlerPage() {
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
-                    fontFamily: '"Inter", sans-serif',
-                    transition: 'all 0.15s ease',
                   }}
                 >
-                  ← Oldingi
+                  ← Previous
                 </button>
 
-                {/* Page numbers */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
                   .reduce<(number | '...')[]>((acc, p, idx, arr) => {
                     if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
                     acc.push(p);
@@ -1409,8 +1239,6 @@ export default function SteamIdlerPage() {
                           fontSize: 13,
                           fontWeight: safePage === p ? 700 : 400,
                           cursor: 'pointer',
-                          fontFamily: '"Inter", sans-serif',
-                          transition: 'all 0.15s ease',
                         }}
                       >
                         {p}
@@ -1418,9 +1246,8 @@ export default function SteamIdlerPage() {
                     )
                   )}
 
-                {/* Next */}
                 <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={safePage >= totalPages}
                   style={{
                     padding: '6px 14px',
@@ -1431,16 +1258,13 @@ export default function SteamIdlerPage() {
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
-                    fontFamily: '"Inter", sans-serif',
-                    transition: 'all 0.15s ease',
                   }}
                 >
-                  Keyingi →
+                  Next →
                 </button>
 
-                {/* Page info */}
-                <span style={{ fontSize: 12, color: 'rgba(242,237,230,0.35)', marginLeft: 8 }}>
-                  {safePage}/{totalPages} sahifa · {filteredGames.length} o'yin
+                <span style={{ fontSize: 12, color: 'rgba(242,237,230,0.4)', marginLeft: 8 }}>
+                  Page {safePage} of {totalPages} · {filteredGames.length} games
                 </span>
               </div>
             )}
@@ -1448,9 +1272,6 @@ export default function SteamIdlerPage() {
         )}
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* KEYFRAME ANIMATIONS */}
-      {/* ════════════════════════════════════════════════════════════════════ */}
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -1458,10 +1279,6 @@ export default function SteamIdlerPage() {
         @keyframes idlePulse {
           0%, 100% { opacity: 1; box-shadow: 0 0 6px #4ade80; }
           50% { opacity: 0.4; box-shadow: 0 0 2px #4ade80; }
-        }
-        @keyframes refreshPulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.65; }
         }
         .skeleton {
           background: linear-gradient(

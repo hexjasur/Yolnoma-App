@@ -349,3 +349,139 @@ pub async fn get_idle_state(state: State<'_, IdlingState>) -> Result<Vec<u32>, S
     let processes = state.processes.lock().await;
     Ok(processes.keys().copied().collect())
 }
+
+// ============================================================
+// SAM — Steam Achievement Manager commands
+// All commands reuse locate_steam_utility() and spawn SteamUtility.exe
+// Output: {"ok":true,"result":{...}} or {"ok":false,"error":"..."}
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Achievement {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub icon_normal: String,
+    pub icon_locked: String,
+    pub achieved: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub percent: Option<f64>,
+    pub hidden: bool,
+    pub protected_achievement: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Stat {
+    pub id: String,
+    pub name: String,
+    pub stat_type: String,
+    pub value: serde_json::Value,
+    pub increment_only: bool,
+    pub protected_stat: bool,
+}
+
+/// Spawn SteamUtility.exe with given args and return parsed JSON result.
+async fn run_steam_utility(args: &[&str]) -> Result<serde_json::Value, String> {
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    use tokio::process::Command;
+
+    let exe = locate_steam_utility()?;
+
+    #[cfg(windows)]
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    let mut cmd = Command::new(&exe);
+    for arg in args {
+        cmd.arg(arg);
+    }
+    cmd.stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true);
+
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to start SteamUtility: {e}"))?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "No stdout from SteamUtility".to_string())?;
+
+    let mut lines = BufReader::new(stdout).lines();
+    let line = tokio::time::timeout(Duration::from_secs(30), lines.next_line())
+        .await
+        .map_err(|_| "SteamUtility timed out".to_string())?
+        .map_err(|e| format!("Read error: {e}"))?
+        .ok_or_else(|| "SteamUtility returned no output".to_string())?;
+
+    let _ = child.wait().await;
+
+    let json: serde_json::Value =
+        serde_json::from_str(&line).map_err(|e| format!("JSON parse error: {e} — output: {line}"))?;
+
+    if json.get("ok").and_then(|v| v.as_bool()) == Some(false) {
+        let err = json
+            .get("error")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Unknown SteamUtility error");
+        return Err(err.to_string());
+    }
+
+    Ok(json)
+}
+
+// ── Get achievement + stat data for a game ───────────────────────────
+#[tauri::command]
+pub async fn get_achievement_data(app_id: u32) -> Result<serde_json::Value, String> {
+    let id = app_id.to_string();
+    let json = run_steam_utility(&["get_achievement_data", &id]).await?;
+    Ok(json.get("result").cloned().unwrap_or(json))
+}
+
+// ── Unlock or lock a single achievement ──────────────────────────────
+#[tauri::command]
+pub async fn set_achievement(app_id: u32, ach_id: String, unlock: bool) -> Result<(), String> {
+    let id = app_id.to_string();
+    let cmd = if unlock { "unlock_achievement" } else { "lock_achievement" };
+    run_steam_utility(&[cmd, &id, &ach_id]).await?;
+    Ok(())
+}
+
+// ── Unlock all achievements for a game ───────────────────────────────
+#[tauri::command]
+pub async fn unlock_all_achievements(app_id: u32) -> Result<(), String> {
+    let id = app_id.to_string();
+    run_steam_utility(&["unlock_all_achievements", &id]).await?;
+    Ok(())
+}
+
+// ── Lock all achievements for a game ─────────────────────────────────
+#[tauri::command]
+pub async fn lock_all_achievements(app_id: u32) -> Result<(), String> {
+    let id = app_id.to_string();
+    run_steam_utility(&["lock_all_achievements", &id]).await?;
+    Ok(())
+}
+
+// ── Update stats for a game ───────────────────────────────────────────
+// stats_json: JSON array of stat update objects
+#[tauri::command]
+pub async fn update_stats(app_id: u32, stats_json: String) -> Result<(), String> {
+    let id = app_id.to_string();
+    run_steam_utility(&["update_stats", &id, &stats_json]).await?;
+    Ok(())
+}
+
+// ── Reset all stats for a game ────────────────────────────────────────
+#[tauri::command]
+pub async fn reset_all_stats(app_id: u32) -> Result<(), String> {
+    let id = app_id.to_string();
+    run_steam_utility(&["reset_all_stats", &id]).await?;
+    Ok(())
+}
