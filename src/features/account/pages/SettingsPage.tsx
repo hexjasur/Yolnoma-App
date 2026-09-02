@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/shared/api/http';
 import { useAuth } from '@/features/auth/AuthContext';
+import { toast } from '@/shared/ui/Toast';
 
 interface SessionItem {
   id?: string;
@@ -36,19 +37,17 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [terminatingId, setTerminatingId] = useState<string | null>(null);
   const [terminatingAll, setTerminatingAll] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [appVersion, setAppVersion] = useState<string>('...');
-
-  const showToast = (msg: string, type: 'success' | 'error') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
 
   const loadSessions = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/api/v2/sessions');
       const list: SessionItem[] = res.data?.sessions || [];
+      const currentSid = res.data?.currentSessionId || list.find(s => s.isCurrent)?.id;
+      if (currentSid) {
+        localStorage.setItem('yolnoma_session_id', currentSid);
+      }
       
       // Ensure at least 1 session is marked current if available, and sort current session first
       let hasCurrent = list.some(s => s.isCurrent);
@@ -59,7 +58,7 @@ export default function SettingsPage() {
 
       setSessions(list);
     } catch (e: any) {
-      showToast(e?.message || 'Error loading sessions', 'error');
+      toast.error(e?.message || 'Error loading sessions');
     } finally {
       setLoading(false);
     }
@@ -75,9 +74,9 @@ export default function SettingsPage() {
     try {
       await api.delete(`/api/v2/sessions/${sessionId}`);
       setSessions(prev => prev.filter(s => (s.id || s._id) !== sessionId));
-      showToast('The session concluded successfully.', 'success');
+      toast.success('The session concluded successfully.');
     } catch (e: any) {
-      showToast(e?.message || 'Error ending the session', 'error');
+      toast.error(e?.message || 'Error ending the session');
     } finally {
       setTerminatingId(null);
     }
@@ -88,9 +87,9 @@ export default function SettingsPage() {
     try {
       await api.delete('/api/v2/sessions?keepCurrent=true');
       setSessions(prev => prev.filter(s => s.isCurrent));
-      showToast('All other sessions have terminated.', 'success');
+      toast.success('All other sessions have terminated.');
     } catch (e: any) {
-      showToast(e?.message || 'Error while terminating sessions', 'error');
+      toast.error(e?.message || 'Error while terminating sessions');
     } finally {
       setTerminatingAll(false);
     }
@@ -125,19 +124,6 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20 select-none">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-medium transition-all ${
-            toast.type === 'success'
-              ? 'bg-emerald-500/15 border border-emerald-500/25 text-emerald-300'
-              : 'bg-red-500/15 border border-red-500/25 text-red-300'
-          }`}
-        >
-          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-          {toast.msg}
-        </div>
-      )}
 
       {/* Header */}
       <div>
@@ -303,14 +289,14 @@ export default function SettingsPage() {
           </div>
 
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-            <p className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">Foydalanuvchi Roli</p>
+            <p className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">ROLE</p>
             <p className="text-sm font-mono text-[#D97757] font-bold mt-1 uppercase">
               {user?.role || 'user'}
             </p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-            <p className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">Tizim</p>
+            <p className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">SYSTEM</p>
             <p className="text-sm font-mono text-emerald-400 mt-1">Tauri 2.0 Desktop</p>
           </div>
         </div>

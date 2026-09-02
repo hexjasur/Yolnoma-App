@@ -21,7 +21,7 @@ const links = [
   { to: '/tools/cleaner', label: 'Cleaner', icon: BrushCleaning, name: 'cleaner' },
 
   { to: '/tools/steam/steam-idler', label: 'Steam/Idler', icon: Gamepad2, name: 'steam-idler' },
-  { to: '/tools/steam/sam', label: 'Steam/SAM', icon: Gamepad, name: 'steam-sam', inDevelopment: true },
+  { to: '/tools/steam/sam', label: 'Steam/SAM', icon: Gamepad, name: 'steam-sam' },
 
   { to: '/users', label: 'Users', icon: Users, name: 'users' },
   { to: '/profile', label: 'Profile', icon: CircleUser, name: 'profile' },

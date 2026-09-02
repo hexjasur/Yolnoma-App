@@ -110,6 +110,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   try {
     let response = await sendRequest(url, options, headers);
     if (response.status === 401 && !options.skipAuth) {
+      // Clear stale session ID from header and storage if server rejected it
+      localStorage.removeItem('yolnoma_session_id');
+      delete headers['x-session-id'];
+
       refreshInFlight ??= refreshToken().finally(() => { refreshInFlight = null; });
       const accessToken = await refreshInFlight;
       if (!accessToken) throw new AppError('Your session has expired. Please sign in again.', { status: 401 });

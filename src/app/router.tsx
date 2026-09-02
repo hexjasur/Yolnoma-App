@@ -28,102 +28,116 @@ export default function AppRoutes() {
   return (
     <HashRouter>
       <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/session-limit" element={<SessionManagementPage />} />
+        {/* Public Routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/session-limit" element={<SessionManagementPage />} />
 
-          {/* Protected Routes */}
-          <Route element={<ProtectedLayout />}>
-            <Route element={<Layout />}>
-              <Route path="/" element={<DashboardPage />} />
+        {/* Protected Routes */}
+        <Route element={<ProtectedLayout />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<DashboardPage />} />
 
-              {/* IN-DEVELOPMENT PROTECTED ROUTES */}
-              <Route
-                path="/marketplace"
-                element={
-                  <DevelopmentGuard featureName="marketplace">
-                    <MarketplacePage />
-                  </DevelopmentGuard>
-                }
-              />
-              <Route
-                path="/tools/steam/sam"
-                element={
-                  <DevelopmentGuard featureName="steam-sam">
-                    <SteamSamPage />
-                  </DevelopmentGuard>
-                }
-              />
+            {/* IN-DEVELOPMENT PROTECTED ROUTES */}
+            <Route
+              path="/marketplace"
+              element={
+                <DevelopmentGuard featureName="marketplace">
+                  <MarketplacePage />
+                </DevelopmentGuard>
+              }
+            />
 
-              {/* STABLE TOOLS */}
-              <Route path="/tools/currency" element={<CurrencyConverterPage />} />
-              <Route path="/tools/bg-remover" element={<BackgroundRemoverPage />} />
-              <Route path='/tools/cleaner' element={<CleanerPage />}/>
-              <Route path="/tools/steam/steam-idler" element={<SteamIdlerPage />} />
+            {/* STABLE TOOLS */}
+            <Route path="/tools/currency" element={<CurrencyConverterPage />} />
+            <Route
+              path="/tools/bg-remover"
+              element={<BackgroundRemoverPage />}
+            />
+            <Route path="/tools/cleaner" element={<CleanerPage />} />
+            <Route path="/tools/steam/sam" element={<SteamSamPage />} />
+            <Route
+              path="/tools/steam/steam-idler"
+              element={<SteamIdlerPage />}
+            />
 
-              {/* PERFORMANCE ROUTES — Owner only */}
-              <Route
-                path="/performances"
-                element={
-                  <RoleGuard page="performances" message="Access restricted: Performances section is available to Owner only.">
-                    <PerformancePage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="/performances/:id"
-                element={
-                  <RoleGuard page="performances" message="Access restricted: Performances section is available to Owner only.">
-                    <PerformanceDetailPage />
-                  </RoleGuard>
-                }
-              />
+            {/* PERFORMANCE ROUTES — Owner only */}
+            <Route
+              path="/performances"
+              element={
+                <RoleGuard
+                  page="performances"
+                  message="Access restricted: Performances section is available to Owner only."
+                >
+                  <PerformancePage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="/performances/:id"
+              element={
+                <RoleGuard
+                  page="performances"
+                  message="Access restricted: Performances section is available to Owner only."
+                >
+                  <PerformanceDetailPage />
+                </RoleGuard>
+              }
+            />
 
-              {/* VIDEO ROUTES — Owner only */}
-              <Route
-                path="/videos"
-                element={
-                  <RoleGuard page="videos" message="Access restricted: Stream section is available to Owner only.">
-                    <VideosPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="/videos/:videoId"
-                element={
-                  <RoleGuard page="videos" message="Access restricted: Stream section is available to Owner only.">
-                    <VideoDetailPage />
-                  </RoleGuard>
-                }
-              />
+            {/* VIDEO ROUTES — Owner only */}
+            <Route
+              path="/videos"
+              element={
+                <RoleGuard
+                  page="videos"
+                  message="Access restricted: Stream section is available to Owner only."
+                >
+                  <VideosPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="/videos/:videoId"
+              element={
+                <RoleGuard
+                  page="videos"
+                  message="Access restricted: Stream section is available to Owner only."
+                >
+                  <VideoDetailPage />
+                </RoleGuard>
+              }
+            />
 
-              {/* USERS ROUTES — Owner & Admin only */}
-              <Route
-                path="/users"
-                element={
-                  <RoleGuard page="users" message="You do not have permission to access the Users management page.">
-                    <UsersPage />
-                  </RoleGuard>
-                }
-              />
+            {/* USERS ROUTES — Owner & Admin only */}
+            <Route
+              path="/users"
+              element={
+                <RoleGuard
+                  page="users"
+                  message="You do not have permission to access the Users management page."
+                >
+                  <UsersPage />
+                </RoleGuard>
+              }
+            />
 
-              {/* PROFILE & SETTINGS ROUTES */}
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+            {/* PROFILE & SETTINGS ROUTES */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
 
-              {/* PLUGIN DYNAMIC ROUTES */}
-              {pluginRoutes.map((route) => {
-                const Component = route.component;
-                return (
-                  <Route
-                    key={route.fullPath}
-                    path={route.fullPath}
-                    element={<Component />}
-                  />
-                );
-              })}
-            </Route>
+            {/* PLUGIN DYNAMIC ROUTES */}
+            {pluginRoutes.map((route) => {
+              const Component = route.component;
+              return (
+                <Route
+                  key={route.fullPath}
+                  path={route.fullPath}
+                  element={<Component />}
+                />
+              );
+            })}
           </Route>
+        </Route>
       </Routes>
     </HashRouter>
   );
