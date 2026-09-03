@@ -7,13 +7,13 @@ import {
   Trash2,
   RefreshCw,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   Radio,
   LogOut,
   Info,
   Laptop
 } from 'lucide-react';
+
 import { api } from '@/shared/api/http';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/shared/ui/Toast';

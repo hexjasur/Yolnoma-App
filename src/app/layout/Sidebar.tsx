@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
 import {
@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
 import { isFeatureInDevelopment, canAccessDevFeature, handleDevFeatureClick } from '@/config/features';
 import { usePluginNavigation } from '@/plugins';
+import { ConfirmModal } from '@/shared/ui';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
@@ -32,7 +33,9 @@ const links = [
 
 export default function Sidebar() {
   const [version, setVersion] = useState<string>('');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { logout, user } = useAuth();
+
   const pluginNavItems = usePluginNavigation();
 
   useEffect(() => {
@@ -175,7 +178,7 @@ export default function Sidebar() {
         
         {/* Logout Button */}
         <button
-          onClick={() => logout()}
+          onClick={() => setShowLogoutConfirm(true)}
           className="group relative w-full flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-colors duration-150 cursor-pointer"
         >
           <LogOut
@@ -193,6 +196,22 @@ export default function Sidebar() {
           {version ? `v${version} — JK Software` : 'Loading…'}
         </p>
       </div>
+
+      {/* Sign Out Confirmation Modal */}
+      <ConfirmModal
+        open={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={async () => {
+          setShowLogoutConfirm(false);
+          await logout();
+        }}
+        title="Sign Out"
+        description="Are you sure you want to sign out of your account? You will need to sign in again to access your workspace."
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </aside>
   );
 }
+

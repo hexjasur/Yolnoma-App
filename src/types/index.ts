@@ -66,3 +66,5 @@ export interface ImgBBResponse {
 }
 
 export * from '@/features/videos/types/video';
+export * from '@/features/users/types/user';
+

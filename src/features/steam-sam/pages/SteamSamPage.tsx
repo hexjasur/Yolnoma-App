@@ -7,6 +7,8 @@ import {
   ChevronRight, Loader2, Users, ArrowUpDown
 } from 'lucide-react';
 import { toast } from '@/shared/ui/Toast';
+import { ConfirmModal } from '@/shared/ui';
+
 
 // ────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -286,10 +288,16 @@ export default function SteamSamPage() {
     }
   };
 
-  const handleResetStats = async () => {
-    if (!selectedGame) return;
-    if (!window.confirm('Are you sure you want to reset all stats for this game?')) return;
+  const [showResetStatsConfirm, setShowResetStatsConfirm] = useState(false);
 
+  const handleResetStats = () => {
+    if (!selectedGame) return;
+    setShowResetStatsConfirm(true);
+  };
+
+  const handleExecuteResetStats = async () => {
+    if (!selectedGame) return;
+    setShowResetStatsConfirm(false);
     setActionLoading(true);
     try {
       await invoke('reset_all_stats', { appId: selectedGame.appId });
@@ -301,6 +309,7 @@ export default function SteamSamPage() {
       setActionLoading(false);
     }
   };
+
 
   // ── Filtered & Sorted Achievements
   const filteredAchievements = useMemo(() => {
@@ -1168,6 +1177,24 @@ export default function SteamSamPage() {
           )}
         </div>
       </div>
+
+      {/* Reset Stats Confirmation Modal */}
+      <ConfirmModal
+        open={showResetStatsConfirm}
+        onClose={() => setShowResetStatsConfirm(false)}
+        onConfirm={handleExecuteResetStats}
+        title="Reset All Statistics"
+        description={
+          <>
+            Are you sure you want to reset all statistics for <strong className="text-white">{selectedGame?.name}</strong> to default/zero? This action will reset in-game statistics.
+          </>
+        }
+        confirmText="Reset Stats"
+        cancelText="Cancel"
+        variant="danger"
+        loading={actionLoading}
+      />
     </div>
   );
 }
+
