@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { useAuthStore, type UserProfile } from './store/authStore';
+import { refreshToken as performTokenRefresh } from '@/shared/api/http';
+import { isTokenExpired } from '@/shared/lib/jwt';
 
 export type { UserProfile };
 
@@ -26,6 +28,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  // Silent background token refresh & window focus listener
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const checkAndRefresh = async () => {
+      const accessToken = localStorage.getItem('yolnoma_access_token');
+      const hasRefreshToken = Boolean(localStorage.getItem('yolnoma_refresh_token'));
+      // If token expires in less than 5 minutes (300s), silently refresh
+      if (hasRefreshToken && isTokenExpired(accessToken, 300)) {
+        await performTokenRefresh();
+      }
+    };
+
+    // Check periodically every 4 minutes
+    const intervalId = setInterval(checkAndRefresh, 4 * 60 * 1000);
+
+    // Check when user focuses/switches back to the window
+    window.addEventListener('focus', checkAndRefresh);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', checkAndRefresh);
+    };
+  }, [isAuthenticated]);
 
   const value = useMemo<AuthContextType>(
     () => ({
