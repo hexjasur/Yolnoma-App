@@ -17,6 +17,7 @@ const links = [
   { to: '/performances', label: 'Performance', icon: Drama, name: 'performances' },
   { to: '/videos', label: 'Stream', icon: Film, name: 'videos' },
 
+  { to: '/tools/video-downloader', label: 'Video Downloader', icon: Film, name: 'video-downloader' },
   { to: '/tools/currency', label: 'Currency Converter', icon: Coins, name: 'currency' },
   { to: '/tools/bg-remover', label: 'Background remover', icon: LayoutGrid, name: 'bg-remover' },
   { to: '/tools/cleaner', label: 'Cleaner', icon: BrushCleaning, name: 'cleaner' },

@@ -3,6 +3,8 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 mod commands;
+#[path = "commands/videos.rs"]
+mod videos;
 mod cleaner;
 mod embedded_api_key;
 mod steam_idler;
@@ -79,6 +81,7 @@ pub fn run() {
         })
         .manage(steam_idler::IdlingState::new())
         .manage(system_monitor::SystemMonitorState::new())
+            .manage(videos::DownloadState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
@@ -191,6 +194,14 @@ pub fn run() {
             commands::proxy_request,
             commands::proxy_eporner,
             commands::open_in_new_window,
+            // ── YouTube Video Downloader ──
+            videos::download_youtube_video,
+            videos::cancel_youtube_download,
+            videos::open_youtube_download_folder,
+            videos::get_youtube_formats,
+            videos::preview_youtube_video,
+            videos::check_yt_dlp_installed,
+            videos::check_ffmpeg_installed,
             // ── Plugins System ──
             commands::list_local_plugins,
             commands::read_plugin_source,

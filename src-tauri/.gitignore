@@ -14,3 +14,7 @@
 
 # Build logs
 build.log
+
+# Local media downloader runtimes (large binaries, kept out of GitHub)
+/resources/*.exe
+/resources/steam-utility

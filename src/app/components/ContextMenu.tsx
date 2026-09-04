@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Globe,
+  ClipboardPaste,
 } from 'lucide-react';
 import { openInNewWindow } from '@/shared/lib/window';
 import { toast } from '@/shared/ui/Toast';
@@ -20,7 +21,11 @@ interface ContextMenuState {
   isExternal: boolean;
 }
 
-export function ContextMenuProvider({ children }: { children: React.ReactNode }) {
+export function ContextMenuProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [menu, setMenu] = useState<ContextMenuState>({
     visible: false,
     x: 0,
@@ -70,17 +75,27 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      const linkEl = target.closest('a[href], [data-link], [data-href]') as HTMLAnchorElement | HTMLElement | null;
+      const linkEl = target.closest('a[href], [data-link], [data-href]') as
+        | HTMLAnchorElement
+        | HTMLElement
+        | null;
       let rawHref: string | null = null;
       let linkText: string | null = null;
 
       if (linkEl) {
-        rawHref = linkEl.getAttribute('href') || linkEl.getAttribute('data-link') || linkEl.getAttribute('data-href');
+        rawHref =
+          linkEl.getAttribute('href') ||
+          linkEl.getAttribute('data-link') ||
+          linkEl.getAttribute('data-href');
         linkText = linkEl.textContent?.trim() || null;
       }
 
       // Ignore pure hash resets like href="#"
-      if (rawHref === '#' || rawHref === 'javascript:void(0)' || rawHref === '') {
+      if (
+        rawHref === '#' ||
+        rawHref === 'javascript:void(0)' ||
+        rawHref === ''
+      ) {
         rawHref = null;
       }
 
@@ -90,7 +105,10 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
       let isExternal = false;
 
       if (targetUrl) {
-        if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+        if (
+          targetUrl.startsWith('http://') ||
+          targetUrl.startsWith('https://')
+        ) {
           // If it points to localhost app url, treat as internal hash route
           if (targetUrl.includes('/#')) {
             targetUrl = targetUrl.substring(targetUrl.indexOf('/#'));
@@ -102,7 +120,7 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
 
       // Calculate coordinates and prevent offscreen overflow
       const menuWidth = 220;
-      const menuHeight = targetUrl ? 230 : 150;
+      const menuHeight = targetUrl ? 230 : 190;
       let posX = e.clientX;
       let posY = e.clientY;
 
@@ -118,7 +136,10 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
         x: posX,
         y: posY,
         targetUrl,
-        linkText: linkText && linkText.length > 24 ? `${linkText.slice(0, 24)}…` : linkText,
+        linkText:
+          linkText && linkText.length > 24
+            ? `${linkText.slice(0, 24)}…`
+            : linkText,
         isExternal,
       });
     };
@@ -134,9 +155,15 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
       if (e.button === 1) {
         const target = e.target as HTMLElement | null;
         if (!target) return;
-        const linkEl = target.closest('a[href], [data-link], [data-href]') as HTMLAnchorElement | HTMLElement | null;
+        const linkEl = target.closest('a[href], [data-link], [data-href]') as
+          | HTMLAnchorElement
+          | HTMLElement
+          | null;
         if (linkEl) {
-          const href = linkEl.getAttribute('href') || linkEl.getAttribute('data-link') || linkEl.getAttribute('data-href');
+          const href =
+            linkEl.getAttribute('href') ||
+            linkEl.getAttribute('data-link') ||
+            linkEl.getAttribute('data-href');
           if (href && href !== '#' && href !== 'javascript:void(0)') {
             e.preventDefault();
             e.stopPropagation();
@@ -150,9 +177,15 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
       if (e.ctrlKey || e.metaKey) {
         const target = e.target as HTMLElement | null;
         if (!target) return;
-        const linkEl = target.closest('a[href], [data-link], [data-href]') as HTMLAnchorElement | HTMLElement | null;
+        const linkEl = target.closest('a[href], [data-link], [data-href]') as
+          | HTMLAnchorElement
+          | HTMLElement
+          | null;
         if (linkEl) {
-          const href = linkEl.getAttribute('href') || linkEl.getAttribute('data-link') || linkEl.getAttribute('data-href');
+          const href =
+            linkEl.getAttribute('href') ||
+            linkEl.getAttribute('data-link') ||
+            linkEl.getAttribute('data-href');
           if (href && href !== '#' && href !== 'javascript:void(0)') {
             e.preventDefault();
             e.stopPropagation();
@@ -201,14 +234,50 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
     const cleanUrl = url.startsWith('#')
       ? `yolnoma://app/${url.slice(2)}`
       : url.startsWith('/')
-      ? `yolnoma://app${url}`
-      : url;
+        ? `yolnoma://app${url}`
+        : url;
 
     try {
       await navigator.clipboard.writeText(cleanUrl);
       toast.success('Link copied');
     } catch {
       toast.error('Could not copy');
+    }
+    closeMenu();
+  };
+
+  const handlePaste = async () => {
+    const activeElement = document.activeElement;
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement
+      )
+    ) {
+      toast.error('Select a text field first');
+      closeMenu();
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      const start = activeElement.selectionStart ?? activeElement.value.length;
+      const end = activeElement.selectionEnd ?? start;
+      const nextValue =
+        activeElement.value.slice(0, start) +
+        text +
+        activeElement.value.slice(end);
+      const setter = Object.getOwnPropertyDescriptor(
+        activeElement instanceof HTMLTextAreaElement
+          ? HTMLTextAreaElement.prototype
+          : HTMLInputElement.prototype,
+        'value',
+      )?.set;
+      setter?.call(activeElement, nextValue);
+      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      activeElement.setSelectionRange(start + text.length, start + text.length);
+    } catch {
+      toast.error('Could not paste from clipboard');
     }
     closeMenu();
   };
@@ -254,7 +323,8 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
             zIndex: 99999,
             background: 'rgba(24, 20, 16, 0.95)',
             borderColor: 'rgba(255, 255, 255, 0.10)',
-            boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 30px rgba(217, 119, 87, 0.08)',
+            boxShadow:
+              '0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 30px rgba(217, 119, 87, 0.08)',
           }}
         >
           {/* Subtle top sheen */}
@@ -272,7 +342,9 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
                   <ExternalLink size={13} strokeWidth={2.2} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-[12px] text-[#F2EDE6]">Open in new tab</div>
+                  <div className="font-semibold text-[12px] text-[#F2EDE6]">
+                    Open in new tab
+                  </div>
                   <div className="text-[10px] text-white/40 truncate">
                     {menu.linkText || menu.targetUrl}
                   </div>
@@ -304,6 +376,32 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
           )}
 
           {/* General navigation actions */}
+          <button
+            type="button"
+            onClick={handlePaste}
+            className="w-full px-3 py-1.5 flex items-center justify-between gap-2 hover:bg-white/[0.08] text-left text-white/75 hover:text-white transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <ClipboardPaste size={12} className="text-white/40" />
+              <span>Paste</span>
+            </div>
+            <span className="text-[10px] text-white/30 font-mono">Ctrl+V</span>
+          </button>
+
+          {!menu.targetUrl && (
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="w-full px-3 py-1.5 flex items-center justify-between gap-2 hover:bg-white/[0.08] text-left text-white/75 hover:text-white transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Copy size={12} className="text-white/40" />
+                <span>Copy link</span>
+              </div>
+              <span className="text-[10px] text-white/30 font-mono">URL</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleRefresh}

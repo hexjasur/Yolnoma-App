@@ -21,6 +21,7 @@ import { usePluginRoutes } from '@/plugins';
 import CleanerPage from '@/features/cleaner/pages/CleanerPage';
 import DevelopmentGuard from '@/shared/ui/DevelopmentGuard';
 import RoleGuard from '@/shared/ui/RoleGuard';
+import { VideoDownloader } from '@/features/yt-video-downloader/pages/YTVideoDownloader';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -85,6 +86,10 @@ export default function AppRoutes() {
             />
 
             {/* VIDEO ROUTES — Owner only */}
+            <Route
+              path="/tools/video-downloader"
+              element={<VideoDownloader />}
+            />
             <Route
               path="/videos"
               element={

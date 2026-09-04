@@ -68,28 +68,35 @@ impl IdlingState {
 
 // ── SteamUtility.exe joylashuvini topish ──────────────────────────────
 fn locate_steam_utility() -> Result<std::path::PathBuf, String> {
-    // 1. Exe yonidagi libs/ dan qidiramiz (production)
-    let mut path = std::env::current_exe()
-        .map_err(|e| format!("current_exe error: {e}"))?;
-    path.pop();
-    path.push("libs");
-    path.push("SteamUtility.exe");
+    let current_dir = std::env::current_exe()
+        .map_err(|e| format!("current_exe error: {e}"))?
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .ok_or_else(|| "Could not determine application directory".to_string())?;
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
-    if !path.exists() {
-        // 2. Dev mode uchun manifest dir yonidagi libs/ dan qidiramiz
-        let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let dev_path = std::path::PathBuf::from(manifest_dir)
+    let candidates = [
+        current_dir.join("resources").join("steam-utility").join("SteamUtility.exe"),
+        current_dir.join("resources").join("SteamUtility.exe"),
+        manifest_dir
+            .join("..")
             .join("libs")
-            .join("SteamUtility.exe");
-        if dev_path.exists() {
-            return Ok(dev_path);
+            .join("SteamUtility")
+            .join("bin")
+            .join("Release")
+            .join("SteamUtility.exe"),
+    ];
+
+    for candidate in candidates {
+        if candidate.exists() {
+            return Ok(candidate);
         }
-        return Err(format!(
-            "SteamUtility.exe not found: {}. Please check the libs/ folder.",
-            path.display()
-        ));
     }
-    Ok(path)
+
+    Err(format!(
+        "SteamUtility.exe not found. Checked bundled resources and {}.",
+        manifest_dir.display()
+    ))
 }
 
 // ── Steam ishlayotganini tekshirish ───────────────────────────────────
