@@ -110,19 +110,23 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   try {
     let response = await sendRequest(url, options, headers);
     if (response.status === 401 && !options.skipAuth) {
-      // Clear stale session ID from header and storage if server rejected it
-      localStorage.removeItem('yolnoma_session_id');
-      delete headers['x-session-id'];
-
       refreshInFlight ??= refreshToken().finally(() => { refreshInFlight = null; });
       const accessToken = await refreshInFlight;
       if (!accessToken) throw new AppError('Your session has expired. Please sign in again.', { status: 401 });
 
       headers.Authorization = `Bearer ${accessToken}`;
+      const latestSessionId = localStorage.getItem('yolnoma_session_id');
+      if (latestSessionId) {
+        headers['x-session-id'] = latestSessionId;
+      }
       response = await sendRequest(url, options, headers);
     }
 
     if (response.status < 200 || response.status >= 300) {
+      throw new AppError(getResponseMessage(response.body), { status: response.status });
+    }
+
+    if (isApiBody(response.body) && response.body.success === false) {
       throw new AppError(getResponseMessage(response.body), { status: response.status });
     }
 
@@ -134,6 +138,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       : new AppError('Unable to reach the service. Check your connection and try again.', { cause: error });
   }
 }
+
 
 export const api = {
   get: <T = any>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: 'GET' }),

@@ -363,6 +363,7 @@ pub async fn get_idle_state(state: State<'_, IdlingState>) -> Result<Vec<u32>, S
 // Output: {"ok":true,"result":{...}} or {"ok":false,"error":"..."}
 // ============================================================
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Achievement {
@@ -378,6 +379,7 @@ pub struct Achievement {
     pub protected_achievement: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Stat {
@@ -396,8 +398,6 @@ async fn run_steam_utility(args: &[&str]) -> Result<serde_json::Value, String> {
 
     let exe = locate_steam_utility()?;
 
-    #[cfg(windows)]
-    use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
     let mut cmd = Command::new(&exe);

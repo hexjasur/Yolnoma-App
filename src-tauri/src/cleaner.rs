@@ -1,19 +1,7 @@
-use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde::Serialize;
-use std::{
-    ffi::OsStr,
-    iter::once,
-    os::windows::{ffi::OsStrExt, process::CommandExt},
-    process::Command,
-};
-use windows_sys::Win32::{
-    Foundation::{CloseHandle, GetLastError, WAIT_OBJECT_0},
-    Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY},
-    System::Threading::{
-        GetCurrentProcess, GetExitCodeProcess, OpenProcessToken, WaitForSingleObject, INFINITE,
-    },
-    UI::Shell::{ShellExecuteExW, SHELLEXECUTEINFOW, SEE_MASK_NOCLOSEPROCESS},
-};
+use std::process::Command;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 const CLEAR_WINDOWS_TEMP: &str = r#"
 # Remove temporary files from the current user and Windows Temp folders.

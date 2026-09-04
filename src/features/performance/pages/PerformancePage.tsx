@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, RefreshCw, Lock, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Plus, RefreshCw, Lock, ChevronLeft, ChevronRight, Search, AlertCircle } from 'lucide-react';
+
 import PerformanceCard from '@/features/performance/components/PerformanceCard';
 import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
 import EditPerformanceModal from '@/features/performance/components/EditPerformanceModal';
@@ -95,7 +96,7 @@ export default function PerformancePage() {
     setSearchParams(newParams);
   };
 
-  // Faqat owner rol uchun
+  // Owner role gate
   if (!isOwner) {
     return (
       <div
@@ -107,6 +108,8 @@ export default function PerformancePage() {
           minHeight: '60vh',
           gap: 16,
           color: 'var(--text-muted)',
+          textAlign: 'center',
+          padding: 24,
         }}
       >
         <div
@@ -123,15 +126,16 @@ export default function PerformancePage() {
         >
           <Lock size={28} strokeWidth={1.5} style={{ color: '#D97757' }} />
         </div>
-        <p style={{ fontSize: 16, color: 'var(--text-primary)', margin: 0 }}>
-          This page has been accessed
-        </p>
-        <p style={{ fontSize: 13, margin: 0 }}>
-          Only <strong style={{ color: '#D97757' }}>owner</strong> available for the role.
+        <h2 style={{ fontSize: 20, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>
+          Access Restricted
+        </h2>
+        <p style={{ fontSize: 13, margin: 0, maxWidth: 420, lineHeight: 1.6 }}>
+          The Performance catalog is available exclusively to the <strong style={{ color: '#D97757' }}>Owner</strong> role. Your current signed-in role is <span style={{ fontFamily: 'monospace', color: '#fff', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: 4 }}>{user?.role || 'user'}</span>.
         </p>
       </div>
     );
   }
+
 
   const startCount = pagination.total === 0 ? 0 : (currentPage - 1) * currentLimit + 1;
   const endCount = Math.min(currentPage * currentLimit, pagination.total);
@@ -271,11 +275,32 @@ export default function PerformancePage() {
             padding: '14px 18px',
             marginBottom: 28,
             fontSize: 13,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
           }}
         >
-          {getErrorMessage(error, 'Unable to load performances.')}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <AlertCircle size={18} style={{ color: '#F2A8A8', flexShrink: 0 }} />
+            <span>{getErrorMessage(error, 'Unable to load performances.')}</span>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => performanceQuery.refetch()}
+            style={{
+              padding: '6px 14px',
+              fontSize: 12,
+              background: 'rgba(220,80,80,0.15)',
+              border: '1px solid rgba(220,80,80,0.3)',
+              color: '#fff',
+            }}
+          >
+            Retry
+          </Button>
         </div>
       )}
+
 
       {/* ── Skeleton ─────────────────────────────────────────── */}
       {loading && <CardGridSkeleton count={currentLimit} />}

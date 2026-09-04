@@ -7,16 +7,18 @@ import {
   Trash2,
   RefreshCw,
   CheckCircle2,
+  AlertCircle,
   Loader2,
   Radio,
   LogOut,
   Info,
   Laptop
 } from 'lucide-react';
-
 import { api } from '@/shared/api/http';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/shared/ui/Toast';
+import { ConfirmModal } from '@/shared/ui';
+import { getErrorMessage } from '@/shared/lib/errors';
 
 interface SessionItem {
   id?: string;
@@ -31,34 +33,60 @@ interface SessionItem {
   isCurrent?: boolean;
 }
 
+interface SessionsApiResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    sessions?: SessionItem[];
+    currentSessionId?: string | null;
+  };
+  sessions?: SessionItem[];
+  currentSessionId?: string | null;
+}
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [terminatingId, setTerminatingId] = useState<string | null>(null);
   const [terminatingAll, setTerminatingAll] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('...');
 
+  // Confirmation modal states
+  const [sessionToTerminate, setSessionToTerminate] = useState<SessionItem | null>(null);
+  const [showTerminateAllConfirm, setShowTerminateAllConfirm] = useState(false);
+
   const loadSessions = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await api.get('/api/v2/sessions');
-      const list: SessionItem[] = res.data?.sessions || [];
-      const currentSid = res.data?.currentSessionId || list.find(s => s.isCurrent)?.id;
+      const res = await api.get<SessionsApiResponse>('/api/v2/sessions');
+      
+      const list: SessionItem[] =
+        res?.data?.sessions ||
+        res?.sessions ||
+        (Array.isArray(res?.data) ? (res.data as unknown as SessionItem[]) : []) ||
+        (Array.isArray(res) ? (res as unknown as SessionItem[]) : []);
+
+      const currentSid = res?.data?.currentSessionId || res?.currentSessionId || list.find((s) => s.isCurrent)?.id;
       if (currentSid) {
         localStorage.setItem('yolnoma_session_id', currentSid);
       }
-      
+
       // Ensure at least 1 session is marked current if available, and sort current session first
-      let hasCurrent = list.some(s => s.isCurrent);
+      const hasCurrent = list.some((s) => s.isCurrent);
       if (!hasCurrent && list.length > 0) {
         list[0].isCurrent = true;
       }
       list.sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0));
 
       setSessions(list);
-    } catch (e: any) {
-      toast.error(e?.message || 'Error loading sessions');
+    } catch (e: unknown) {
+      console.error('Failed to load sessions:', e);
+      const msg = getErrorMessage(e, 'Failed to load active sessions.');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -69,34 +97,39 @@ export default function SettingsPage() {
     getVersion().then(setAppVersion).catch(() => setAppVersion('2.2.5'));
   }, [loadSessions]);
 
-  const terminateSession = async (sessionId: string) => {
-    setTerminatingId(sessionId);
+  const handleExecuteTerminate = async () => {
+    if (!sessionToTerminate) return;
+    const sid = sessionToTerminate.id || sessionToTerminate._id || '';
+    setTerminatingId(sid);
+    setSessionToTerminate(null);
+
     try {
-      await api.delete(`/api/v2/sessions/${sessionId}`);
-      setSessions(prev => prev.filter(s => (s.id || s._id) !== sessionId));
+      await api.delete(`/api/v2/sessions/${sid}`);
+      setSessions((prev) => prev.filter((s) => (s.id || s._id) !== sid));
       toast.success('The session concluded successfully.');
-    } catch (e: any) {
-      toast.error(e?.message || 'Error ending the session');
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, 'Error ending the session.'));
     } finally {
       setTerminatingId(null);
     }
   };
 
-  const terminateAllOther = async () => {
+  const handleExecuteTerminateAll = async () => {
+    setShowTerminateAllConfirm(false);
     setTerminatingAll(true);
     try {
       await api.delete('/api/v2/sessions?keepCurrent=true');
-      setSessions(prev => prev.filter(s => s.isCurrent));
-      toast.success('All other sessions have terminated.');
-    } catch (e: any) {
-      toast.error(e?.message || 'Error while terminating sessions');
+      setSessions((prev) => prev.filter((s) => s.isCurrent));
+      toast.success('All other sessions have been terminated.');
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, 'Error while terminating sessions.'));
     } finally {
       setTerminatingAll(false);
     }
   };
 
   const formatTimestamp = (iso?: string) => {
-    if (!iso) return 'Noma\'lum';
+    if (!iso) return 'Unknown';
     try {
       const d = new Date(iso);
       if (isNaN(d.getTime())) return iso;
@@ -124,11 +157,10 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20 select-none">
-
       {/* Header */}
       <div>
         <p className="text-[10px] uppercase tracking-[0.18em] text-[#D97757] font-semibold mb-1">
-          Boshqaruv
+          MANAGEMENT
         </p>
         <h1 className="font-serif text-3xl font-medium tracking-tight text-[#F2EDE6]">
           Settings & Sessions
@@ -148,7 +180,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="text-base font-semibold text-[#F2EDE6]">Active Sessions</h2>
               <p className="text-xs text-white/45">
-                All computers and browsers used to access your account
+                All computers and browsers currently authorized to access your account
               </p>
             </div>
           </div>
@@ -157,24 +189,40 @@ export default function SettingsPage() {
             <button
               onClick={loadSessions}
               disabled={loading}
-              className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.08] disabled:opacity-50 transition-colors"
-              title="Refreshing sessions"
+              className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.08] disabled:opacity-50 transition-colors cursor-pointer"
+              title="Refresh sessions"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             </button>
 
-            {sessions.filter(s => !s.isCurrent).length > 0 && (
+            {sessions.filter((s) => !s.isCurrent).length > 0 && (
               <button
-                onClick={terminateAllOther}
+                onClick={() => setShowTerminateAllConfirm(true)}
                 disabled={terminatingAll}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {terminatingAll ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
-                Terminate all
+                Terminate All Others
               </button>
             )}
           </div>
         </div>
+
+        {/* Error Banner */}
+        {error && (
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle size={16} className="text-red-400 shrink-0" />
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={loadSessions}
+              className="px-3 py-1 rounded-lg text-xs font-medium bg-red-500/20 hover:bg-red-500/30 text-red-200 transition-colors shrink-0 cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Sessions List */}
         <div className="space-y-3">
@@ -185,10 +233,10 @@ export default function SettingsPage() {
           ) : sessions.length === 0 ? (
             <div className="text-center py-10 text-white/30 text-sm">
               <Globe size={28} className="mx-auto mb-2 opacity-30" />
-              There are no active sessions.
+              There are no active sessions recorded.
             </div>
           ) : (
-            sessions.map(session => {
+            sessions.map((session) => {
               const DeviceIcon = getDeviceIcon(session.device);
               const sid = session.id || session._id || '';
               return (
@@ -219,7 +267,7 @@ export default function SettingsPage() {
                         {session.isCurrent && (
                           <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold tracking-wide border border-emerald-500/40 uppercase shadow-sm">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                            CURRENT (CURRENT SESSION)
+                            CURRENT SESSION
                           </span>
                         )}
                       </div>
@@ -234,7 +282,7 @@ export default function SettingsPage() {
                           {session.isCurrent ? (
                             <span className="text-emerald-400/90 font-medium">Currently in use</span>
                           ) : (
-                            `Oxirgi faollik: ${formatTimestamp(session.last_used_at || session.created_at || session.createdAt)}`
+                            `Last active: ${formatTimestamp(session.last_used_at || session.created_at || session.createdAt)}`
                           )}
                         </span>
                       </div>
@@ -248,12 +296,12 @@ export default function SettingsPage() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => terminateSession(sid)}
+                      onClick={() => setSessionToTerminate(session)}
                       disabled={terminatingId === sid}
                       className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
                                 bg-red-500/10 text-red-400 border border-red-500/20
-                                hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50 transition-colors"
-                      title="End the session"
+                                hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50 transition-colors cursor-pointer"
+                      title="End this session"
                     >
                       {terminatingId === sid ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -277,8 +325,8 @@ export default function SettingsPage() {
             <Info size={18} className="text-blue-400" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-[#F2EDE6]">About the Program</h2>
-            <p className="text-xs text-white/45">Client system information</p>
+            <h2 className="text-base font-semibold text-[#F2EDE6]">About the Application</h2>
+            <p className="text-xs text-white/45">Client system & role information</p>
           </div>
         </div>
 
@@ -301,6 +349,36 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Terminate Single Session Confirm Modal */}
+      <ConfirmModal
+        open={Boolean(sessionToTerminate)}
+        onClose={() => setSessionToTerminate(null)}
+        onConfirm={handleExecuteTerminate}
+        title="Terminate Session"
+        description={
+          <>
+            Are you sure you want to terminate session on <strong className="text-white font-semibold">"{sessionToTerminate?.device || 'this device'}"</strong> ({sessionToTerminate?.ip})? This device will be logged out immediately.
+          </>
+        }
+        confirmText="Terminate Session"
+        cancelText="Cancel"
+        variant="danger"
+        loading={Boolean(terminatingId)}
+      />
+
+      {/* Terminate All Other Sessions Confirm Modal */}
+      <ConfirmModal
+        open={showTerminateAllConfirm}
+        onClose={() => setShowTerminateAllConfirm(false)}
+        onConfirm={handleExecuteTerminateAll}
+        title="Terminate All Other Sessions"
+        description="Are you sure you want to log out of all other devices except this current session? All other active sessions will be terminated immediately."
+        confirmText="Terminate All Others"
+        cancelText="Cancel"
+        variant="danger"
+        loading={terminatingAll}
+      />
     </div>
   );
 }

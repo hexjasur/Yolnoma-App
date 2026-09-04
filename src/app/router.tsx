@@ -22,6 +22,9 @@ import CleanerPage from '@/features/cleaner/pages/CleanerPage';
 import DevelopmentGuard from '@/shared/ui/DevelopmentGuard';
 import RoleGuard from '@/shared/ui/RoleGuard';
 import { VideoDownloader } from '@/features/yt-video-downloader/pages/YTVideoDownloader';
+import SteamReviewPage from '@/features/steam/review/SteamReviewPage';
+import CrosshairPage from '@/features/crosshair/pages/CrosshairPage';
+import CrosshairOverlayWindow from '@/features/crosshair/pages/CrosshairOverlayWindow';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -32,6 +35,7 @@ export default function AppRoutes() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/session-limit" element={<SessionManagementPage />} />
+        <Route path="/crosshair-overlay-window" element={<CrosshairOverlayWindow />} />
 
         {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
@@ -55,7 +59,9 @@ export default function AppRoutes() {
               element={<BackgroundRemoverPage />}
             />
             <Route path="/tools/cleaner" element={<CleanerPage />} />
+            <Route path="/tools/crosshair-overlay" element={<CrosshairPage />} />
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
+            <Route path='/tools/steam/review' element={<SteamReviewPage />} />
             <Route
               path="/tools/steam/steam-idler"
               element={<SteamIdlerPage />}

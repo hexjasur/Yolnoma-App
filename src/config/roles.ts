@@ -11,10 +11,10 @@ export const ROLES = {
 // NOTE: 'users' page is strictly for owner and admin only.
 // NOTE: 'performances' and 'videos' pages are strictly for owner only.
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
-  [ROLES.OWNER]:  ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'performances', 'videos', 'users', 'settings', 'profile'],
-  [ROLES.ADMIN]:  ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'users', 'settings', 'profile'],
-  [ROLES.TESTER]: ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'settings', 'profile'],
-  [ROLES.USER]:   ['dashboard', 'currency', 'bg-remover', 'cleaner', 'steam-idler', 'steam-sam', 'marketplace', 'settings', 'profile'],
+  [ROLES.OWNER]:  ['dashboard', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'video-downloader', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'performances', 'videos', 'users', 'settings', 'profile'],
+  [ROLES.ADMIN]:  ['dashboard', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'video-downloader', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'users', 'settings', 'profile'],
+  [ROLES.TESTER]: ['dashboard', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'video-downloader', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'settings', 'profile'],
+  [ROLES.USER]:   ['dashboard', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'video-downloader', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'settings', 'profile'],
 };
 
 // ===== PAGE ROLES (auto-generated from ROLE_PERMISSIONS) =====

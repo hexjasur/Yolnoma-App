@@ -1,4 +1,4 @@
-﻿use std::sync::Mutex;
+use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
@@ -6,6 +6,7 @@ mod commands;
 #[path = "commands/videos.rs"]
 mod videos;
 mod cleaner;
+mod crosshair;
 mod embedded_api_key;
 mod steam_idler;
 mod system_monitor;
@@ -209,6 +210,13 @@ pub fn run() {
             system_monitor::get_system_stats,
             // ── Cleaner ──
             cleaner::run_cleaner,
+            // ── Crosshair Overlay ──
+            crosshair::start_crosshair_overlay,
+            crosshair::stop_crosshair_overlay,
+            crosshair::update_crosshair_config,
+            crosshair::is_crosshair_active,
+            crosshair::save_crosshair_config,
+            crosshair::get_saved_crosshair_config,
             // ── Steam Idler & SAM ──
             steam_idler::steam_is_running,
             steam_idler::get_steam_accounts,

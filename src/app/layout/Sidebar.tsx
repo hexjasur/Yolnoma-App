@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { getVersion } from '@tauri-apps/api/app';
 import {
   LayoutGrid, Drama, Settings, Film, LogOut, Users, CircleUser,
-  Gamepad2, Coins, Blocks, ShoppingCart, Gamepad, BrushCleaning
+  Gamepad2, Coins, Blocks, ShoppingCart, Gamepad, BrushCleaning, Crosshair
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
@@ -21,9 +21,11 @@ const links = [
   { to: '/tools/currency', label: 'Currency Converter', icon: Coins, name: 'currency' },
   { to: '/tools/bg-remover', label: 'Background remover', icon: LayoutGrid, name: 'bg-remover' },
   { to: '/tools/cleaner', label: 'Cleaner', icon: BrushCleaning, name: 'cleaner' },
+  { to: '/tools/crosshair-overlay', label: 'Crosshair Overlay', icon: Crosshair, name: 'crosshair-overlay' },
 
   { to: '/tools/steam/steam-idler', label: 'Steam/Idler', icon: Gamepad2, name: 'steam-idler' },
   { to: '/tools/steam/sam', label: 'Steam/SAM', icon: Gamepad, name: 'steam-sam' },
+  { to: '/tools/steam/review', label: 'Steam/Review', icon: Gamepad2, name: 'steam-review' },
 
   { to: '/users', label: 'Users', icon: Users, name: 'users' },
   { to: '/profile', label: 'Profile', icon: CircleUser, name: 'profile' },
