@@ -2,10 +2,10 @@ import { useState, memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Clock, Eye, Star } from 'lucide-react';
 import HoverPreview from './HoverPreview';
-import type { EpornerVideo } from '@/features/videos/types/video';
+import type { EPVideo } from '@/features/videos/types/video';
 
 interface VideoCardProps {
-  video: EpornerVideo;
+  video: EPVideo;
 }
 
 function VideoCard({ video }: VideoCardProps) {

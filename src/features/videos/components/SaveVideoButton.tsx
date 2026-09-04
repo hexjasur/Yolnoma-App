@@ -1,13 +1,13 @@
 import { Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
 import { useSavedVideosQuery, useToggleSavedVideo } from '@/features/videos/hooks/useVideoQueries';
 import { Button } from '@/shared/ui';
-import type { EpornerVideo, SavedVideo } from '@/features/videos/types/video';
+import type { EPVideo, SavedVideo } from '@/features/videos/types/video';
 
 interface SaveVideoButtonProps {
-  video: EpornerVideo | SavedVideo;
+  video: EPVideo | SavedVideo;
 }
 
-function toEpornerVideo(video: EpornerVideo | SavedVideo): EpornerVideo {
+function toEPVideo(video: EPVideo | SavedVideo): EPVideo {
   if ('id' in video) return video;
   return {
     id: video.videoId,
@@ -24,7 +24,7 @@ function toEpornerVideo(video: EpornerVideo | SavedVideo): EpornerVideo {
 }
 
 export default function SaveVideoButton({ video }: SaveVideoButtonProps) {
-  const normalizedVideo = toEpornerVideo(video);
+  const normalizedVideo = toEPVideo(video);
   const savedQuery = useSavedVideosQuery();
   const toggleSaved = useToggleSavedVideo();
   const isSaved = (savedQuery.data ?? []).some((item) => item.videoId === normalizedVideo.id);

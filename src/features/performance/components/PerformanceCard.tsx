@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink } from 'lucide-react';
+import { openInNewWindow } from '@/shared/lib/window';
 import type { Performance } from '@/types';
 
 interface PerformanceCardProps {
@@ -11,7 +12,7 @@ interface PerformanceCardProps {
 
 /**
  * Memoized card — only re-renders when the item data changes.
- * Hover reveals Edit + Delete action buttons in the top-right corner.
+ * Hover reveals Open in New Window + Edit + Delete action buttons in the top-right corner.
  */
 const PerformanceCard = memo(function PerformanceCard({
   item,
@@ -22,6 +23,11 @@ const PerformanceCard = memo(function PerformanceCard({
 
   function handleCardClick() {
     navigate(`/performances/${item.id}`);
+  }
+
+  function handleOpenNewWindow(e: React.MouseEvent) {
+    e.stopPropagation();
+    openInNewWindow(`/performances/${item.id}`, item.full_name);
   }
 
   function handleEdit(e: React.MouseEvent) {
@@ -38,6 +44,8 @@ const PerformanceCard = memo(function PerformanceCard({
     <div
       className="perf-card"
       onClick={handleCardClick}
+      data-link={`/performances/${item.id}`}
+      data-href={`#/performances/${item.id}`}
       style={{
         position: 'relative',
         borderRadius: 14,
@@ -95,8 +103,40 @@ const PerformanceCard = memo(function PerformanceCard({
           }}
         >
           <button
+            onClick={handleOpenNewWindow}
+            aria-label="Open in New Window"
+            title="Open in New Window"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(20,17,14,0.85)',
+              border: '1px solid rgba(242,237,230,0.14)',
+              color: 'rgba(242,237,230,0.7)',
+              backdropFilter: 'blur(6px)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(217,119,87,0.25)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(217,119,87,0.5)';
+              (e.currentTarget as HTMLButtonElement).style.color = '#F2EDE6';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(20,17,14,0.85)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(242,237,230,0.14)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(242,237,230,0.7)';
+            }}
+          >
+            <ExternalLink size={13} strokeWidth={2} />
+          </button>
+
+          <button
             onClick={handleEdit}
-            aria-label="Tahrirlash"
+            aria-label="Edit"
+            title="Edit"
             style={{
               width: 32,
               height: 32,
@@ -126,7 +166,8 @@ const PerformanceCard = memo(function PerformanceCard({
 
           <button
             onClick={handleDelete}
-            aria-label="O'chirish"
+            aria-label="Delete"
+            title="Delete"
             style={{
               width: 32,
               height: 32,

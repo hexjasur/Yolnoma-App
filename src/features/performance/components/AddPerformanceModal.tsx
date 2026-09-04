@@ -94,7 +94,7 @@ export default function AddPerformanceModal({ open, onClose, onCreated }: AddPer
           label="Full name *"
           value={form.full_name}
           onChange={(e) => set('full_name', e.target.value)}
-          placeholder="For example: Jasur Toshmatov"
+          placeholder="For example: John Doe"
           required
           autoFocus
         />

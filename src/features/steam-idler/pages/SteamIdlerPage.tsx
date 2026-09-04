@@ -2,9 +2,21 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import {
-  Gamepad2, Play, Square, StopCircle, RefreshCw,
-  AlertTriangle, Wifi, WifiOff, Users, Star, Clock,
-  ChevronRight, Loader2, Trophy, Flame
+  Gamepad2,
+  Play,
+  Square,
+  StopCircle,
+  RefreshCw,
+  AlertTriangle,
+  Wifi,
+  WifiOff,
+  Users,
+  Star,
+  Clock,
+  ChevronRight,
+  Loader2,
+  Trophy,
+  Flame,
 } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -42,9 +54,11 @@ type Tab = 'favorites' | 'idling' | 'all';
 
 const CACHE_KEY = 'yolnoma_steam_games_cache';
 const FAVORITES_KEY = 'yolnoma_steam_favorites';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000; // 5m
 
-function getCachedGames(steamId: string): { games: SteamGame[]; age: number } | null {
+function getCachedGames(
+  steamId: string,
+): { games: SteamGame[]; age: number } | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
@@ -126,14 +140,14 @@ function GameCard({
     <div
       style={{
         background: isIdling
-          ? 'linear-gradient(135deg, rgba(34,197,94,0.06) 0%, #1B1713 100%)'
+          ? 'linear-gradient(135deg, rgba(217,119,87,0.08) 0%, #1B1713 100%)'
           : '#1B1713',
         border: `1px solid ${
           isIdling
-            ? 'rgba(34,197,94,0.25)'
+            ? 'rgba(217,119,87,0.35)'
             : isFavorite
-            ? 'rgba(217,119,87,0.3)'
-            : 'rgba(242,237,230,0.08)'
+              ? 'rgba(217,119,87,0.3)'
+              : 'rgba(242,237,230,0.08)'
         }`,
         borderRadius: 14,
         overflow: 'hidden',
@@ -141,7 +155,7 @@ function GameCard({
         flexDirection: 'column',
         transition: 'all 0.2s ease',
         position: 'relative',
-        boxShadow: isIdling ? '0 4px 16px rgba(34,197,94,0.1)' : 'none',
+        boxShadow: isIdling ? '0 4px 16px rgba(217,119,87,0.14)' : 'none',
       }}
     >
       {/* Idling Badge with Timer */}
@@ -152,23 +166,24 @@ function GameCard({
             top: 8,
             left: 8,
             zIndex: 2,
-            background: 'rgba(34,197,94,0.12)',
-            border: '1px solid rgba(34,197,94,0.3)',
+            background: 'rgba(10,9,7,0.82)',
+            border: '1px solid rgba(217,119,87,0.5)',
             borderRadius: 12,
-            padding: '4px 8px',
+            padding: '7px 10px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 2,
+            gap: 3,
             backdropFilter: 'blur(8px)',
+            minWidth: 82,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <span
               style={{
-                width: 6,
-                height: 6,
+                width: 7,
+                height: 7,
                 borderRadius: '50%',
-                background: '#4ade80',
+                background: '#D97757',
                 display: 'inline-block',
                 animation: 'idlePulse 1.5s infinite',
                 flexShrink: 0,
@@ -176,9 +191,9 @@ function GameCard({
             />
             <span
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 700,
-                color: '#4ade80',
+                color: '#D97757',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
               }}
@@ -189,8 +204,9 @@ function GameCard({
           {idleStartTime && (
             <span
               style={{
-                fontSize: 10,
-                color: 'rgba(74,222,128,0.9)',
+                fontSize: 12,
+                fontWeight: 700,
+                color: 'rgba(217,119,87,0.95)',
                 fontFamily: '"JetBrains Mono", monospace',
                 paddingLeft: 11,
               }}
@@ -215,7 +231,7 @@ function GameCard({
         <button
           onClick={() => onOpenSam(game.appId)}
           style={{
-            background: 'rgba(0,0,0,0.45)',
+            background: 'rgba(10,9,7,0.75)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: 8,
             width: 32,
@@ -236,7 +252,9 @@ function GameCard({
         <button
           onClick={() => onToggleFavorite(game.appId)}
           style={{
-            background: isFavorite ? 'rgba(217,119,87,0.25)' : 'rgba(0,0,0,0.45)',
+            background: isFavorite
+              ? 'rgba(217,119,87,0.25)'
+              : 'rgba(0,0,0,0.45)',
             border: `1px solid ${
               isFavorite ? 'rgba(217,119,87,0.5)' : 'rgba(255,255,255,0.12)'
             }`,
@@ -263,8 +281,9 @@ function GameCard({
       {/* Cover Image */}
       <div
         style={{
-          height: 100,
-          background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%)',
+          height: 132,
+          background:
+            'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%)',
           overflow: 'hidden',
           position: 'relative',
         }}
@@ -288,7 +307,8 @@ function GameCard({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'radial-gradient(circle, rgba(217,119,87,0.08) 0%, transparent 100%)',
+              background:
+                'radial-gradient(circle, rgba(217,119,87,0.08) 0%, transparent 100%)',
             }}
           >
             <Gamepad2 size={32} color="rgba(217,119,87,0.25)" />
@@ -534,7 +554,7 @@ export default function SteamIdlerPage() {
         setGamesLoading(false);
       }
     },
-    [selectedSteamId]
+    [selectedSteamId],
   );
 
   useEffect(() => {
@@ -567,7 +587,9 @@ export default function SteamIdlerPage() {
       setIdlingIds(new Set(result.running));
       await refreshIdleState();
       if (result.failed.length > 0) {
-        setError(`${result.failed.length} games failed to start idling. Please make sure Steam is running.`);
+        setError(
+          `${result.failed.length} games failed to start idling. Please make sure Steam is running.`,
+        );
       }
     } catch (e: unknown) {
       setError(String(e));
@@ -601,7 +623,7 @@ export default function SteamIdlerPage() {
   };
 
   const handleOpenSam = (appId: number) => {
-    navigate(`/steam-sam?appId=${appId}`);
+    navigate(`/tools/steam/sam?appId=${appId}`);
   };
 
   // Filter games based on current active tab & search query
@@ -615,13 +637,21 @@ export default function SteamIdlerPage() {
   // Pagination for "All Games" tab without search
   const GAMES_PER_PAGE = 60;
   const isPaginated = tab === 'all' && search.trim() === '';
-  const totalPages = isPaginated ? Math.ceil(filteredGames.length / GAMES_PER_PAGE) : 1;
+  const totalPages = isPaginated
+    ? Math.ceil(filteredGames.length / GAMES_PER_PAGE)
+    : 1;
   const safePage = Math.max(1, Math.min(currentPage, totalPages || 1));
   const displayedGames = isPaginated
-    ? filteredGames.slice((safePage - 1) * GAMES_PER_PAGE, safePage * GAMES_PER_PAGE)
+    ? filteredGames.slice(
+        (safePage - 1) * GAMES_PER_PAGE,
+        safePage * GAMES_PER_PAGE,
+      )
     : filteredGames;
 
-  const cacheAgeMin = cacheAge !== null ? Math.floor(cacheAge / 60000) : null;
+  const cacheAgeMin =
+    cacheAge !== null && Number.isFinite(cacheAge)
+      ? Math.floor(cacheAge / 60000)
+      : null;
 
   return (
     <div
@@ -647,7 +677,13 @@ export default function SteamIdlerPage() {
         >
           Steam Toolkit
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <div>
             <h1
               style={{
@@ -660,7 +696,13 @@ export default function SteamIdlerPage() {
             >
               Steam Game Idler
             </h1>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(242,237,230,0.45)' }}>
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: 13,
+                color: 'rgba(242,237,230,0.45)',
+              }}
+            >
               Simulate game hours and manage achievement unlocking seamlessly.
             </p>
           </div>
@@ -673,17 +715,15 @@ export default function SteamIdlerPage() {
               gap: 8,
               padding: '8px 16px',
               background: steamRunning
-                ? 'rgba(34,197,94,0.08)'
+                ? 'rgba(217,119,87,0.08)'
                 : 'rgba(239,68,68,0.08)',
               border: `1px solid ${
-                steamRunning
-                  ? 'rgba(34,197,94,0.2)'
-                  : 'rgba(239,68,68,0.2)'
+                steamRunning ? 'rgba(217,119,87,0.25)' : 'rgba(239,68,68,0.2)'
               }`,
               borderRadius: 24,
               fontSize: 13,
               fontWeight: 500,
-              color: steamRunning ? '#4ade80' : '#f87171',
+              color: steamRunning ? '#D97757' : '#f87171',
               backdropFilter: 'blur(8px)',
             }}
           >
@@ -765,11 +805,23 @@ export default function SteamIdlerPage() {
             Active Steam Account
           </p>
           {accountsLoading ? (
-            <p style={{ margin: 0, fontSize: 13, color: 'rgba(242,237,230,0.4)' }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                color: 'rgba(242,237,230,0.4)',
+              }}
+            >
               Detecting accounts...
             </p>
           ) : accounts.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: 'rgba(242,237,230,0.4)' }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                color: 'rgba(242,237,230,0.4)',
+              }}
+            >
               No Steam accounts detected on this PC
             </p>
           ) : (
@@ -809,7 +861,9 @@ export default function SteamIdlerPage() {
             }}
           >
             <Clock size={12} />
-            {cacheAgeMin === 0 ? 'Just updated' : `Updated ${cacheAgeMin} min ago`}
+            {cacheAgeMin === 0
+              ? 'Just updated'
+              : `Updated ${cacheAgeMin} min ago`}
             {secondsLeft > 0 && (
               <span
                 style={{
@@ -822,7 +876,7 @@ export default function SteamIdlerPage() {
                 }}
               >
                 Cooldown ({Math.floor(secondsLeft / 60)}:
-                {(secondsLeft % 60) < 10 ? '0' : ''}
+                {secondsLeft % 60 < 10 ? '0' : ''}
                 {secondsLeft % 60})
               </span>
             )}
@@ -848,16 +902,26 @@ export default function SteamIdlerPage() {
             }`,
             borderRadius: 10,
             padding: '7px 15px',
-            color: canRefresh && secondsLeft === 0 ? '#D97757' : 'rgba(242,237,230,0.45)',
+            color:
+              canRefresh && secondsLeft === 0
+                ? '#D97757'
+                : 'rgba(242,237,230,0.45)',
             fontSize: 13,
             fontWeight: 500,
-            cursor: gamesLoading || !selectedSteamId || secondsLeft > 0 ? 'not-allowed' : 'pointer',
-            opacity: gamesLoading || !selectedSteamId || secondsLeft > 0 ? 0.5 : 1,
+            cursor:
+              gamesLoading || !selectedSteamId || secondsLeft > 0
+                ? 'not-allowed'
+                : 'pointer',
+            opacity:
+              gamesLoading || !selectedSteamId || secondsLeft > 0 ? 0.5 : 1,
             transition: 'all 0.15s ease',
           }}
         >
           {gamesLoading ? (
-            <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+            <Loader2
+              size={14}
+              style={{ animation: 'spin 1s linear infinite' }}
+            />
           ) : (
             <RefreshCw size={14} />
           )}
@@ -876,9 +940,24 @@ export default function SteamIdlerPage() {
         }}
       >
         {[
-          { key: 'favorites', label: 'Favorite Games', count: favorites.size, icon: Star },
-          { key: 'idling', label: 'Now Idling', count: idlingIds.size, icon: Flame },
-          { key: 'all', label: 'All Games', count: games.length, icon: Gamepad2 },
+          {
+            key: 'favorites',
+            label: 'Favorite Games',
+            count: favorites.size,
+            icon: Star,
+          },
+          {
+            key: 'idling',
+            label: 'Now Idling',
+            count: idlingIds.size,
+            icon: Flame,
+          },
+          {
+            key: 'all',
+            label: 'All Games',
+            count: games.length,
+            icon: Gamepad2,
+          },
         ].map(({ key, label, count, icon: TabIcon }) => (
           <button
             key={key}
@@ -906,13 +985,18 @@ export default function SteamIdlerPage() {
             <TabIcon
               size={14}
               color={tab === key ? '#D97757' : 'rgba(242,237,230,0.4)'}
-              fill={key === 'favorites' && favorites.size > 0 ? '#D97757' : 'none'}
+              fill={
+                key === 'favorites' && favorites.size > 0 ? '#D97757' : 'none'
+              }
             />
             {label}
             {count > 0 && (
               <span
                 style={{
-                  background: tab === key ? 'rgba(217,119,87,0.15)' : 'rgba(242,237,230,0.07)',
+                  background:
+                    tab === key
+                      ? 'rgba(217,119,87,0.15)'
+                      : 'rgba(242,237,230,0.07)',
                   border: `1px solid ${tab === key ? 'rgba(217,119,87,0.3)' : 'rgba(242,237,230,0.1)'}`,
                   borderRadius: 20,
                   padding: '2px 8px',
@@ -929,16 +1013,24 @@ export default function SteamIdlerPage() {
 
         {/* Global Stop All Button */}
         {idlingIds.size > 0 && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8 }}>
+          <div
+            style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              paddingBottom: 8,
+            }}
+          >
             <span
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
                 fontSize: 12,
-                color: '#4ade80',
-                background: 'rgba(34,197,94,0.08)',
-                border: '1px solid rgba(34,197,94,0.2)',
+                color: '#D97757',
+                background: 'rgba(217,119,87,0.08)',
+                border: '1px solid rgba(217,119,87,0.25)',
                 borderRadius: 20,
                 padding: '4px 12px',
                 fontWeight: 500,
@@ -949,7 +1041,7 @@ export default function SteamIdlerPage() {
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  background: '#4ade80',
+                  background: '#D97757',
                   animation: 'idlePulse 1.5s infinite',
                   display: 'inline-block',
                 }}
@@ -996,10 +1088,23 @@ export default function SteamIdlerPage() {
           }}
         >
           <div>
-            <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: '#F2EDE6' }}>
+            <p
+              style={{
+                margin: '0 0 2px',
+                fontSize: 13,
+                fontWeight: 700,
+                color: '#F2EDE6',
+              }}
+            >
               Batch Idling Control
             </p>
-            <p style={{ margin: 0, fontSize: 12, color: 'rgba(242,237,230,0.45)' }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 12,
+                color: 'rgba(242,237,230,0.45)',
+              }}
+            >
               {favorites.size === 0
                 ? 'Mark games with ⭐ to queue them for idling (up to 32 concurrent games)'
                 : `${favorites.size} favorite game(s) queued for idling`}
@@ -1024,19 +1129,35 @@ export default function SteamIdlerPage() {
               }`,
               borderRadius: 12,
               padding: '9px 20px',
-              color: favorites.size > 0 && steamRunning && !actionLoading ? '#fff' : 'rgba(242,237,230,0.3)',
+              color:
+                favorites.size > 0 && steamRunning && !actionLoading
+                  ? '#fff'
+                  : 'rgba(242,237,230,0.3)',
               fontSize: 13,
               fontWeight: 600,
-              cursor: favorites.size > 0 && steamRunning && !actionLoading ? 'pointer' : 'not-allowed',
+              cursor:
+                favorites.size > 0 && steamRunning && !actionLoading
+                  ? 'pointer'
+                  : 'not-allowed',
               transition: 'all 0.15s ease',
             }}
           >
             {actionLoading ? (
-              <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+              <Loader2
+                size={15}
+                style={{ animation: 'spin 1s linear infinite' }}
+              />
             ) : (
-              <Play size={15} fill={favorites.size > 0 && steamRunning ? '#fff' : 'transparent'} />
+              <Play
+                size={15}
+                fill={
+                  favorites.size > 0 && steamRunning ? '#fff' : 'transparent'
+                }
+              />
             )}
-            {idlingIds.size > 0 ? 'Restart Favorites Idling' : 'Start Idling Favorites'}
+            {idlingIds.size > 0
+              ? 'Restart Favorites Idling'
+              : 'Start Idling Favorites'}
           </button>
         </div>
       )}
@@ -1074,7 +1195,8 @@ export default function SteamIdlerPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 280px))',
+              justifyContent: 'start',
               gap: 12,
             }}
           >
@@ -1089,9 +1211,22 @@ export default function SteamIdlerPage() {
                 }}
               >
                 <div className="skeleton" style={{ height: 100 }} />
-                <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div className="skeleton" style={{ height: 13, width: '75%', borderRadius: 6 }} />
-                  <div className="skeleton" style={{ height: 11, width: '40%', borderRadius: 6 }} />
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    className="skeleton"
+                    style={{ height: 13, width: '75%', borderRadius: 6 }}
+                  />
+                  <div
+                    className="skeleton"
+                    style={{ height: 11, width: '40%', borderRadius: 6 }}
+                  />
                 </div>
               </div>
             ))}
@@ -1111,7 +1246,13 @@ export default function SteamIdlerPage() {
             {tab === 'favorites' ? (
               <>
                 <Star size={40} style={{ marginBottom: 16, opacity: 0.3 }} />
-                <p style={{ fontSize: 15, margin: '0 0 6px', color: 'rgba(242,237,230,0.6)' }}>
+                <p
+                  style={{
+                    fontSize: 15,
+                    margin: '0 0 6px',
+                    color: 'rgba(242,237,230,0.6)',
+                  }}
+                >
                   No Favorite Games
                 </p>
                 <p style={{ fontSize: 13, margin: '0 0 16px' }}>
@@ -1139,7 +1280,13 @@ export default function SteamIdlerPage() {
             ) : tab === 'idling' ? (
               <>
                 <Flame size={40} style={{ marginBottom: 16, opacity: 0.3 }} />
-                <p style={{ fontSize: 15, margin: '0 0 6px', color: 'rgba(242,237,230,0.6)' }}>
+                <p
+                  style={{
+                    fontSize: 15,
+                    margin: '0 0 6px',
+                    color: 'rgba(242,237,230,0.6)',
+                  }}
+                >
                   No Games Currently Idling
                 </p>
                 <p style={{ fontSize: 13, margin: 0 }}>
@@ -1148,12 +1295,25 @@ export default function SteamIdlerPage() {
               </>
             ) : (
               <>
-                <Gamepad2 size={40} style={{ marginBottom: 16, opacity: 0.3 }} />
-                <p style={{ fontSize: 15, margin: '0 0 6px', color: 'rgba(242,237,230,0.6)' }}>
-                  {games.length === 0 ? 'No Games Loaded' : 'No matching games found'}
+                <Gamepad2
+                  size={40}
+                  style={{ marginBottom: 16, opacity: 0.3 }}
+                />
+                <p
+                  style={{
+                    fontSize: 15,
+                    margin: '0 0 6px',
+                    color: 'rgba(242,237,230,0.6)',
+                  }}
+                >
+                  {games.length === 0
+                    ? 'No Games Loaded'
+                    : 'No matching games found'}
                 </p>
                 <p style={{ fontSize: 13, margin: 0 }}>
-                  {games.length === 0 ? 'Select a Steam account and click Refresh.' : 'Try adjusting your search query.'}
+                  {games.length === 0
+                    ? 'Select a Steam account and click Refresh.'
+                    : 'Try adjusting your search query.'}
                 </p>
               </>
             )}
@@ -1163,7 +1323,8 @@ export default function SteamIdlerPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 280px))',
+                justifyContent: 'start',
                 gap: 12,
                 paddingBottom: 16,
               }}
@@ -1202,7 +1363,10 @@ export default function SteamIdlerPage() {
                   style={{
                     padding: '6px 14px',
                     borderRadius: 10,
-                    background: safePage <= 1 ? 'rgba(242,237,230,0.04)' : 'rgba(217,119,87,0.1)',
+                    background:
+                      safePage <= 1
+                        ? 'rgba(242,237,230,0.04)'
+                        : 'rgba(217,119,87,0.1)',
                     border: `1px solid ${safePage <= 1 ? 'rgba(242,237,230,0.08)' : 'rgba(217,119,87,0.25)'}`,
                     color: safePage <= 1 ? 'rgba(242,237,230,0.3)' : '#D97757',
                     fontSize: 13,
@@ -1214,15 +1378,28 @@ export default function SteamIdlerPage() {
                 </button>
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === totalPages ||
+                      Math.abs(p - safePage) <= 2,
+                  )
                   .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
+                    if (idx > 0 && p - (arr[idx - 1] as number) > 1)
+                      acc.push('...');
                     acc.push(p);
                     return acc;
                   }, [])
                   .map((p, idx) =>
                     p === '...' ? (
-                      <span key={`ellipsis-${idx}`} style={{ color: 'rgba(242,237,230,0.3)', fontSize: 13, padding: '0 4px' }}>
+                      <span
+                        key={`ellipsis-${idx}`}
+                        style={{
+                          color: 'rgba(242,237,230,0.3)',
+                          fontSize: 13,
+                          padding: '0 4px',
+                        }}
+                      >
                         …
                       </span>
                     ) : (
@@ -1233,9 +1410,13 @@ export default function SteamIdlerPage() {
                           minWidth: 36,
                           padding: '6px 10px',
                           borderRadius: 10,
-                          background: safePage === p ? '#D97757' : 'rgba(242,237,230,0.04)',
+                          background:
+                            safePage === p
+                              ? '#D97757'
+                              : 'rgba(242,237,230,0.04)',
                           border: `1px solid ${safePage === p ? '#D97757' : 'rgba(242,237,230,0.08)'}`,
-                          color: safePage === p ? '#fff' : 'rgba(242,237,230,0.6)',
+                          color:
+                            safePage === p ? '#fff' : 'rgba(242,237,230,0.6)',
                           fontSize: 13,
                           fontWeight: safePage === p ? 700 : 400,
                           cursor: 'pointer',
@@ -1243,18 +1424,26 @@ export default function SteamIdlerPage() {
                       >
                         {p}
                       </button>
-                    )
+                    ),
                   )}
 
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
                   disabled={safePage >= totalPages}
                   style={{
                     padding: '6px 14px',
                     borderRadius: 10,
-                    background: safePage >= totalPages ? 'rgba(242,237,230,0.04)' : 'rgba(217,119,87,0.1)',
+                    background:
+                      safePage >= totalPages
+                        ? 'rgba(242,237,230,0.04)'
+                        : 'rgba(217,119,87,0.1)',
                     border: `1px solid ${safePage >= totalPages ? 'rgba(242,237,230,0.08)' : 'rgba(217,119,87,0.25)'}`,
-                    color: safePage >= totalPages ? 'rgba(242,237,230,0.3)' : '#D97757',
+                    color:
+                      safePage >= totalPages
+                        ? 'rgba(242,237,230,0.3)'
+                        : '#D97757',
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
@@ -1263,7 +1452,13 @@ export default function SteamIdlerPage() {
                   Next →
                 </button>
 
-                <span style={{ fontSize: 12, color: 'rgba(242,237,230,0.4)', marginLeft: 8 }}>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: 'rgba(242,237,230,0.4)',
+                    marginLeft: 8,
+                  }}
+                >
                   Page {safePage} of {totalPages} · {filteredGames.length} games
                 </span>
               </div>
@@ -1277,8 +1472,8 @@ export default function SteamIdlerPage() {
           to { transform: rotate(360deg); }
         }
         @keyframes idlePulse {
-          0%, 100% { opacity: 1; box-shadow: 0 0 6px #4ade80; }
-          50% { opacity: 0.4; box-shadow: 0 0 2px #4ade80; }
+          0%, 100% { opacity: 1; box-shadow: 0 0 6px #D97757; }
+          50% { opacity: 0.4; box-shadow: 0 0 2px #D97757; }
         }
         .skeleton {
           background: linear-gradient(

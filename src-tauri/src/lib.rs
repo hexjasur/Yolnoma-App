@@ -8,6 +8,7 @@ mod videos;
 mod cleaner;
 mod crosshair;
 mod embedded_api_key;
+mod image_converter;
 mod steam_idler;
 mod system_monitor;
 
@@ -84,6 +85,7 @@ pub fn run() {
         .manage(system_monitor::SystemMonitorState::new())
             .manage(videos::DownloadState::new())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
@@ -193,7 +195,7 @@ pub fn run() {
             hide_window,
             get_idling_count,
             commands::proxy_request,
-            commands::proxy_eporner,
+            commands::proxy_ep,
             commands::open_in_new_window,
             // ── YouTube Video Downloader ──
             videos::download_youtube_video,
@@ -217,6 +219,12 @@ pub fn run() {
             crosshair::is_crosshair_active,
             crosshair::save_crosshair_config,
             crosshair::get_saved_crosshair_config,
+            // ── Image Converter ──
+            image_converter::get_image_info,
+            image_converter::get_default_output_dir,
+            image_converter::open_output_folder,
+            image_converter::convert_image,
+            image_converter::convert_images_batch,
             // ── Steam Idler & SAM ──
             steam_idler::steam_is_running,
             steam_idler::get_steam_accounts,

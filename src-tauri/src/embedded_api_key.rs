@@ -54,8 +54,11 @@ pub fn decode() -> Option<String> {
         Some(key) => obfuscate(key),
         None => ([0u8; 64], 0),
     };
+    decode_obfuscated(OBFUSCATED)
+}
 
-    let (obfuscated, len) = OBFUSCATED;
+fn decode_obfuscated(obfuscated: ([u8; 64], usize)) -> Option<String> {
+    let (obfuscated, len) = obfuscated;
     if len == 0 {
         return None;
     }
@@ -67,4 +70,38 @@ pub fn decode() -> Option<String> {
     }
 
     Some(String::from_utf8_lossy(&decoded).to_string())
+}
+
+// Generates a referer based on the same host as the index mapping in the frontend.
+pub fn referer() -> Result<String, String> {
+    const OBFUSCATED: ([u8; 64], usize) = match option_env!("VITE_ABC_KEY") {
+        Some(key) => obfuscate(key),
+        None => ([0u8; 64], 0),
+    };
+    let key = decode_obfuscated(OBFUSCATED).ok_or_else(|| {
+        "VITE_ABC_KEY was not embedded during the Rust build".to_string()
+    })?
+        .replace('_', "");
+
+    const INDICES: [usize; 15] = [
+        3, 3, 3, 15, 10, 11, 8, 12, 15, 8, 17, 11, 13, 0, 0,
+    ];
+    let bytes = key.as_bytes();
+    if bytes.iter().any(|byte| !byte.is_ascii()) || INDICES[..13].iter().any(|&index| index >= bytes.len()) {
+        return Err("VITE_ABC_KEY does not contain the expected character mapping".to_string());
+    }
+
+    let first_label: String = INDICES[..3]
+        .iter()
+        .map(|&index| bytes[index] as char)
+        .collect();
+    let second_label: String = INDICES[3..10]
+        .iter()
+        .map(|&index| bytes[index] as char)
+        .collect();
+    let top_level_domain: String = INDICES[10..13]
+        .iter()
+        .map(|&index| bytes[index] as char)
+        .collect();
+    Ok(format!("https://{}.{}.{}/", first_label, second_label, top_level_domain))
 }

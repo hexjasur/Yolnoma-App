@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Trophy, BarChart3, Search, RefreshCw, Lock, Unlock,
   CheckCircle2, AlertTriangle, Shield, Wifi, WifiOff,
-  ChevronRight, Loader2, Users, ArrowUpDown
+  ChevronRight, Loader2, Users, ArrowUpDown,
+  Sparkles, Check
 } from 'lucide-react';
 import { toast } from '@/shared/ui/Toast';
 import { ConfirmModal } from '@/shared/ui';
-
 
 // ────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -84,11 +84,21 @@ export default function SteamSamPage() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [modifiedStats, setModifiedStats] = useState<Record<string, number | string>>({});
 
+  // ── Multi-select Achievement Staging
+  const [selectedAchIds, setSelectedAchIds] = useState<Set<string>>(new Set());
+
+  // ── Confirmation Modals
+  const [confirmUnlockModal, setConfirmUnlockModal] = useState<{ open: boolean; mode: 'selected' | 'all'; count: number }>({ open: false, mode: 'selected', count: 0 });
+  const [confirmLockModal, setConfirmLockModal] = useState<{ open: boolean; mode: 'selected' | 'all'; count: number }>({ open: false, mode: 'selected', count: 0 });
+  const [showResetStatsConfirm, setShowResetStatsConfirm] = useState(false);
+
   // ── Achievement filters & search
   const [achFilter, setAchFilter] = useState<AchFilter>('all');
   const [achSort, setAchSort] = useState<AchSort>('rarity');
   const [achSearch, setAchSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  const initialLoadedRef = useRef(false);
 
   // Check Steam client status
   const checkSteam = useCallback(async () => {
@@ -102,7 +112,7 @@ export default function SteamSamPage() {
 
   useEffect(() => {
     checkSteam();
-    const interval = setInterval(checkSteam, 4000);
+    const interval = setInterval(checkSteam, 8000);
     return () => clearInterval(interval);
   }, [checkSteam]);
 
@@ -124,19 +134,15 @@ export default function SteamSamPage() {
   const loadGames = useCallback(async () => {
     if (!selectedSteamId) return;
 
-    // Check localStorage cache first
     try {
       const raw = localStorage.getItem(CACHE_KEY);
       if (raw) {
         const cache = JSON.parse(raw);
         if (cache.steamId === selectedSteamId && cache.games?.length > 0) {
           setGames(cache.games);
-          return;
         }
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     setGamesLoading(true);
     try {
@@ -145,6 +151,9 @@ export default function SteamSamPage() {
       });
       list.sort((a, b) => b.playtimeForever - a.playtimeForever);
       setGames(list);
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ steamId: selectedSteamId, games: list }));
+      } catch {}
     } catch (e: unknown) {
       console.error(e);
     } finally {
@@ -160,6 +169,7 @@ export default function SteamSamPage() {
   const loadSamData = useCallback(async (appId: number) => {
     setSamLoading(true);
     setSamError(null);
+    setSelectedAchIds(new Set());
     try {
       const data = await invoke<AchievementData>('get_achievement_data', { appId });
       setAchievements(data.achievements || []);
@@ -179,23 +189,22 @@ export default function SteamSamPage() {
     }
   }, []);
 
-  // Handle game selection
+  // Direct fast game selection
   const handleSelectGame = useCallback((game: SteamGame) => {
     setSelectedGame(game);
-    setSearchParams({ appId: String(game.appId) });
+    setSearchParams({ appId: String(game.appId) }, { replace: true });
     loadSamData(game.appId);
   }, [loadSamData, setSearchParams]);
 
-  // Auto-select game if urlAppId exists
+  // Initial load from URL
   useEffect(() => {
+    if (initialLoadedRef.current) return;
     if (urlAppId && games.length > 0) {
+      initialLoadedRef.current = true;
       const found = games.find((g) => g.appId === urlAppId);
       if (found) {
-        if (!selectedGame || selectedGame.appId !== urlAppId) {
-          handleSelectGame(found);
-        }
-      } else if (!selectedGame || selectedGame.appId !== urlAppId) {
-        // If not in library list yet, create minimal object and load
+        handleSelectGame(found);
+      } else {
         const fallbackGame: SteamGame = {
           appId: urlAppId,
           name: `App ID: ${urlAppId}`,
@@ -205,60 +214,114 @@ export default function SteamSamPage() {
         loadSamData(urlAppId);
       }
     }
-  }, [urlAppId, games, selectedGame, handleSelectGame, loadSamData]);
+  }, [urlAppId, games, handleSelectGame, loadSamData]);
 
-  // ── Achievement Handlers
-  const handleToggleAchievement = async (ach: Achievement) => {
-    if (!selectedGame) return;
-    if (ach.protectedAchievement) {
-      toast.warning('This achievement is server-side protected and cannot be modified.');
-      return;
-    }
-
-    const nextState = !ach.achieved;
-    try {
-      await invoke('set_achievement', {
-        appId: selectedGame.appId,
-        achId: ach.id,
-        unlock: nextState,
-      });
-
-      setAchievements((prev) =>
-        prev.map((a) => (a.id === ach.id ? { ...a, achieved: nextState } : a))
-      );
-      toast.success(`${nextState ? 'Unlocked' : 'Locked'}: ${ach.name}`);
-    } catch (err: unknown) {
-      toast.error(String(err) || 'Failed to update achievement');
-    }
+  // ── Multi-select Achievement Handlers
+  const handleToggleSelectAch = (id: string) => {
+    setSelectedAchIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
-  const handleUnlockAll = async () => {
+  const handleSelectAllFiltered = () => {
+    const selectable = filteredAchievements.filter((a) => !a.protectedAchievement);
+    setSelectedAchIds(new Set(selectable.map((a) => a.id)));
+  };
+
+  const handleSelectLockedOnly = () => {
+    const locked = achievements.filter((a) => !a.achieved && !a.protectedAchievement);
+    setSelectedAchIds(new Set(locked.map((a) => a.id)));
+  };
+
+  const handleSelectUnlockedOnly = () => {
+    const unlocked = achievements.filter((a) => a.achieved && !a.protectedAchievement);
+    setSelectedAchIds(new Set(unlocked.map((a) => a.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedAchIds(new Set());
+  };
+
+  // ── Execution Handlers (Commit to Steam with Confirmations)
+  const handleExecuteUnlock = async (mode: 'selected' | 'all') => {
     if (!selectedGame) return;
+    setConfirmUnlockModal({ open: false, mode: 'selected', count: 0 });
     setActionLoading(true);
+
     try {
-      await invoke('unlock_all_achievements', { appId: selectedGame.appId });
-      setAchievements((prev) =>
-        prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: true }))
-      );
-      toast.success('All unlocked achievements synchronized with Steam!');
+      if (mode === 'all') {
+        await invoke('unlock_all_achievements', { appId: selectedGame.appId });
+        setAchievements((prev) =>
+          prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: true }))
+        );
+        setSelectedAchIds(new Set());
+        toast.success('All achievements unlocked in Steam!');
+      } else {
+        const targetIds = Array.from(selectedAchIds);
+        let successCount = 0;
+        for (const achId of targetIds) {
+          try {
+            await invoke('set_achievement', {
+              appId: selectedGame.appId,
+              achId,
+              unlock: true,
+            });
+            successCount++;
+          } catch {}
+        }
+        setAchievements((prev) =>
+          prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: true } : a))
+        );
+        setSelectedAchIds(new Set());
+        toast.success(`Successfully unlocked ${successCount} achievement${successCount === 1 ? '' : 's'}!`);
+      }
     } catch (err: unknown) {
-      toast.error(String(err) || 'Failed to unlock all achievements');
+      toast.error(String(err) || 'Failed to unlock achievements');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleLockAll = async () => {
+  const handleExecuteLock = async (mode: 'selected' | 'all') => {
     if (!selectedGame) return;
+    setConfirmLockModal({ open: false, mode: 'selected', count: 0 });
     setActionLoading(true);
+
     try {
-      await invoke('lock_all_achievements', { appId: selectedGame.appId });
-      setAchievements((prev) =>
-        prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: false }))
-      );
-      toast.success('All achievements locked!');
+      if (mode === 'all') {
+        await invoke('lock_all_achievements', { appId: selectedGame.appId });
+        setAchievements((prev) =>
+          prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: false }))
+        );
+        setSelectedAchIds(new Set());
+        toast.success('All achievements locked!');
+      } else {
+        const targetIds = Array.from(selectedAchIds);
+        let successCount = 0;
+        for (const achId of targetIds) {
+          try {
+            await invoke('set_achievement', {
+              appId: selectedGame.appId,
+              achId,
+              unlock: false,
+            });
+            successCount++;
+          } catch {}
+        }
+        setAchievements((prev) =>
+          prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: false } : a))
+        );
+        setSelectedAchIds(new Set());
+        toast.success(`Successfully locked ${successCount} achievement${successCount === 1 ? '' : 's'}!`);
+      }
     } catch (err: unknown) {
-      toast.error(String(err) || 'Failed to lock all achievements');
+      toast.error(String(err) || 'Failed to lock achievements');
     } finally {
       setActionLoading(false);
     }
@@ -288,13 +351,6 @@ export default function SteamSamPage() {
     }
   };
 
-  const [showResetStatsConfirm, setShowResetStatsConfirm] = useState(false);
-
-  const handleResetStats = () => {
-    if (!selectedGame) return;
-    setShowResetStatsConfirm(true);
-  };
-
   const handleExecuteResetStats = async () => {
     if (!selectedGame) return;
     setShowResetStatsConfirm(false);
@@ -310,10 +366,9 @@ export default function SteamSamPage() {
     }
   };
 
-
   // ── Filtered & Sorted Achievements
   const filteredAchievements = useMemo(() => {
-    let list = achievements.filter((a) => {
+    const list = achievements.filter((a) => {
       const matchSearch =
         a.name.toLowerCase().includes(achSearch.toLowerCase()) ||
         a.description.toLowerCase().includes(achSearch.toLowerCase());
@@ -336,6 +391,7 @@ export default function SteamSamPage() {
   }, [achievements, achFilter, achSort, achSearch]);
 
   const unlockedCount = achievements.filter((a) => a.achieved).length;
+  const lockedCount = achievements.length - unlockedCount;
   const progressPercent = achievements.length > 0 ? Math.round((unlockedCount / achievements.length) * 100) : 0;
 
   // Filtered Game Library
@@ -348,103 +404,70 @@ export default function SteamSamPage() {
       style={{
         fontFamily: '"Inter", sans-serif',
         color: '#F2EDE6',
-        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 16,
+        height: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
     >
-      {/* ── HEADER ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: '#D97757',
-                fontWeight: 700,
-              }}
-            >
-              Steam Toolkit
-            </span>
-            <span
-              style={{
-                fontSize: 10,
-                fontFamily: '"JetBrains Mono", monospace',
-                padding: '2px 8px',
-                borderRadius: 4,
-                background: 'rgba(217,119,87,0.15)',
-                color: '#D97757',
-                fontWeight: 700,
-              }}
-            >
-              SAM PRO
-            </span>
-          </div>
-          <h1
-            style={{
-              fontFamily: '"Georgia", serif',
-              fontSize: 28,
-              fontWeight: 500,
-              margin: 0,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Steam Achievement Manager
-          </h1>
+      {/* ── TOP BANNER: STEAM STATUS ── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 20px',
+          background: '#14110E',
+          borderBottom: '1px solid rgba(242,237,230,0.06)',
+          fontSize: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Trophy size={16} color="#D97757" />
+          <span style={{ fontWeight: 600, letterSpacing: '0.04em' }}>
+            STEAM ACHIEVEMENT MANAGER (SAM)
+          </span>
         </div>
 
-        {/* Steam Status Badge */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '7px 14px',
-            background: steamRunning ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
-            border: `1px solid ${steamRunning ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
-            borderRadius: 20,
-            fontSize: 12,
-            fontWeight: 500,
-            color: steamRunning ? '#4ade80' : '#f87171',
-          }}
-        >
-          {steamRunning ? (
-            <>
-              <Wifi size={13} />
-              Steam Client Connected
-            </>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {steamRunning === null ? (
+            <span style={{ color: 'rgba(242,237,230,0.4)' }}>Checking Steam status...</span>
+          ) : steamRunning ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4ade80' }}>
+              <Wifi size={14} />
+              <span>Steam Connected</span>
+            </div>
           ) : (
-            <>
-              <WifiOff size={13} />
-              Steam Client Offline
-            </>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#f87171' }}>
+              <WifiOff size={14} />
+              <span>Steam is not running</span>
+            </div>
           )}
         </div>
       </div>
 
-      {/* ── MAIN WORKSPACE (SPLIT VIEW) ── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16 }}>
-        {/* ── LEFT PANEL: GAME PICKER (280px) ── */}
+      {/* ── WORKSPACE BODY ── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, padding: 16, gap: 16 }}>
+        {/* ── LEFT PANEL: GAME LIBRARY ── */}
         <div
           style={{
-            width: 290,
+            width: 320,
             background: '#181410',
             border: '1px solid rgba(242,237,230,0.08)',
             borderRadius: 16,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            flexShrink: 0,
           }}
         >
           {/* Account Selector */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(242,237,230,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <Users size={14} color="#D97757" />
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(242,237,230,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Account
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(242,237,230,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Users size={12} color="rgba(242,237,230,0.4)" />
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(242,237,230,0.4)', textTransform: 'uppercase' }}>
+                Active Steam User
               </span>
             </div>
             {accounts.length > 0 ? (
@@ -519,6 +542,7 @@ export default function SteamSamPage() {
                   return (
                     <button
                       key={game.appId}
+                      type="button"
                       onClick={() => handleSelectGame(game)}
                       style={{
                         display: 'flex',
@@ -620,7 +644,7 @@ export default function SteamSamPage() {
                 Select a Game
               </h2>
               <p style={{ fontSize: 13, margin: 0, maxWidth: 360, lineHeight: 1.5 }}>
-                Choose a title from the library on the left to inspect achievements, unlock stats, or simulate milestones.
+                Choose a title from the library on the left to inspect achievements, check the ones you want to unlock or lock, and commit changes with a single click.
               </p>
             </div>
           ) : (
@@ -697,6 +721,7 @@ export default function SteamSamPage() {
                 {/* Sub-tabs: Achievements | Statistics */}
                 <div style={{ display: 'flex', gap: 6, background: '#1B1713', padding: 4, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('achievements')}
                     style={{
                       display: 'flex',
@@ -717,6 +742,7 @@ export default function SteamSamPage() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setActiveTab('stats')}
                     style={{
                       display: 'flex',
@@ -755,10 +781,10 @@ export default function SteamSamPage() {
               ) : activeTab === 'achievements' ? (
                 /* ── ACHIEVEMENTS TAB ── */
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                  {/* Controls Bar: Filter, Sort, Search, Bulk Actions */}
+                  {/* Controls Bar: Filter, Sort, Search, Selection Shortcuts */}
                   <div
                     style={{
-                      padding: '12px 20px',
+                      padding: '10px 20px',
                       borderBottom: '1px solid rgba(242,237,230,0.06)',
                       display: 'flex',
                       alignItems: 'center',
@@ -767,13 +793,14 @@ export default function SteamSamPage() {
                       flexWrap: 'wrap',
                     }}
                   >
-                    {/* Left: Filter Pills & Search */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* Left: Filter Pills, Sort & Search */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       {/* Filter Pills */}
                       <div style={{ display: 'flex', gap: 4, background: '#1B1713', padding: 3, borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
                         {(['all', 'unlocked', 'locked'] as AchFilter[]).map((f) => (
                           <button
                             key={f}
+                            type="button"
                             onClick={() => setAchFilter(f)}
                             style={{
                               padding: '4px 10px',
@@ -827,69 +854,219 @@ export default function SteamSamPage() {
                           fontSize: 12,
                           color: '#F2EDE6',
                           outline: 'none',
-                          width: 170,
+                          width: 160,
                         }}
                       />
                     </div>
 
-                    {/* Right: Bulk Actions */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* Right: Quick Selection Buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <button
-                        onClick={handleUnlockAll}
-                        disabled={actionLoading}
+                        type="button"
+                        onClick={handleSelectAllFiltered}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 5,
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          background: 'rgba(34,197,94,0.12)',
-                          border: '1px solid rgba(34,197,94,0.3)',
-                          color: '#4ade80',
-                          fontSize: 12,
-                          fontWeight: 600,
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'rgba(242,237,230,0.7)',
+                          fontSize: 11,
+                          fontWeight: 500,
                           cursor: 'pointer',
                         }}
                       >
-                        <Unlock size={12} />
-                        Unlock All
+                        Select All
                       </button>
 
                       <button
-                        onClick={handleLockAll}
-                        disabled={actionLoading}
+                        type="button"
+                        onClick={handleSelectLockedOnly}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 5,
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          background: 'rgba(239,68,68,0.1)',
-                          border: '1px solid rgba(239,68,68,0.25)',
-                          color: '#f87171',
-                          fontSize: 12,
-                          fontWeight: 600,
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'rgba(242,237,230,0.7)',
+                          fontSize: 11,
+                          fontWeight: 500,
                           cursor: 'pointer',
                         }}
                       >
-                        <Lock size={12} />
-                        Lock All
+                        Select Locked ({lockedCount})
                       </button>
 
                       <button
+                        type="button"
+                        onClick={handleSelectUnlockedOnly}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'rgba(242,237,230,0.7)',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Select Unlocked ({unlockedCount})
+                      </button>
+
+                      {selectedAchIds.size > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearSelection}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: 6,
+                            background: 'rgba(239,68,68,0.1)',
+                            border: '1px solid rgba(239,68,68,0.2)',
+                            color: '#f87171',
+                            fontSize: 11,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Clear ({selectedAchIds.size})
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
                         onClick={() => selectedGame && loadSamData(selectedGame.appId)}
                         disabled={actionLoading}
                         style={{
-                          padding: '6px',
-                          borderRadius: 8,
+                          padding: '5px',
+                          borderRadius: 6,
                           background: 'rgba(242,237,230,0.05)',
                           border: '1px solid rgba(242,237,230,0.1)',
                           color: 'rgba(242,237,230,0.5)',
                           cursor: 'pointer',
+                          marginLeft: 4,
                         }}
                         title="Reload"
                       >
                         <RefreshCw size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── STAGED ACTIONS BAR (VISIBLE WHEN USER SELECTS ACHIEVEMENTS) ── */}
+                  <div
+                    style={{
+                      padding: '10px 20px',
+                      background: selectedAchIds.size > 0 ? 'rgba(217,119,87,0.12)' : 'rgba(255,255,255,0.02)',
+                      borderBottom: '1px solid rgba(242,237,230,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'background 0.2s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Sparkles size={15} color={selectedAchIds.size > 0 ? '#D97757' : 'rgba(242,237,230,0.4)'} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: selectedAchIds.size > 0 ? '#F2EDE6' : 'rgba(242,237,230,0.5)' }}>
+                        {selectedAchIds.size > 0 ? (
+                          <>
+                            <strong style={{ color: '#D97757' }}>{selectedAchIds.size}</strong> achievement{selectedAchIds.size === 1 ? '' : 's'} selected
+                          </>
+                        ) : (
+                          'Select achievements using checkboxes below to unlock or lock them'
+                        )}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Unlock Selected Button */}
+                      <button
+                        type="button"
+                        onClick={() => setConfirmUnlockModal({ open: true, mode: 'selected', count: selectedAchIds.size })}
+                        disabled={selectedAchIds.size === 0 || actionLoading}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 14px',
+                          borderRadius: 8,
+                          background: selectedAchIds.size > 0 ? '#22c55e' : 'rgba(255,255,255,0.05)',
+                          border: 'none',
+                          color: selectedAchIds.size > 0 ? '#000' : 'rgba(242,237,230,0.3)',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: selectedAchIds.size > 0 ? 'pointer' : 'not-allowed',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <Unlock size={13} strokeWidth={2.5} />
+                        Unlock Selected ({selectedAchIds.size})
+                      </button>
+
+                      {/* Lock Selected Button */}
+                      <button
+                        type="button"
+                        onClick={() => setConfirmLockModal({ open: true, mode: 'selected', count: selectedAchIds.size })}
+                        disabled={selectedAchIds.size === 0 || actionLoading}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 14px',
+                          borderRadius: 8,
+                          background: selectedAchIds.size > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.05)',
+                          border: `1px solid ${selectedAchIds.size > 0 ? 'rgba(239,68,68,0.4)' : 'transparent'}`,
+                          color: selectedAchIds.size > 0 ? '#f87171' : 'rgba(242,237,230,0.3)',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: selectedAchIds.size > 0 ? 'pointer' : 'not-allowed',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <Lock size={13} />
+                        Lock Selected ({selectedAchIds.size})
+                      </button>
+
+                      {/* Unlock All (Global action with modal) */}
+                      <button
+                        type="button"
+                        onClick={() => setConfirmUnlockModal({ open: true, mode: 'all', count: achievements.length })}
+                        disabled={actionLoading || achievements.length === 0}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '6px 12px',
+                          borderRadius: 8,
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'rgba(242,237,230,0.7)',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Unlock All
+                      </button>
+
+                      {/* Lock All (Global action with modal) */}
+                      <button
+                        type="button"
+                        onClick={() => setConfirmLockModal({ open: true, mode: 'all', count: achievements.length })}
+                        disabled={actionLoading || achievements.length === 0}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '6px 12px',
+                          borderRadius: 8,
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'rgba(242,237,230,0.7)',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Lock All
                       </button>
                     </div>
                   </div>
@@ -907,24 +1084,58 @@ export default function SteamSamPage() {
                           const isGold = percent !== null && percent < 10;
                           const isSilver = percent !== null && percent >= 10 && percent < 25;
                           const isBronze = percent !== null && percent >= 25 && percent < 50;
+                          const isSelected = selectedAchIds.has(ach.id);
 
                           return (
                             <div
                               key={ach.id}
-                              onClick={() => handleToggleAchievement(ach)}
+                              onClick={() => {
+                                if (!ach.protectedAchievement) {
+                                  handleToggleSelectAch(ach.id);
+                                }
+                              }}
                               style={{
-                                background: ach.achieved ? 'rgba(34,197,94,0.04)' : '#1B1713',
-                                border: `1px solid ${ach.achieved ? 'rgba(34,197,94,0.25)' : 'rgba(242,237,230,0.06)'}`,
+                                background: isSelected
+                                  ? 'rgba(217,119,87,0.14)'
+                                  : ach.achieved
+                                  ? 'rgba(34,197,94,0.04)'
+                                  : '#1B1713',
+                                border: `1px solid ${
+                                  isSelected
+                                    ? '#D97757'
+                                    : ach.achieved
+                                    ? 'rgba(34,197,94,0.25)'
+                                    : 'rgba(242,237,230,0.06)'
+                                }`,
                                 borderRadius: 12,
                                 padding: '10px 12px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 12,
+                                gap: 10,
                                 cursor: ach.protectedAchievement ? 'not-allowed' : 'pointer',
                                 opacity: ach.protectedAchievement ? 0.6 : 1,
                                 transition: 'all 0.15s ease',
+                                userSelect: 'none',
                               }}
                             >
+                              {/* Checkbox */}
+                              <div
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: 6,
+                                  border: `1.5px solid ${isSelected ? '#D97757' : 'rgba(255,255,255,0.2)'}`,
+                                  background: isSelected ? '#D97757' : 'rgba(255,255,255,0.04)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                {isSelected && <Check size={13} strokeWidth={3} color="#fff" />}
+                              </div>
+
                               {/* Achievement Icon */}
                               <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
                                 <img
@@ -1060,7 +1271,8 @@ export default function SteamSamPage() {
 
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button
-                        onClick={handleResetStats}
+                        type="button"
+                        onClick={() => setShowResetStatsConfirm(true)}
                         disabled={actionLoading}
                         style={{
                           padding: '6px 12px',
@@ -1077,6 +1289,7 @@ export default function SteamSamPage() {
                       </button>
 
                       <button
+                        type="button"
                         onClick={handleSaveStats}
                         disabled={actionLoading}
                         style={{
@@ -1178,7 +1391,41 @@ export default function SteamSamPage() {
         </div>
       </div>
 
-      {/* Reset Stats Confirmation Modal */}
+      {/* ── UNLOCK CONFIRMATION MODAL ── */}
+      <ConfirmModal
+        open={confirmUnlockModal.open}
+        onClose={() => setConfirmUnlockModal({ open: false, mode: 'selected', count: 0 })}
+        onConfirm={() => handleExecuteUnlock(confirmUnlockModal.mode)}
+        title={confirmUnlockModal.mode === 'all' ? 'Unlock All Achievements' : 'Unlock Selected Achievements'}
+        description={
+          <>
+            Are you sure you want to unlock {confirmUnlockModal.mode === 'all' ? 'all' : <strong className="text-white">{confirmUnlockModal.count}</strong>} achievement{confirmUnlockModal.count === 1 ? '' : 's'} for <strong className="text-white">{selectedGame?.name}</strong> in Steam?
+          </>
+        }
+        confirmText="Unlock Now"
+        cancelText="Cancel"
+        variant="primary"
+        loading={actionLoading}
+      />
+
+      {/* ── LOCK CONFIRMATION MODAL ── */}
+      <ConfirmModal
+        open={confirmLockModal.open}
+        onClose={() => setConfirmLockModal({ open: false, mode: 'selected', count: 0 })}
+        onConfirm={() => handleExecuteLock(confirmLockModal.mode)}
+        title={confirmLockModal.mode === 'all' ? 'Lock All Achievements' : 'Lock Selected Achievements'}
+        description={
+          <>
+            Are you sure you want to lock/relock {confirmLockModal.mode === 'all' ? 'all' : <strong className="text-white">{confirmLockModal.count}</strong>} achievement{confirmLockModal.count === 1 ? '' : 's'} for <strong className="text-white">{selectedGame?.name}</strong>?
+          </>
+        }
+        confirmText="Lock Achievements"
+        cancelText="Cancel"
+        variant="danger"
+        loading={actionLoading}
+      />
+
+      {/* ── RESET STATS CONFIRMATION MODAL ── */}
       <ConfirmModal
         open={showResetStatsConfirm}
         onClose={() => setShowResetStatsConfirm(false)}
@@ -1186,7 +1433,7 @@ export default function SteamSamPage() {
         title="Reset All Statistics"
         description={
           <>
-            Are you sure you want to reset all statistics for <strong className="text-white">{selectedGame?.name}</strong> to default/zero? This action will reset in-game statistics.
+            Are you sure you want to reset all statistics for <strong className="text-white">{selectedGame?.name}</strong> to default/zero?
           </>
         }
         confirmText="Reset Stats"
@@ -1197,4 +1444,3 @@ export default function SteamSamPage() {
     </div>
   );
 }
-

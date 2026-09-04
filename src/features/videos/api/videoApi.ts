@@ -1,19 +1,19 @@
 import { invoke } from '@tauri-apps/api/core';
 import { api } from '@/shared/api/http';
-import type { EpornerSearchResponse, EpornerVideo, SavedVideo, VideoOrder } from '@/features/videos/types/video';
+import type { EPSearchResponse, EPVideo, SavedVideo, VideoOrder } from '@/features/videos/types/video';
 
-// Try multiple base URLs in order
-const BASE_URLS = [
-  'https://www.eporner.com',
-  'https://es.eporner.com',
-];
+import { BASE_URLS } from './encrypt';
 
 async function proxyFetch(path: string): Promise<unknown> {
+  if (BASE_URLS.length === 0) {
+    throw new Error('Video service is unavailable: VITE_ABC_KEY is not configured.');
+  }
+
   let lastError = '';
   for (const base of BASE_URLS) {
     const url = `${base}${path}`;
     try {
-      const result = await invoke<unknown>('proxy_eporner', { url });
+      const result = await invoke<unknown>('proxy_ep', { url });
       return result;
     } catch (err) {
       lastError = String(err);
@@ -33,22 +33,22 @@ export const videoApi = {
     page = 1,
     perPage = 20,
     order: VideoOrder = 'latest'
-  ): Promise<EpornerSearchResponse> => {
+  ): Promise<EPSearchResponse> => {
     const orderParam = order || 'latest';
     const path = `/api/v2/video/search/?query=${encodeURIComponent(
       query
     )}&per_page=${perPage}&page=${page}&thumbsize=big&order=${encodeURIComponent(
       orderParam
     )}&thumbs=true&format=json`;
-    return proxyFetch(path) as Promise<EpornerSearchResponse>;
+    return proxyFetch(path) as Promise<EPSearchResponse>;
   },
 
   /**
    * Get full video details by ID including big thumbnails and thumbs array.
    */
-  getById: async (id: string): Promise<EpornerVideo> => {
+  getById: async (id: string): Promise<EPVideo> => {
     const path = `/api/v2/video/id/?id=${id}&thumbsize=big&thumbs=true&format=json`;
-    return proxyFetch(path) as Promise<EpornerVideo>;
+    return proxyFetch(path) as Promise<EPVideo>;
   },
 
   /**

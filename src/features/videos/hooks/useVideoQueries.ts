@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { EpornerVideo, SavedVideo, VideoOrder } from '@/features/videos/types/video';
+import type { EPVideo, SavedVideo, VideoOrder } from '@/features/videos/types/video';
 import { videoApi } from '@/features/videos/api/videoApi';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { toast } from '@/shared/ui/Toast';
@@ -38,7 +38,7 @@ export function useSavedVideosQuery(enabled = true) {
   });
 }
 
-function toSavedVideo(video: EpornerVideo): SavedVideo {
+function toSavedVideo(video: EPVideo): SavedVideo {
   return {
     videoId: video.id,
     title: video.title,
@@ -53,7 +53,7 @@ export function useToggleSavedVideo() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ video, isSaved }: { video: EpornerVideo; isSaved: boolean }) => {
+    mutationFn: async ({ video, isSaved }: { video: EPVideo; isSaved: boolean }) => {
       if (isSaved) {
         await videoApi.unsave(video.id);
         return { saved: false, video: toSavedVideo(video) };

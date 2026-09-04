@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import type { EpornerThumb } from '@/features/videos/types/video';
+import type { EPThumb } from '@/features/videos/types/video';
 
 interface HoverPreviewProps {
   defaultThumbUrl: string;
-  thumbs?: EpornerThumb[];
+  thumbs?: EPThumb[];
   isHovered: boolean;
   className?: string;
 }
@@ -13,7 +13,7 @@ export default function HoverPreview({ defaultThumbUrl, thumbs, isHovered, class
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<number | null>(null);
 
-  // Generate or load frame URLs based on Eporner response
+  // Generate or load frame URLs based on Ep response
   useEffect(() => {
     if (thumbs && thumbs.length > 0) {
       const apiFrames = thumbs.map((t) => t.src);
@@ -29,14 +29,14 @@ export default function HoverPreview({ defaultThumbUrl, thumbs, isHovered, class
 
     if (!defaultThumbUrl) return;
 
-    // Matches Eporner pattern like: .../1.jpg or .../1_360px.jpg or .../1_big.jpg
+    // Matches Ep pattern like: .../1.jpg or .../1_360px.jpg or .../1_big.jpg
     const match = defaultThumbUrl.match(/^(.*\/)(\d+)(_[^/]+|\.[a-zA-Z]+)$/);
     if (match) {
       const [, base, , suffix] = match;
       const generatedFrames = Array.from({ length: 8 }, (_, i) => `${base}${i + 1}${suffix}`);
       setFrames(generatedFrames);
 
-      // Preload images to ensure 60 FPS silliq animatsiya
+      // Preload images to ensure smooth animation
       generatedFrames.forEach((src) => {
         const img = new Image();
         img.src = src;

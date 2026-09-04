@@ -25,6 +25,7 @@ import { VideoDownloader } from '@/features/yt-video-downloader/pages/YTVideoDow
 import SteamReviewPage from '@/features/steam/review/SteamReviewPage';
 import CrosshairPage from '@/features/crosshair/pages/CrosshairPage';
 import CrosshairOverlayWindow from '@/features/crosshair/pages/CrosshairOverlayWindow';
+import ImageConverterPage from '@/features/image-converter/pages/ImageConverterPage';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -60,6 +61,7 @@ export default function AppRoutes() {
             />
             <Route path="/tools/cleaner" element={<CleanerPage />} />
             <Route path="/tools/crosshair-overlay" element={<CrosshairPage />} />
+            <Route path="/tools/image-converter" element={<ImageConverterPage />} />
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
             <Route path='/tools/steam/review' element={<SteamReviewPage />} />
             <Route

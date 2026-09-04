@@ -11,11 +11,12 @@ import {
   Server,
 } from 'lucide-react';
 import { videoApi } from '@/features/videos/api/videoApi';
+import { getEmbedUrl } from '@/features/videos/api/encrypt';
 import SaveVideoButton from '@/features/videos/components/SaveVideoButton';
 import VideoGallery from '@/features/videos/components/VideoGallery';
 import { Button } from '@/shared/ui';
 import { LineSkeleton } from '@/shared/ui/Skeleton';
-import type { EpornerVideo } from '@/features/videos/types/video';
+import type { EPVideo } from '@/features/videos/types/video';
 
 /** Skeleton matching VideoDetailPage layout while data loads. */
 function VideoDetailSkeleton() {
@@ -32,9 +33,7 @@ function VideoDetailSkeleton() {
 
       {/* Player */}
       <div className="space-y-3">
-        <div
-          className="skeleton aspect-video w-full rounded-3xl border border-[var(--border)]"
-        />
+        <div className="skeleton aspect-video w-full rounded-3xl border border-[var(--border)]" />
         <div className="flex gap-2 items-center justify-between flex-wrap">
           <LineSkeleton width={220} height={13} />
           <div className="flex gap-1.5">
@@ -74,7 +73,11 @@ function VideoDetailSkeleton() {
         }}
       >
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="skeleton" style={{ aspectRatio: '16/9', borderRadius: 10 }} />
+          <div
+            key={i}
+            className="skeleton"
+            style={{ aspectRatio: '16/9', borderRadius: 10 }}
+          />
         ))}
       </div>
     </div>
@@ -85,7 +88,7 @@ export default function VideoDetailPage() {
   const { videoId } = useParams<{ videoId: string }>();
   const location = useLocation();
 
-  const [video, setVideo] = useState<EpornerVideo | null>(null);
+  const [video, setVideo] = useState<EPVideo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [server, setServer] = useState<'www' | 'es'>('www');
@@ -121,7 +124,7 @@ export default function VideoDetailPage() {
       (typeof video.default_thumb === 'string' ? video.default_thumb : '');
 
     const thumbList = (video.thumbs || []).map((t: any) =>
-      typeof t === 'string' ? t : t?.src || ''
+      typeof t === 'string' ? t : t?.src || '',
     );
 
     const combined = [defaultThumbSrc, ...thumbList].filter(Boolean);
@@ -152,8 +155,12 @@ export default function VideoDetailPage() {
         </Link>
 
         <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.06] p-6 text-center">
-          <p className="font-semibold text-red-300 mb-2">Video yuklashda xato yuz berdi</p>
-          <p className="text-sm text-red-300/70 mb-5">{error || 'Video topilmadi.'}</p>
+          <p className="font-semibold text-red-300 mb-2">
+            Video yuklashda xato yuz berdi
+          </p>
+          <p className="text-sm text-red-300/70 mb-5">
+            {error || 'Video topilmadi.'}
+          </p>
           <Button variant="ghost" onClick={loadVideo}>
             Qayta urinish
           </Button>
@@ -166,14 +173,17 @@ export default function VideoDetailPage() {
     ? video.views >= 1000000
       ? `${(video.views / 1000000).toFixed(1)}M`
       : video.views >= 1000
-      ? `${(video.views / 1000).toFixed(0)}K`
-      : String(video.views)
+        ? `${(video.views / 1000).toFixed(0)}K`
+        : String(video.views)
     : '0';
 
   const rating = parseFloat(video.rate || '0').toFixed(1);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8" style={{ fontFamily: 'var(--font-sans)' }}>
+    <div
+      className="max-w-5xl mx-auto space-y-8"
+      style={{ fontFamily: 'var(--font-sans)' }}
+    >
       {/* Navigation & Action Row */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <Link
@@ -193,7 +203,7 @@ export default function VideoDetailPage() {
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent-border)] transition-all text-decoration-none"
             >
               <ExternalLink size={13} />
-              Epornerda ko'rish
+              Original EP CODE
             </a>
           )}
           <SaveVideoButton video={video} />
@@ -204,7 +214,7 @@ export default function VideoDetailPage() {
       <div className="space-y-3">
         <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-black shadow-2xl">
           <iframe
-            src={`https://${server}.eporner.com/embed/${video.id}/`}
+            src={getEmbedUrl(server, video.id)}
             title={video.title}
             width="100%"
             height="100%"
@@ -256,8 +266,13 @@ export default function VideoDetailPage() {
         <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)] border-t border-b border-[var(--border)] py-3">
           {/* Rating */}
           <div className="flex items-center gap-1.5">
-            <Star size={14} className="fill-[var(--accent)] stroke-[var(--accent)]" />
-            <span className="font-bold text-[var(--text-primary)]">{rating}</span>
+            <Star
+              size={14}
+              className="fill-[var(--accent)] stroke-[var(--accent)]"
+            />
+            <span className="font-bold text-[var(--text-primary)]">
+              {rating}
+            </span>
             <span>/ 5.0</span>
           </div>
 
@@ -270,7 +285,12 @@ export default function VideoDetailPage() {
           {/* Duration */}
           <div className="flex items-center gap-1.5">
             <Clock size={14} className="text-[var(--accent)]" />
-            <span>Davomiyligi: <strong className="text-[var(--text-primary)]">{video.length_min || '0:00'}</strong></span>
+            <span>
+              Davomiyligi:{' '}
+              <strong className="text-[var(--text-primary)]">
+                {video.length_min || '0:00'}
+              </strong>
+            </span>
           </div>
 
           {/* Added Date */}

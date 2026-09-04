@@ -7,7 +7,7 @@
 
 [package]
 name = "yolnoma-app"
-version = "0.6.121"
+version = "0.7.2"
 description = "Yolnoma Desktop Utility App"
 authors = ["Jasurbek Haydarov"]
 edition = "2021"
@@ -30,6 +30,7 @@ tauri-plugin-opener = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-dialog = "2"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -47,6 +48,7 @@ regex = "1"
 steamlocate = "2"
 dirs = "6.0.0"
 base64 = "0.22"
+image = { version = "0.25", features = ["png", "jpeg", "bmp", "webp", "gif", "ico", "tiff"] }
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Security",

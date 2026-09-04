@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ExternalLink,
-  Copy,
   RotateCw,
   ArrowLeft,
   ArrowRight,
   Globe,
-  ClipboardPaste,
 } from 'lucide-react';
 import { openInNewWindow } from '@/shared/lib/window';
 import { toast } from '@/shared/ui/Toast';
@@ -229,59 +227,6 @@ export function ContextMenuProvider({
     closeMenu();
   };
 
-  const handleCopyLink = async () => {
-    const url = menu.targetUrl || window.location.hash || window.location.href;
-    const cleanUrl = url.startsWith('#')
-      ? `yolnoma://app/${url.slice(2)}`
-      : url.startsWith('/')
-        ? `yolnoma://app${url}`
-        : url;
-
-    try {
-      await navigator.clipboard.writeText(cleanUrl);
-      toast.success('Link copied');
-    } catch {
-      toast.error('Could not copy');
-    }
-    closeMenu();
-  };
-
-  const handlePaste = async () => {
-    const activeElement = document.activeElement;
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement
-      )
-    ) {
-      toast.error('Select a text field first');
-      closeMenu();
-      return;
-    }
-
-    try {
-      const text = await navigator.clipboard.readText();
-      const start = activeElement.selectionStart ?? activeElement.value.length;
-      const end = activeElement.selectionEnd ?? start;
-      const nextValue =
-        activeElement.value.slice(0, start) +
-        text +
-        activeElement.value.slice(end);
-      const setter = Object.getOwnPropertyDescriptor(
-        activeElement instanceof HTMLTextAreaElement
-          ? HTMLTextAreaElement.prototype
-          : HTMLInputElement.prototype,
-        'value',
-      )?.set;
-      setter?.call(activeElement, nextValue);
-      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-      activeElement.setSelectionRange(start + text.length, start + text.length);
-    } catch {
-      toast.error('Could not paste from clipboard');
-    }
-    closeMenu();
-  };
-
   const handleOpenInBrowser = async () => {
     if (menu.targetUrl) {
       try {
@@ -351,15 +296,6 @@ export function ContextMenuProvider({
                 </div>
               </button>
 
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="w-full px-3 py-2 flex items-center gap-2.5 hover:bg-white/[0.08] text-left text-white/70 hover:text-white transition-colors"
-              >
-                <Copy size={13} className="text-white/40" />
-                <span>Copy link</span>
-              </button>
-
               {menu.isExternal && (
                 <button
                   type="button"
@@ -376,31 +312,6 @@ export function ContextMenuProvider({
           )}
 
           {/* General navigation actions */}
-          <button
-            type="button"
-            onClick={handlePaste}
-            className="w-full px-3 py-1.5 flex items-center justify-between gap-2 hover:bg-white/[0.08] text-left text-white/75 hover:text-white transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <ClipboardPaste size={12} className="text-white/40" />
-              <span>Paste</span>
-            </div>
-            <span className="text-[10px] text-white/30 font-mono">Ctrl+V</span>
-          </button>
-
-          {!menu.targetUrl && (
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="w-full px-3 py-1.5 flex items-center justify-between gap-2 hover:bg-white/[0.08] text-left text-white/75 hover:text-white transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Copy size={12} className="text-white/40" />
-                <span>Copy link</span>
-              </div>
-              <span className="text-[10px] text-white/30 font-mono">URL</span>
-            </button>
-          )}
 
           <button
             type="button"

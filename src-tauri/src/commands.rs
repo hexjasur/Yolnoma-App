@@ -1,5 +1,5 @@
 #[tauri::command]
-pub async fn proxy_eporner(url: String) -> Result<serde_json::Value, String> {
+pub async fn proxy_ep(url: String) -> Result<serde_json::Value, String> {
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -9,7 +9,10 @@ pub async fn proxy_eporner(url: String) -> Result<serde_json::Value, String> {
     let res = client
         .get(&url)
         .header("Accept", "application/json")
-        .header("Referer", "https://www.eporner.com/")
+        .header(
+            "Referer",
+            crate::embedded_api_key::referer().map_err(|e| format!("Referer configuration error: {}", e))?,
+        )
         .timeout(std::time::Duration::from_secs(15))
         .send()
         .await

@@ -6,7 +6,7 @@ import { useSavedVideos } from '@/features/videos/hooks/useSavedVideos';
 import { useVideoSearch } from '@/features/videos/hooks/useVideoQueries';
 import VideoCard from '@/features/videos/components/VideoCard';
 import { Button } from '@/shared/ui';
-import type { EpornerVideo, VideoOrder } from '@/features/videos/types/video';
+import type { EPVideo, VideoOrder } from '@/features/videos/types/video';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 const VALID_ORDERS: VideoOrder[] = [
@@ -38,7 +38,7 @@ export default function VideosPage() {
   const [activeTab, setActiveTab] = useState<'search' | 'saved'>('search');
   const [queryInput, setQueryInput] = useState(queryParam);
   const videoSearchQuery = useVideoSearch(queryParam, currentPage, currentOrder, activeTab === 'search');
-  const videos: EpornerVideo[] = videoSearchQuery.data?.videos ?? [];
+  const videos: EPVideo[] = videoSearchQuery.data?.videos ?? [];
   const totalVideos = Number(videoSearchQuery.data?.total_count ?? 0);
   const loading = videoSearchQuery.isLoading;
   const error = videoSearchQuery.error;
@@ -272,7 +272,7 @@ export default function VideosPage() {
           ) : (
             <div className="py-20 text-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
               <Search size={36} className="mx-auto mb-3 opacity-30 text-[var(--accent)]" />
-              <p className="text-base text-[var(--text-primary)] font-medium">Search for videos</p>
+              <p className="text-base text-[var(--text-primary)] font-medium">Global Search</p>
               <p className="text-xs mt-1">Type in the search bar or select one of the performance above.</p>
             </div>
           )}
@@ -364,8 +364,8 @@ export default function VideosPage() {
           ) : savedVideos.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {savedVideos.map((sv) => {
-                // Map SavedVideo to EpornerVideo shape for consistent card presentation
-                const mappedVideo: EpornerVideo = {
+                // Map SavedVideo to EPVideo shape for consistent card presentation
+                const mappedVideo: EPVideo = {
                   id: sv.videoId,
                   title: sv.title,
                   url: '',

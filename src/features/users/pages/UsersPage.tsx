@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users, Shield, User as UserIcon, RefreshCw, AlertCircle, Check, Loader2,
-  Edit2, Trash2, Search, X, CheckCircle2
+  Pencil, Trash2, Search, X, Ban, ShieldCheck
 } from 'lucide-react';
 import { Button, Modal, ConfirmModal } from '@/shared/ui';
+import { toast } from '@/shared/ui/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { userApi } from '../api/userApi';
@@ -11,331 +13,402 @@ import type { UserItem, UserRole, UserUpdatePayload } from '../types/user';
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Editing state
+  // ── React Query for Users (Smooth caching, zero flashing)
+  const {
+    data: users = [],
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => userApi.list(),
+    staleTime: 60 * 1000, // 1 minute fresh cache
+  });
+
+  // ── Editing state
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState<UserRole>('user');
   const [editIsPrivate, setEditIsPrivate] = useState(false);
-  const [savingEdit, setSavingEdit] = useState(false);
+  const [editIsSpam, setEditIsSpam] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  // Deletion confirm state
+  // ── Block / Spam Confirmation Modal
+  const [userToBlock, setUserToBlock] = useState<UserItem | null>(null);
+
+  // ── Delete Confirmation Modal
   const [userToDelete, setUserToDelete] = useState<UserItem | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await userApi.list();
-      setUsers(data);
-    } catch (err: unknown) {
-      console.error(err);
-      setError(getErrorMessage(err, 'Failed to fetch users list.'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ── Mutations
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UserUpdatePayload }) =>
+      userApi.update(id, payload),
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData<UserItem[]>(['users'], (old = []) =>
+        old.map((u) => (u.id === updatedUser.id ? { ...u, ...updatedUser } : u))
+      );
+      toast.success(`User "${updatedUser.displayName || updatedUser.email || updatedUser.id}" updated.`);
+      closeEditModal();
+      setUserToBlock(null);
+    },
+    onError: (err) => {
+      const msg = getErrorMessage(err, 'Failed to update user.');
+      setEditError(msg);
+      toast.error(msg);
+    },
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => userApi.delete(userId),
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData<UserItem[]>(['users'], (old = []) =>
+        old.filter((u) => u.id !== deletedId)
+      );
+      toast.success('User deleted successfully.');
+      setUserToDelete(null);
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'Failed to delete user.'));
+    },
+  });
 
+  // ── Modal Handlers
   const openEditModal = (u: UserItem) => {
     setEditingUser(u);
     setEditDisplayName(u.displayName || u.name || '');
     setEditEmail(u.email || '');
     setEditRole(u.role || 'user');
     setEditIsPrivate(Boolean(u.isPrivate));
+    setEditIsSpam(Boolean(u.isSpam || u.isBlocked));
     setEditError(null);
   };
 
   const closeEditModal = () => {
     setEditingUser(null);
-    setSavingEdit(false);
     setEditError(null);
   };
 
-  const handleSaveUser = async () => {
+  const handleSaveUser = () => {
     if (!editingUser) return;
-    setSavingEdit(true);
     setEditError(null);
 
-    try {
-      const payload: UserUpdatePayload = {};
-      const trimmedName = editDisplayName.trim();
-      if (trimmedName !== (editingUser.displayName || editingUser.name || '')) {
-        payload.displayName = trimmedName || null;
-      }
-      if (editEmail.trim() && editEmail.trim() !== (editingUser.email || '')) {
-        payload.email = editEmail.trim();
-      }
-      if (editIsPrivate !== Boolean(editingUser.isPrivate)) {
-        payload.isPrivate = editIsPrivate;
-      }
-      if (currentUser?.role === 'owner' && editRole !== editingUser.role) {
-        payload.role = editRole;
-      }
+    const payload: UserUpdatePayload = {};
+    const trimmedName = editDisplayName.trim();
+    if (trimmedName !== (editingUser.displayName || editingUser.name || '')) {
+      payload.displayName = trimmedName || null;
+    }
+    if (editEmail.trim() && editEmail.trim() !== (editingUser.email || '')) {
+      payload.email = editEmail.trim();
+    }
+    if (editIsPrivate !== Boolean(editingUser.isPrivate)) {
+      payload.isPrivate = editIsPrivate;
+    }
+    if (editIsSpam !== Boolean(editingUser.isSpam || editingUser.isBlocked)) {
+      payload.isSpam = editIsSpam;
+      payload.isBlocked = editIsSpam;
+    }
+    if (currentUser?.role === 'owner' && editRole !== editingUser.role) {
+      payload.role = editRole;
+    }
 
-      // If nothing changed, just close
-      if (Object.keys(payload).length === 0) {
-        closeEditModal();
-        return;
-      }
-
-      const updatedUser = await userApi.update(editingUser.id, payload);
-
-      setUsers((prev) =>
-        prev.map((u) => (u.id === editingUser.id ? { ...u, ...updatedUser } : u))
-      );
-
-      setSuccessMsg(`User "${updatedUser.displayName || updatedUser.email || updatedUser.id}" updated successfully!`);
-      setTimeout(() => setSuccessMsg(null), 3500);
+    if (Object.keys(payload).length === 0) {
       closeEditModal();
-    } catch (err: unknown) {
-      console.error(err);
-      setEditError(getErrorMessage(err, 'Failed to save user changes.'));
-    } finally {
-      setSavingEdit(false);
+      return;
     }
+
+    updateMutation.mutate({ id: editingUser.id, payload });
   };
 
-  const confirmDeleteUser = (u: UserItem) => {
-    setUserToDelete(u);
+  const handleToggleSpamBlock = () => {
+    if (!userToBlock) return;
+    const nextSpamState = !Boolean(userToBlock.isSpam || userToBlock.isBlocked);
+    updateMutation.mutate({
+      id: userToBlock.id,
+      payload: { isSpam: nextSpamState, isBlocked: nextSpamState },
+    });
   };
 
-  const handleExecuteDelete = async () => {
+  const handleExecuteDelete = () => {
     if (!userToDelete) return;
-    setDeleting(true);
-    setError(null);
-    try {
-      await userApi.delete(userToDelete.id);
-      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
-      setSuccessMsg(`User "${userToDelete.displayName || userToDelete.email || userToDelete.id}" deleted successfully.`);
-      setTimeout(() => setSuccessMsg(null), 3000);
-      setUserToDelete(null);
-    } catch (err: unknown) {
-      console.error(err);
-      setError(getErrorMessage(err, 'Failed to delete user.'));
-    } finally {
-      setDeleting(false);
-    }
+    deleteMutation.mutate(userToDelete.id);
   };
 
+  // ── Role & Status Badges
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'owner':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D97757]/15 text-[#D97757] border border-[#D97757]/30">
-            <Shield size={12} />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#D97757]/15 text-[#D97757] border border-[#D97757]/30">
+            <Shield size={11} />
             Owner
           </span>
         );
       case 'admin':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Shield size={12} />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <Shield size={11} />
             Admin
           </span>
         );
       case 'tester':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Shield size={12} />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Shield size={11} />
             Tester
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/5 text-white/60 border border-white/10">
-            <UserIcon size={12} />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/5 text-white/60 border border-white/10">
+            <UserIcon size={11} />
             User
           </span>
         );
     }
   };
 
-  const filteredUsers = users.filter((u) => {
+  const getStatusBadge = (u: UserItem) => {
+    const isSpam = Boolean(u.isSpam || u.isBlocked);
+    if (isSpam) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/30">
+          <Ban size={11} />
+          Blocked / Spam
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400/80 border border-emerald-500/20">
+        <ShieldCheck size={11} />
+        Active
+      </span>
+    );
+  };
+
+  // ── Filtered Users
+  const filteredUsers = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    const name = (u.displayName || u.name || '').toLowerCase();
-    const email = (u.email || '').toLowerCase();
-    const role = (u.role || '').toLowerCase();
-    const id = u.id.toLowerCase();
-    return name.includes(q) || email.includes(q) || role.includes(q) || id.includes(q);
-  });
+    if (!q) return users;
+    return users.filter((u) => {
+      const name = (u.displayName || u.name || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const role = (u.role || '').toLowerCase();
+      const id = u.id.toLowerCase();
+      return name.includes(q) || email.includes(q) || role.includes(q) || id.includes(q);
+    });
+  }, [users, searchQuery]);
 
   const isOwner = currentUser?.role === 'owner';
 
   return (
-    <div className="h-full flex flex-col" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
-      {/* Header */}
-      <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-8 pb-6 border-b border-white/[0.06]">
-        <div>
-          <p className="text-[11px] tracking-[0.18em] uppercase text-[var(--accent)] mb-2 font-semibold">
-            MANAGEMENT
-          </p>
-          <h1 className="font-serif text-4xl font-medium tracking-tight text-white m-0 leading-none">
-            Users
-          </h1>
-          <p className="mt-2 text-white/40 text-sm">
-            {loading ? 'Loading...' : `Total ${users.length} registered user${users.length === 1 ? '' : 's'}`}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Search bar */}
-          <div className="relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-            <input
-              type="text"
-              placeholder="Search user..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-8 py-2 text-xs bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--accent)] transition-all w-56 md:w-64"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70"
-              >
-                <X size={12} />
-              </button>
-            )}
+    <div className="h-full overflow-y-auto px-6 py-6" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
+      <div className="max-w-6xl mx-auto flex flex-col gap-6">
+        {/* Header */}
+        <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 pb-6 border-b border-white/[0.06]">
+          <div>
+            <p className="text-[11px] tracking-[0.18em] uppercase text-[var(--accent)] mb-2 font-semibold">
+              ADMINISTRATION
+            </p>
+            <h1 className="font-serif text-3xl font-medium tracking-tight text-white m-0 leading-none">
+              Users Management
+            </h1>
+            <p className="mt-2 text-white/40 text-xs">
+              {isLoading ? 'Loading users...' : `Total ${users.length} registered account${users.length === 1 ? '' : 's'}`}
+            </p>
           </div>
 
-          <Button variant="ghost" onClick={fetchUsers} disabled={loading} className="gap-2">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </Button>
-        </div>
-      </header>
+          <div className="flex items-center gap-3">
+            {/* Search bar */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+              <input
+                type="text"
+                placeholder="Search user..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8 py-2 text-xs bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--accent)] transition-all w-56 md:w-64"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
 
-      {/* Success Banner */}
-      {successMsg && (
-        <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-3">
-          <CheckCircle2 size={16} />
-          {successMsg}
-        </div>
-      )}
+            <Button
+              variant="ghost"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="gap-2 text-xs py-2 px-3"
+            >
+              <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
+              Refresh
+            </Button>
+          </div>
+        </header>
 
-      {/* Error Banner */}
-      {error && (
-        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
-          <AlertCircle size={16} />
-          {error}
-        </div>
-      )}
+        {/* Error Banner */}
+        {queryError && (
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
+            <AlertCircle size={16} />
+            {getErrorMessage(queryError, 'Failed to fetch users list.')}
+          </div>
+        )}
 
-      {/* Users Table / List */}
-      {loading ? (
-        <div className="flex-1 flex flex-col gap-3">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="h-16 w-full bg-white/5 animate-pulse rounded-xl border border-white/5" />
-          ))}
-        </div>
-      ) : filteredUsers.length === 0 ? (
-        <div className="text-center py-20 text-white/40 border border-dashed border-white/10 rounded-2xl">
-          <Users className="mx-auto mb-4 text-white/20" size={40} />
-          <p className="text-base text-white/80 mb-1">
-            {searchQuery ? 'No users found matching your search' : 'No users available'}
-          </p>
-          <p className="text-xs">
-            {searchQuery ? 'Try searching with a different keyword.' : 'There are no users in the database.'}
-          </p>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-x-auto rounded-2xl border border-white/[0.06] bg-[#111109]">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.06] text-white/40 text-xs font-semibold uppercase tracking-wider bg-white/[0.01]">
-                <th className="py-4 px-6">User</th>
-                <th className="py-4 px-6">Email</th>
-                <th className="py-4 px-6">Role</th>
-                <th className="py-4 px-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.03]">
-              {filteredUsers.map((u) => {
-                const isSelf = currentUser?.id === u.id;
-                const avatar = u.avatarUrl || u.avatar;
-
-                return (
-                  <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                          {avatar ? (
-                            <img src={avatar} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <UserIcon size={16} className="text-white/40" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white/90">
-                            {u.displayName || u.name || 'Unknown'}
-                            {isSelf && (
-                              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono">
-                                You
-                              </span>
-                            )}
-                            {u.isPrivate && (
-                              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                Private
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs font-mono text-white/30 truncate max-w-[160px]">
-                            {u.id}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="py-4 px-6 font-medium text-white/80 text-sm">{u.email || '—'}</td>
-
-                    <td className="py-4 px-6">{getRoleBadge(u.role)}</td>
-
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Edit Button — Owner can edit anyone; Admin can only edit users/testers and self */}
-                        {(isOwner || isSelf || (currentUser?.role === 'admin' && u.role !== 'owner' && u.role !== 'admin')) && (
-                          <button
-                            onClick={() => openEditModal(u)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-white/80 border border-white/10 hover:border-white/25 hover:bg-white/[0.08] transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                            title="Edit"
-                          >
-                            <Edit2 size={12} className="text-[var(--accent)]" />
-                            <span>Edit</span>
-                          </button>
-                        )}
-
-                        {/* Delete Button (Owner only, cannot delete self) */}
-                        {isOwner && !isSelf && (
-                          <button
-                            onClick={() => confirmDeleteUser(u)}
-                            className="p-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+        {/* Users Table */}
+        {isLoading ? (
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="h-16 w-full bg-white/5 animate-pulse rounded-xl border border-white/5" />
+            ))}
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-20 text-white/40 border border-dashed border-white/10 rounded-2xl bg-[#14110E]">
+            <Users className="mx-auto mb-3 text-white/20" size={36} />
+            <p className="text-sm font-medium text-white/80 mb-1">
+              {searchQuery ? 'No users matching your search' : 'No users registered yet'}
+            </p>
+            <p className="text-xs text-white/40">
+              {searchQuery ? 'Try clearing or changing your search filters.' : 'Users will appear here once registered.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#14110E] shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.06] text-white/40 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.02]">
+                    <th className="py-3.5 px-5">User</th>
+                    <th className="py-3.5 px-5">Email</th>
+                    <th className="py-3.5 px-5">Role</th>
+                    <th className="py-3.5 px-5">Status</th>
+                    <th className="py-3.5 px-5 text-right">Actions</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {filteredUsers.map((u) => {
+                    const isSelf = currentUser?.id === u.id;
+                    const avatar = u.avatarUrl || u.avatar;
+                    const isSpam = Boolean(u.isSpam || u.isBlocked);
+                    const canEdit = isOwner || isSelf || (currentUser?.role === 'admin' && u.role !== 'owner' && u.role !== 'admin');
+                    const canBlock = isOwner && !isSelf && u.role !== 'owner';
+                    const canDelete = isOwner && !isSelf && u.role !== 'owner';
+
+                    return (
+                      <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
+                        {/* User Identity */}
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                              {avatar ? (
+                                <img src={avatar} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <UserIcon size={16} className="text-white/40" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-white/90 truncate">
+                                  {u.displayName || u.name || 'Anonymous User'}
+                                </p>
+                                {isSelf && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono">
+                                    You
+                                  </span>
+                                )}
+                                {u.isPrivate && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    Private
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] font-mono text-white/30 truncate max-w-[180px]">
+                                {u.id}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Email */}
+                        <td className="py-3.5 px-5 font-mono text-xs text-white/70">
+                          {u.email || '—'}
+                        </td>
+
+                        {/* Role */}
+                        <td className="py-3.5 px-5">
+                          {getRoleBadge(u.role)}
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3.5 px-5">
+                          {getStatusBadge(u)}
+                        </td>
+
+                        {/* Actions (3 Icons: Edit, Block/Spam, Delete) */}
+                        <td className="py-3.5 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* 1. Edit Button */}
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(u)}
+                                className="p-2 rounded-lg text-white/60 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 transition-all cursor-pointer"
+                                title="Edit User"
+                                aria-label="Edit User"
+                              >
+                                <Pencil size={13} className="text-[#D97757]" />
+                              </button>
+                            )}
+
+                            {/* 2. Spam / Block Button */}
+                            {canBlock && (
+                              <button
+                                type="button"
+                                onClick={() => setUserToBlock(u)}
+                                className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                                  isSpam
+                                    ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
+                                    : 'bg-white/[0.04] text-white/60 border-white/10 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10'
+                                }`}
+                                title={isSpam ? 'Unblock User' : 'Block / Mark as Spam'}
+                                aria-label={isSpam ? 'Unblock User' : 'Block / Mark as Spam'}
+                              >
+                                <Ban size={13} />
+                              </button>
+                            )}
+
+                            {/* 3. Delete Button */}
+                            {canDelete && (
+                              <button
+                                type="button"
+                                onClick={() => setUserToDelete(u)}
+                                className="p-2 rounded-lg text-white/50 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 transition-all cursor-pointer"
+                                title="Delete User"
+                                aria-label="Delete User"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Edit User Modal ────────────────────────────── */}
       {editingUser && (
@@ -344,19 +417,19 @@ export default function UsersPage() {
           onClose={closeEditModal}
           title="Edit User"
           subtitle="ADMIN MANAGEMENT"
-          maxWidth="max-w-[500px]"
+          maxWidth="max-w-[480px]"
           footer={
             <div className="flex items-center justify-end gap-3 w-full">
-              <Button variant="ghost" onClick={closeEditModal} disabled={savingEdit}>
+              <Button variant="ghost" onClick={closeEditModal} disabled={updateMutation.isPending}>
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 onClick={handleSaveUser}
-                disabled={savingEdit}
+                disabled={updateMutation.isPending}
                 className="gap-2 bg-[#D97757] hover:bg-[#c96a48]"
               >
-                {savingEdit ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Save Changes
               </Button>
             </div>
@@ -417,7 +490,7 @@ export default function UsersPage() {
             </div>
 
             {/* Private profile toggle */}
-            <div className="flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] mt-2">
+            <div className="flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
               <div>
                 <p className="text-xs font-medium text-white/80">Private Profile</p>
                 <p className="text-[11px] text-white/40">Profile is hidden from public view</p>
@@ -436,25 +509,66 @@ export default function UsersPage() {
                 />
               </button>
             </div>
+
+            {/* Spam / Blocked toggle (Owner only) */}
+            {isOwner && currentUser?.id !== editingUser.id && (
+              <div className="flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <div>
+                  <p className="text-xs font-medium text-white/80">Block / Mark as Spam</p>
+                  <p className="text-[11px] text-white/40">Restricts user actions and flags account</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditIsSpam((p) => !p)}
+                  className={`relative w-10 h-5 rounded-full transition-colors duration-200 cursor-pointer ${
+                    editIsSpam ? 'bg-red-500' : 'bg-white/10'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                      editIsSpam ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
           </div>
         </Modal>
       )}
+
+      {/* ── Block / Spam Confirmation Modal ────────────────── */}
+      <ConfirmModal
+        open={Boolean(userToBlock)}
+        onClose={() => setUserToBlock(null)}
+        onConfirm={handleToggleSpamBlock}
+        title={userToBlock?.isSpam || userToBlock?.isBlocked ? 'Unblock User' : 'Block / Mark as Spam'}
+        description={
+          <>
+            Are you sure you want to {userToBlock?.isSpam || userToBlock?.isBlocked ? 'unblock' : 'block and mark as spam'}{' '}
+            <strong className="text-white font-semibold">"{userToBlock?.displayName || userToBlock?.email || userToBlock?.id}"</strong>?
+          </>
+        }
+        confirmText={userToBlock?.isSpam || userToBlock?.isBlocked ? 'Unblock User' : 'Block User'}
+        cancelText="Cancel"
+        variant={userToBlock?.isSpam || userToBlock?.isBlocked ? 'primary' : 'danger'}
+        loading={updateMutation.isPending}
+      />
 
       {/* ── Delete Confirmation Modal ──────────────────────── */}
       <ConfirmModal
         open={Boolean(userToDelete)}
         onClose={() => setUserToDelete(null)}
         onConfirm={handleExecuteDelete}
-        title="Delete User"
+        title="Delete User Account"
         description={
           <>
-            Are you sure you want to delete user <strong className="text-white font-semibold">"{userToDelete?.displayName || userToDelete?.email || userToDelete?.id}"</strong>? This action cannot be undone.
+            Are you sure you want to permanently delete user <strong className="text-white font-semibold">"{userToDelete?.displayName || userToDelete?.email || userToDelete?.id}"</strong>? All associated account data will be removed. This action cannot be undone.
           </>
         }
-        confirmText="Delete User"
+        confirmText="Delete Account"
         cancelText="Cancel"
         variant="danger"
-        loading={deleting}
+        loading={deleteMutation.isPending}
       />
     </div>
   );

@@ -9,6 +9,8 @@ export interface UserItem {
   avatarUrl?: string | null;
   thumbnailUrl?: string | null;
   isPrivate?: boolean;
+  isSpam?: boolean;
+  isBlocked?: boolean;
   role: UserRole;
   createdAt?: string;
   lastSignInAt?: string;
@@ -19,6 +21,8 @@ export interface UserUpdatePayload {
   email?: string;
   role?: UserRole;
   isPrivate?: boolean;
+  isSpam?: boolean;
+  isBlocked?: boolean;
 }
 
 export interface UsersResponse {
