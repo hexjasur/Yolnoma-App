@@ -1,13 +1,13 @@
 # ============================================
-# Yolnoma: Desktop Ultimate Utility App
-# Author: Jasurbek Haydarov
+# Yolnoma App: Desktop Ultimate Utility App
+# Author: Jasurbek Haydarov CEO @ JK Software
 # Backend: Rust + Tauri v2
 # ============================================
 
 
 [package]
 name = "yolnoma-app"
-version = "0.7.2"
+version = "0.8.0"
 description = "Yolnoma Desktop Utility App"
 authors = ["Jasurbek Haydarov"]
 edition = "2021"
@@ -36,19 +36,16 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 url = "2"
 
-mongodb = "2.8"
-bson = "2.13"
 tokio = { version = "1", features = ["full"] }
-futures = "0.3"
-dotenvy = "0.15"
 reqwest = { version = "0.12", features = ["json"] }
-bcrypt = "0.15"
 sysinfo = "0.30"
 regex = "1"
 steamlocate = "2"
 dirs = "6.0.0"
 base64 = "0.22"
 image = { version = "0.25", features = ["png", "jpeg", "bmp", "webp", "gif", "ico", "tiff"] }
+zip = { version = "2.2", default-features = false, features = ["deflate", "bzip2", "time"] }
+sevenz-rust = "0.6"
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Security",

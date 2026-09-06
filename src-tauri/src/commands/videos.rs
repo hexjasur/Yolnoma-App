@@ -38,32 +38,33 @@ impl DownloadState {
     }
 }
 
-fn bundled_binary(app: Option<&AppHandle>, name: &str) -> Option<PathBuf> {
-    let candidates = [
-        app.and_then(|handle| handle.path().resource_dir().ok())
-            .map(|dir| dir.join("resources").join(name)),
-        Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join(name)),
-    ];
+fn bundled_binary_any(app: Option<&AppHandle>, names: &[&str]) -> Option<PathBuf> {
+    for name in names {
+        let candidates = [
+            app.and_then(|handle| handle.path().resource_dir().ok())
+                .map(|dir| dir.join("resources").join(name)),
+            Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join(name)),
+        ];
 
-    candidates.into_iter().flatten().find(|path| path.is_file())
+        if let Some(path) = candidates.into_iter().flatten().find(|path| path.is_file()) {
+            return Some(path);
+        }
+    }
+    None
 }
 
 fn yt_dlp_command(app: Option<&AppHandle>) -> Command {
-    if let Some(path) = bundled_binary(app, if cfg!(windows) { "yt-dlp.exe" } else { "yt-dlp" }) {
+    let names = if cfg!(windows) {
+        vec!["yolnoma_dl.dat", "yt-dlp.dat", "yt-dlp.exe", "yt-dlp"]
+    } else {
+        vec!["yolnoma_dl.dat", "yt-dlp.dat", "yt-dlp"]
+    };
+
+    if let Some(path) = bundled_binary_any(app, &names) {
         return Command::new(path);
     }
 
-    let direct_works = Command::new("yt-dlp")
-        .arg("--version")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false);
-
-    if direct_works {
-        Command::new("yt-dlp")
-    } else {
-        Command::new("yt-dlp")
-    }
+    Command::new("yt-dlp")
 }
 
 #[tauri::command]
@@ -147,14 +148,15 @@ async fn download_youtube_video_inner(
         .arg("--no-warnings")
         .arg(&url);
 
+    let ffmpeg_names = if cfg!(windows) {
+        vec!["yolnoma_codec.dat", "ffmpeg.dat", "ffmpeg.exe", "ffmpeg"]
+    } else {
+        vec!["yolnoma_codec.dat", "ffmpeg.dat", "ffmpeg"]
+    };
+
     if ffmpeg_installed(Some(&app_handle)) {
-        if let Some(ffmpeg_path) = bundled_binary(
-            Some(&app_handle),
-            if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" },
-        ) {
-            if let Some(ffmpeg_dir) = ffmpeg_path.parent() {
-                command.arg("--ffmpeg-location").arg(ffmpeg_dir);
-            }
+        if let Some(ffmpeg_path) = bundled_binary_any(Some(&app_handle), &ffmpeg_names) {
+            command.arg("--ffmpeg-location").arg(&ffmpeg_path);
         }
         command.arg("--merge-output-format").arg("mp4");
     }
@@ -174,37 +176,74 @@ async fn download_youtube_video_inner(
         let _ = reader.read_to_string(&mut text).await;
         text
     });
+    let app_for_emit = window.app_handle().clone();
     let mut last_percent = 0.0_f32;
 
-    loop {
-        let next_line = tokio::select! {
-            _ = tokio::time::sleep(std::time::Duration::from_millis(250)) => {
-                if cancel_flag.load(Ordering::Relaxed) {
-                    let _ = child.kill().await;
-                    return Err("Download cancelled".to_string());
-                }
-                continue;
-            }
-            line = reader.next_line() => line.map_err(|e| e.to_string())?,
-        };
+    while let Ok(Some(line)) = reader.next_line().await {
+        if cancel_flag.load(Ordering::Relaxed) {
+            let _ = child.kill().await;
+            return Err("Download cancelled".to_string());
+        }
 
-        let Some(line) = next_line else { break };
         let line = line.trim();
-        let parts: Vec<&str> = line.strip_prefix("download:").unwrap_or("").split('|').collect();
-        if parts.len() == 5 {
-            let percent = parts[0].trim().trim_end_matches('%').parse::<f32>().unwrap_or(0.0);
-            last_percent = last_percent.max(percent).min(99.9);
-            let downloaded = parts[3].trim().parse::<u64>().unwrap_or(0);
-            let total = parts[4].trim().parse::<u64>().unwrap_or(0);
-            let _ = window.emit("video-download-progress", DownloadProgress {
-                task_id,
-                percent: last_percent,
-                speed: parts[1].trim().to_string(),
-                eta: parts[2].trim().to_string(),
-                filename: "downloading".to_string(),
-                downloaded_bytes: downloaded,
-                total_bytes: total,
-            });
+        if line.is_empty() {
+            continue;
+        }
+
+        // 1. Custom template format: download:45.0%|2.5MiB/s|00:10|1024|2048
+        if let Some(rest) = line.strip_prefix("download:") {
+            let parts: Vec<&str> = rest.split('|').collect();
+            if parts.len() >= 5 {
+                let percent = parts[0].trim().trim_end_matches('%').parse::<f32>().unwrap_or(0.0);
+                last_percent = last_percent.max(percent).min(99.9);
+                let speed = parts[1].trim().to_string();
+                let eta = parts[2].trim().to_string();
+                let downloaded = parts[3].trim().parse::<u64>().unwrap_or(0);
+                let total = parts[4].trim().parse::<u64>().unwrap_or(0);
+
+                let _ = app_for_emit.emit("video-download-progress", DownloadProgress {
+                    task_id,
+                    percent: last_percent,
+                    speed: if speed.is_empty() { "—".to_string() } else { speed },
+                    eta: if eta.is_empty() { "—".to_string() } else { eta },
+                    filename: "downloading".to_string(),
+                    downloaded_bytes: downloaded,
+                    total_bytes: total,
+                });
+            }
+        } 
+        // 2. Standard yt-dlp progress line fallback: [download]  45.2% of ~10.50MiB at 2.50MiB/s ETA 00:05
+        else if line.contains("[download]") && line.contains('%') {
+            let tokens: Vec<&str> = line.split_whitespace().collect();
+            for (i, token) in tokens.iter().enumerate() {
+                if token.ends_with('%') {
+                    if let Ok(pct) = token.trim_end_matches('%').parse::<f32>() {
+                        last_percent = last_percent.max(pct).min(99.9);
+                        let mut speed = "—".to_string();
+                        let mut eta = "—".to_string();
+
+                        for j in i+1..tokens.len() {
+                            if tokens[j] == "at" && j + 1 < tokens.len() {
+                                speed = tokens[j+1].to_string();
+                            }
+                            if tokens[j] == "ETA" && j + 1 < tokens.len() {
+                                eta = tokens[j+1].to_string();
+                            }
+                        }
+
+                        let _ = app_for_emit.emit("video-download-progress", DownloadProgress {
+                            task_id,
+                            percent: last_percent,
+                            speed,
+                            eta,
+                            filename: "downloading".to_string(),
+                            downloaded_bytes: 0,
+                            total_bytes: 0,
+                        });
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -282,7 +321,13 @@ pub fn check_yt_dlp_installed(app: AppHandle) -> bool {
 }
 
 fn ffmpeg_installed(app: Option<&AppHandle>) -> bool {
-    let mut command = bundled_binary(app, if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" })
+    let names = if cfg!(windows) {
+        vec!["yolnoma_codec.dat", "ffmpeg.dat", "ffmpeg.exe", "ffmpeg"]
+    } else {
+        vec!["yolnoma_codec.dat", "ffmpeg.dat", "ffmpeg"]
+    };
+
+    let mut command = bundled_binary_any(app, &names)
         .map(Command::new)
         .unwrap_or_else(|| Command::new("ffmpeg"));
     command

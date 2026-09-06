@@ -11,6 +11,8 @@ mod embedded_api_key;
 mod image_converter;
 mod steam_idler;
 mod system_monitor;
+mod port_scanner;
+mod archive;
 
 pub struct AuthState {
     pub user_id: Mutex<Option<String>>,
@@ -239,6 +241,14 @@ pub fn run() {
             steam_idler::lock_all_achievements,
             steam_idler::update_stats,
             steam_idler::reset_all_stats,
+            // ── Port Scanner ──
+            port_scanner::scan_ports,
+            port_scanner::get_common_ports,
+            // ── Archive Explorer ──
+            archive::list_archive_entries,
+            archive::read_archive_entry_content,
+            archive::extract_single_entry,
+            archive::extract_archive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -51,8 +51,6 @@ export function VideoDownloader() {
   const [quality, setQuality] = useState('best');
   const [qualityOpen, setQualityOpen] = useState(false);
   const [jobs, setJobs] = useState<DownloadJob[]>([]);
-  const [ytDlpInstalled, setYtDlpInstalled] = useState<boolean | null>(null);
-  const [ffmpegInstalled, setFfmpegInstalled] = useState<boolean | null>(null);
   const [preview, setPreview] = useState<VideoPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
@@ -61,7 +59,6 @@ export function VideoDownloader() {
   const qualityRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    checkInstall();
     const unlisten = listen('video-download-progress', (event) => {
       const progress = event.payload as DownloadProgress;
       setJobs((current) =>
@@ -87,15 +84,6 @@ export function VideoDownloader() {
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
-
-  const checkInstall = async () => {
-    const [ytDlp, ffmpeg] = await Promise.all([
-      invoke<boolean>('check_yt_dlp_installed'),
-      invoke<boolean>('check_ffmpeg_installed'),
-    ]);
-    setYtDlpInstalled(ytDlp);
-    setFfmpegInstalled(ffmpeg);
-  };
 
   const download = async () => {
     if (!url.trim() || !preview) {
@@ -231,187 +219,206 @@ export function VideoDownloader() {
   };
 
   return (
-    <div className="min-h-[70vh] flex items-start justify-center pt-24 px-6">
-      <div className="w-full max-w-xl">
+    <div className="min-h-[75vh] flex items-start justify-center pt-16 px-6">
+      <div className="w-full max-w-3xl space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-center gap-2 mb-8 text-center">
-          <Video size={18} strokeWidth={1.75} className="text-[#D97757]" />
-          <h2 className="text-base font-semibold text-[#F2EDE6]">
-            YouTube Downloader
-          </h2>
-          {ytDlpInstalled === true && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-300/80 ml-1">
-              <CheckCircle2 size={12} /> ready
-            </span>
-          )}
-          {ytDlpInstalled === false && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-red-300/80 ml-1">
-              <XCircle size={12} /> not installed
-            </span>
-          )}
-          {ffmpegInstalled === true && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-300/80 ml-1">
-              <CheckCircle2 size={12} /> merge ready
-            </span>
-          )}
-        </div>
-
-        {/* URL input — own centered row */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => {
-              setUrl(e.target.value);
-              setPreview(null);
-              setPreviewError('');
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && loadPreview()}
-            placeholder="https://youtube.com/watch?v=..."
-            disabled={activeCount >= 3 || previewLoading}
-            className="min-w-0 flex-1 rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3.5 text-sm text-[#F2EDE6]
-                       placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-[#D97757]/40
-                       focus:border-[#D97757]/50 transition-all disabled:opacity-50"
-          />
-          <button
-            type="button"
-            onClick={loadPreview}
-            disabled={!url.trim() || previewLoading || activeCount >= 3}
-            className="shrink-0 rounded-lg border border-white/10 px-4 py-2.5 text-sm text-white/75 hover:bg-white/[0.06] disabled:opacity-40"
-          >
-            {previewLoading ? 'Loading...' : 'Preview'}
-          </button>
-          <button
-            type="button"
-            onClick={openDownloadFolder}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2.5 text-sm text-white/70 hover:bg-white/[0.06]"
-            title="Open download folder"
-            aria-label="Open download folder"
-          >
-            <FolderOpen size={15} />
-          </button>
-        </div>
-
-        {previewError && (
-          <p className="mt-3 text-xs text-red-200/80">{previewError}</p>
-        )}
-        {preview && (
-          <div className="mt-4 flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-            {preview.thumbnail && (
-              <img
-                src={preview.thumbnail}
-                alt=""
-                className="h-20 w-32 shrink-0 rounded-lg object-cover"
-              />
-            )}
-            <div className="min-w-0">
-              <h3 className="line-clamp-2 text-sm font-medium text-[#F2EDE6]">
-                {preview.title}
-              </h3>
-              <p className="mt-1 text-xs text-white/50">
-                {preview.uploader} · {formatDuration(preview.duration)}
-              </p>
-              {preview.view_count !== null && (
-                <p className="mt-1 text-xs text-white/35">
-                  {preview.view_count.toLocaleString()} views
-                </p>
-              )}
-            </div>
+        <div className="text-center space-y-1">
+          <div className="inline-flex items-center justify-center gap-2 text-[#D97757] font-semibold text-xs uppercase tracking-[0.2em]">
+            <Video size={16} strokeWidth={2} />
+            <span>Media Utility</span>
           </div>
-        )}
+          <h1 className="font-serif text-3xl font-medium tracking-tight text-[#F2EDE6]">
+            YouTube Video Downloader
+          </h1>
+          <p className="text-xs text-white/45 max-w-md mx-auto">
+            Paste any YouTube link to fetch metadata and download in up to 4K quality with full audio.
+          </p>
+        </div>
 
-        {/* Quality + download — centered together below */}
-        <div className="mt-4 flex items-center justify-center gap-2.5">
-          <div ref={qualityRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setQualityOpen((v) => !v)}
+        {/* URL input bar */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                setPreview(null);
+                setPreviewError('');
+              }}
+              placeholder="Paste YouTube URL: https://youtube.com/watch?v=... or https://youtu.be/..."
               disabled={activeCount >= 3}
-              className="inline-flex items-center gap-2 rounded-lg bg-white/[0.04] border border-white/10
-                         px-3.5 py-2.5 text-sm text-[#F2EDE6] hover:bg-white/[0.06] transition-colors
-                         disabled:opacity-50 min-w-[150px] justify-between"
-            >
-              {currentQuality.label}
-              <ChevronDown
-                size={14}
-                className={`text-white/40 transition-transform ${qualityOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {qualityOpen && (
-              <div
-                className="absolute z-20 mt-1.5 w-full min-w-[170px] rounded-lg border border-white/10
-                           bg-[#1B1713] shadow-2xl overflow-hidden"
-                style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.6)' }}
-              >
-                {QUALITIES.map((q) => (
-                  <button
-                    key={q.value}
-                    type="button"
-                    onClick={() => {
-                      setQuality(q.value);
-                      setQualityOpen(false);
-                    }}
-                    className={`block w-full text-left px-3.5 py-2.5 text-sm transition-colors ${
-                      q.value === quality
-                        ? 'bg-[#D97757]/15 text-[#F2EDE6]'
-                        : 'text-white/60 hover:bg-white/[0.05] hover:text-[#F2EDE6]'
-                    }`}
-                  >
-                    {q.label}
-                  </button>
-                ))}
+              className="w-full rounded-2xl bg-white/[0.04] border border-white/10 px-5 py-3.5 text-sm text-[#F2EDE6]
+                         placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-[#D97757]/40
+                         focus:border-[#D97757]/50 transition-all disabled:opacity-50"
+            />
+            {previewLoading && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-xs text-[#D97757]">
+                <div className="w-4 h-4 border-2 border-[#D97757]/30 border-t-[#D97757] rounded-full animate-spin" />
+                <span className="hidden sm:inline">Fetching…</span>
               </div>
             )}
           </div>
 
           <button
-            onClick={download}
-            disabled={activeCount >= 3 || !ytDlpInstalled || !preview}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#D97757] px-5 py-2.5 text-sm
-                       font-medium text-white hover:bg-[#D97757]/90 disabled:opacity-40 disabled:cursor-not-allowed
-                       transition-colors shrink-0"
+            type="button"
+            onClick={openDownloadFolder}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-sm text-white/70 hover:bg-white/[0.08] hover:text-white transition-all shadow-md shrink-0"
+            title="Open download folder"
+            aria-label="Open download folder"
           >
-            <Download size={15} strokeWidth={1.75} />
-            {activeCount >= 3 ? 'Limit reached' : 'Download'}
+            <FolderOpen size={18} />
+            <span className="hidden sm:inline text-xs font-medium">Downloads</span>
           </button>
         </div>
 
-        {/* Progress */}
+        {previewError && (
+          <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-xs text-red-200/90 flex items-start gap-2.5">
+            <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+            <span>{previewError}</span>
+          </div>
+        )}
+
+        {/* Large Enhanced Metadata Preview Card */}
+        {preview && (
+          <div className="bg-[#181410] border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+              {/* Left: Large 16:9 Thumbnail */}
+              <div className="md:col-span-5 relative rounded-2xl overflow-hidden bg-black/40 border border-white/10 group aspect-video">
+                {preview.thumbnail ? (
+                  <img
+                    src={preview.thumbnail}
+                    alt={preview.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/20">
+                    <Video size={36} />
+                  </div>
+                )}
+                {preview.duration !== null && (
+                  <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md text-[11px] font-mono font-medium text-white/90 border border-white/10">
+                    {formatDuration(preview.duration)}
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Metadata & Actions */}
+              <div className="md:col-span-7 flex flex-col justify-between space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-base sm:text-lg font-medium text-[#F2EDE6] line-clamp-2 leading-snug">
+                    {preview.title}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
+                    <span className="font-medium text-white/70">{preview.uploader}</span>
+                    {preview.view_count !== null && (
+                      <>
+                        <span>•</span>
+                        <span>{preview.view_count.toLocaleString()} views</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quality selection & Download Action */}
+                <div className="pt-2 border-t border-white/[0.06] flex flex-wrap items-center gap-3">
+                  <div ref={qualityRef} className="relative flex-1 min-w-[140px]">
+                    <button
+                      type="button"
+                      onClick={() => setQualityOpen((v) => !v)}
+                      disabled={activeCount >= 3}
+                      className="w-full inline-flex items-center justify-between gap-2 rounded-xl bg-white/[0.04] border border-white/10
+                                 px-3.5 py-2.5 text-xs text-[#F2EDE6] hover:bg-white/[0.08] transition-colors
+                                 disabled:opacity-50"
+                    >
+                      <span className="truncate">{currentQuality.label}</span>
+                      <ChevronDown
+                        size={14}
+                        className={`text-white/40 transition-transform ${qualityOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {qualityOpen && (
+                      <div
+                        className="absolute bottom-full mb-1.5 left-0 right-0 rounded-xl border border-white/10
+                                   bg-[#1F1A15] shadow-2xl overflow-hidden z-30"
+                      >
+                        {QUALITIES.map((q) => (
+                          <button
+                            key={q.value}
+                            type="button"
+                            onClick={() => {
+                              setQuality(q.value);
+                              setQualityOpen(false);
+                            }}
+                            className={`block w-full text-left px-3.5 py-2 text-xs transition-colors ${
+                              q.value === quality
+                                ? 'bg-[#D97757]/20 text-[#D97757] font-semibold'
+                                : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+                            }`}
+                          >
+                            {q.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={download}
+                    disabled={activeCount >= 3}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D97757] px-6 py-2.5 text-xs
+                               font-semibold text-white hover:bg-[#D97757]/90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed
+                               transition-all shadow-lg shadow-[#D97757]/20 shrink-0"
+                  >
+                    <Download size={15} strokeWidth={2} />
+                    <span>{activeCount >= 3 ? 'Queue full' : 'Download Video'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active & Completed Downloads Progress Area */}
         {jobs.length > 0 && (
-          <div className="mt-6 space-y-3">
+          <div className="space-y-3 pt-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-white/40">
+              Downloads ({jobs.length})
+            </div>
             {jobs.map((job) => (
               <div
                 key={job.taskId}
-                className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
+                className="rounded-2xl border border-white/10 bg-[#181410] p-4 space-y-2.5 shadow-lg"
               >
-                <div className="flex items-center justify-between gap-3 text-xs text-white/60">
-                  <span className="truncate">{job.url}</span>
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="truncate text-white/80 font-medium">{job.url}</span>
                   {job.active && (
                     <button
                       type="button"
                       onClick={() => cancelDownload(job.taskId)}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-400/20 px-2 py-1 text-red-300/80 hover:bg-red-400/10"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-400/20 bg-red-500/10 px-2.5 py-1 text-xs text-red-300 hover:bg-red-500/20 transition-all"
                     >
                       <X size={12} /> Cancel
                     </button>
                   )}
                 </div>
+
                 {job.progress && (
-                  <div className="mt-2 space-y-1.5">
-                    <div className="flex justify-between text-xs text-white/45">
-                      <span>{job.progress.percent.toFixed(1)}%</span>
-                      <span>
-                        {job.progress.speed} · {job.progress.eta}
-                      </span>
-                      <span>
-                        {formatSize(job.progress.downloaded_bytes)} /{' '}
-                        {formatSize(job.progress.total_bytes)}
-                      </span>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-white/50 font-mono">
+                      <span className="text-[#D97757] font-bold">{job.progress.percent.toFixed(1)}%</span>
+                      <span>{job.progress.speed}</span>
+                      <span>ETA: {job.progress.eta}</span>
+                      {job.progress.total_bytes > 0 && (
+                        <span>
+                          {formatSize(job.progress.downloaded_bytes)} / {formatSize(job.progress.total_bytes)}
+                        </span>
+                      )}
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[#D97757] transition-all duration-300"
+                        className="h-full rounded-full bg-gradient-to-r from-[#D97757] to-[#E59880] transition-all duration-300"
                         style={{
                           width: `${Math.min(job.progress.percent, 100)}%`,
                         }}
@@ -419,33 +426,23 @@ export function VideoDownloader() {
                     </div>
                   </div>
                 )}
+
                 {job.status && (
                   <div
-                    className={`mt-2 flex items-start gap-2 text-xs ${job.status.kind === 'success' ? 'text-emerald-200/90' : 'text-red-200/90'}`}
+                    className={`flex items-start gap-2 text-xs font-medium ${
+                      job.status.kind === 'success' ? 'text-emerald-300' : 'text-red-300'
+                    }`}
                   >
                     {job.status.kind === 'success' ? (
-                      <CheckCircle2 size={14} />
+                      <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                     ) : (
-                      <XCircle size={14} />
+                      <XCircle size={15} className="text-red-400 shrink-0 mt-0.5" />
                     )}
                     <span>{job.status.text}</span>
                   </div>
                 )}
               </div>
             ))}
-          </div>
-        )}
-
-        {ytDlpInstalled === false && (
-          <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3.5 py-2.5 text-xs text-red-200/80">
-            Bundled yt-dlp.exe was not found. Reinstall the application with its
-            resources folder.
-          </div>
-        )}
-        {ytDlpInstalled === true && ffmpegInstalled === false && (
-          <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-2.5 text-xs text-amber-200/80">
-            FFmpeg is not installed. A combined audio/video format will be
-            downloaded instead of separate streams.
           </div>
         )}
       </div>

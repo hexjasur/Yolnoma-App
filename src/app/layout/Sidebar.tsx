@@ -4,21 +4,15 @@ import { getVersion } from '@tauri-apps/api/app';
 import {
   LayoutGrid,
   Drama,
-  Settings,
   Film,
   LogOut,
   Users,
   CircleUser,
-  Gamepad2,
-  Coins,
   Blocks,
   ShoppingCart,
-  Gamepad,
-  BrushCleaning,
-  Crosshair,
-  ImageIcon,
   PanelLeftClose,
   PanelLeftOpen,
+  Star,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
@@ -29,8 +23,19 @@ import {
 } from '@/config/features';
 import { usePluginNavigation } from '@/plugins';
 import { ConfirmModal } from '@/shared/ui';
+import { TOOL_CATALOG } from '@/config/toolCatalog';
+import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
+import type { LucideIcon } from 'lucide-react';
 
-const links = [
+type SidebarLink = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  name: string;
+  inDevelopment?: boolean;
+};
+
+const links: SidebarLink[] = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
 
   {
@@ -41,65 +46,8 @@ const links = [
   },
   { to: '/videos', label: 'Stream', icon: Film, name: 'videos' },
 
-  {
-    to: '/tools/video-downloader',
-    label: 'Video Downloader',
-    icon: Film,
-    name: 'video-downloader',
-  },
-  {
-    to: '/tools/currency',
-    label: 'Currency Converter',
-    icon: Coins,
-    name: 'currency',
-  },
-  {
-    to: '/tools/image-converter',
-    label: 'Image Converter',
-    icon: ImageIcon,
-    name: 'image-converter',
-  },
-  {
-    to: '/tools/bg-remover',
-    label: 'Background remover',
-    icon: LayoutGrid,
-    name: 'bg-remover',
-  },
-  {
-    to: '/tools/cleaner',
-    label: 'Cleaner',
-    icon: BrushCleaning,
-    name: 'cleaner',
-  },
-  {
-    to: '/tools/crosshair-overlay',
-    label: 'Crosshair Overlay',
-    icon: Crosshair,
-    name: 'crosshair-overlay',
-  },
-
-  {
-    to: '/tools/steam/steam-idler',
-    label: 'Steam/Idler',
-    icon: Gamepad2,
-    name: 'steam-idler',
-  },
-  {
-    to: '/tools/steam/sam',
-    label: 'Steam/SAM',
-    icon: Gamepad,
-    name: 'steam-sam',
-  },
-  {
-    to: '/tools/steam/review',
-    label: 'Steam/Review',
-    icon: Gamepad2,
-    name: 'steam-review',
-  },
-
   { to: '/users', label: 'Users', icon: Users, name: 'users' },
   { to: '/profile', label: 'Profile', icon: CircleUser, name: 'profile' },
-  { to: '/settings', label: 'Settings', icon: Settings, name: 'settings' },
 
   {
     to: '/marketplace',
@@ -134,6 +82,7 @@ export default function Sidebar() {
   const [isResizing, setIsResizing] = useState(false);
   const resizeStart = useRef({ pointerX: 0, width: DEFAULT_SIDEBAR_WIDTH });
   const { logout, user } = useAuth();
+  const { pinnedTools, togglePinnedTool } = usePinnedTools();
 
   const pluginNavItems = usePluginNavigation();
 
@@ -183,7 +132,11 @@ export default function Sidebar() {
   };
 
   // Filter links based on user's role
-  const filteredLinks = links.filter((link) =>
+  const toolLinks: SidebarLink[] = TOOL_CATALOG.map((tool) => ({
+    ...tool,
+    name: tool.id,
+  }));
+  const filteredLinks = [...links, ...toolLinks].filter((link) =>
     canAccessPage(user?.role, link.name),
   );
 
@@ -270,6 +223,41 @@ export default function Sidebar() {
                     }
                   />
                   {!isCollapsed && <span className="truncate">{label}</span>}
+                  {!isCollapsed &&
+                    TOOL_CATALOG.some((tool) => tool.id === link.name) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          togglePinnedTool(link.name);
+                        }}
+                        className={`ml-auto rounded p-1 transition-colors ${
+                          pinnedTools.includes(link.name)
+                            ? 'text-[var(--accent)]'
+                            : 'text-[var(--text-faint)] hover:text-[var(--accent)]'
+                        }`}
+                        title={
+                          pinnedTools.includes(link.name)
+                            ? 'Remove from Dashboard'
+                            : 'Add to Dashboard'
+                        }
+                        aria-label={
+                          pinnedTools.includes(link.name)
+                            ? `Remove ${label} from Dashboard`
+                            : `Add ${label} to Dashboard`
+                        }
+                      >
+                        <Star
+                          size={13}
+                          fill={
+                            pinnedTools.includes(link.name)
+                              ? 'currentColor'
+                              : 'none'
+                          }
+                        />
+                      </button>
+                    )}
                   {!isCollapsed && inDev && (
                     <span
                       className={`ml-auto text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${

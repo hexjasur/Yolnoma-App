@@ -6,9 +6,6 @@ import {
   HardDrive,
   Activity,
   Layers,
-  Sparkles,
-  Gamepad2,
-  Coins,
   Shield,
   Monitor,
 } from 'lucide-react';
@@ -16,10 +13,13 @@ import { usePerformances } from '@/features/performance/hooks/usePerformances';
 import { useSystemStats } from '@/features/system-monitor/hooks/useSystemStats';
 import { useAuth } from '@/features/auth/AuthContext';
 import { handleDevFeatureClick } from '@/config/features';
+import { TOOL_CATALOG } from '@/config/toolCatalog';
+import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
 
 export default function HomePage() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
+  const { pinnedTools } = usePinnedTools();
 
   // Real-time system monitoring toggle (default: false / OFF)
   const [monitoringEnabled, setMonitoringEnabled] = useState<boolean>(() => {
@@ -42,7 +42,11 @@ export default function HomePage() {
   };
 
   // Native local system stats with 2s visibility-aware polling (only when enabled)
-  const { stats, loading: statsLoading, isPaused } = useSystemStats(monitoringEnabled);
+  const {
+    stats,
+    loading: statsLoading,
+    isPaused,
+  } = useSystemStats(monitoringEnabled);
 
   // Performances only fetched for owner
   const { items, loading: perfLoading } = usePerformances();
@@ -55,7 +59,10 @@ export default function HomePage() {
   }, [items, isOwner]);
 
   return (
-    <div className="space-y-10 max-w-5xl mx-auto pb-16" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
+    <div
+      className="space-y-10 max-w-5xl mx-auto pb-16"
+      style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
+    >
       {/* ── Welcome & Header ── */}
       <div>
         <p className="text-[11px] tracking-[0.18em] uppercase text-[var(--accent)] mb-2 font-semibold flex items-center gap-2">
@@ -87,11 +94,13 @@ export default function HomePage() {
               <Activity size={18} />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">System Resources (Local System)</h2>
+              <h2 className="text-base font-semibold text-white">
+                System Resources (Local System)
+              </h2>
               <p className="text-xs text-white/40 truncate max-w-md">
                 {monitoringEnabled
                   ? stats?.cpuModel || 'Protsessor va operativ xotira holati'
-                  : 'Monitoring o\'chirilgan (yoqish uchun o\'ngdagi tugmani bosing)'}
+                  : "Monitoring o'chirilgan (yoqish uchun o'ngdagi tugmani bosing)"}
               </p>
             </div>
           </div>
@@ -99,25 +108,29 @@ export default function HomePage() {
           {/* Live Polling Status Indicator & Toggle Switch */}
           <div className="flex items-center gap-4 self-start sm:self-auto">
             <div className="flex items-center gap-2 text-xs font-mono">
-              <span className={`w-2 h-2 rounded-full ${
-                !monitoringEnabled
-                  ? 'bg-zinc-500/60'
-                  : isPaused
-                  ? 'bg-amber-400 opacity-60'
-                  : 'bg-emerald-400 animate-ping'
-              }`} />
-              <span className={
-                !monitoringEnabled
-                  ? 'text-zinc-400'
-                  : isPaused
-                  ? 'text-amber-300/70'
-                  : 'text-emerald-400'
-              }>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  !monitoringEnabled
+                    ? 'bg-zinc-500/60'
+                    : isPaused
+                      ? 'bg-amber-400 opacity-60'
+                      : 'bg-emerald-400 animate-ping'
+                }`}
+              />
+              <span
+                className={
+                  !monitoringEnabled
+                    ? 'text-zinc-400'
+                    : isPaused
+                      ? 'text-amber-300/70'
+                      : 'text-emerald-400'
+                }
+              >
                 {!monitoringEnabled
                   ? "O'chirilgan"
                   : isPaused
-                  ? 'To\'xtatildi (fon)'
-                  : 'Real-time (2s)'}
+                    ? "To'xtatildi (fon)"
+                    : 'Real-time (2s)'}
               </span>
             </div>
 
@@ -128,9 +141,15 @@ export default function HomePage() {
               aria-checked={monitoringEnabled}
               onClick={toggleMonitoring}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                monitoringEnabled ? 'bg-[var(--accent)]' : 'bg-white/10 hover:bg-white/15'
+                monitoringEnabled
+                  ? 'bg-[var(--accent)]'
+                  : 'bg-white/10 hover:bg-white/15'
               }`}
-              title={monitoringEnabled ? "Monitoringni to'xtatish" : "Monitoringni yoqish"}
+              title={
+                monitoringEnabled
+                  ? "Monitoringni to'xtatish"
+                  : 'Monitoringni yoqish'
+              }
             >
               <span
                 className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
@@ -148,7 +167,13 @@ export default function HomePage() {
             icon={<Cpu size={18} />}
             name="CPU"
             value={statsLoading ? '—' : stats ? `${stats.cpuPercent}%` : '—'}
-            detail={stats?.cpuCores ? `${stats.cpuCores} ta yadro` : monitoringEnabled ? 'Usage' : 'Nofaol'}
+            detail={
+              stats?.cpuCores
+                ? `${stats.cpuCores} ta yadro`
+                : monitoringEnabled
+                  ? 'Usage'
+                  : 'Nofaol'
+            }
             percent={stats?.cpuPercent ?? 0}
             color="from-amber-500 to-orange-500"
             loading={statsLoading}
@@ -159,8 +184,18 @@ export default function HomePage() {
             icon={<Layers size={18} />}
             name="RAM"
             value={statsLoading ? '—' : stats ? `${stats.ramUsedGb} GB` : '—'}
-            detail={stats?.ramTotalGb ? `${stats.ramUsedGb} / ${stats.ramTotalGb} GB` : monitoringEnabled ? 'Memory' : 'Nofaol'}
-            percent={stats ? Math.round((stats.ramUsedGb / (stats.ramTotalGb || 1)) * 100) : 0}
+            detail={
+              stats?.ramTotalGb
+                ? `${stats.ramUsedGb} / ${stats.ramTotalGb} GB`
+                : monitoringEnabled
+                  ? 'Memory'
+                  : 'Nofaol'
+            }
+            percent={
+              stats
+                ? Math.round((stats.ramUsedGb / (stats.ramTotalGb || 1)) * 100)
+                : 0
+            }
             color="from-blue-500 to-cyan-500"
             loading={statsLoading}
           />
@@ -170,8 +205,20 @@ export default function HomePage() {
             icon={<HardDrive size={18} />}
             name="DISK"
             value={statsLoading ? '—' : stats ? `${stats.diskUsedGb} GB` : '—'}
-            detail={stats?.diskTotalGb ? `${stats.diskUsedGb} / ${stats.diskTotalGb} GB` : monitoringEnabled ? 'Storage' : 'Nofaol'}
-            percent={stats ? Math.round((stats.diskUsedGb / (stats.diskTotalGb || 1)) * 100) : 0}
+            detail={
+              stats?.diskTotalGb
+                ? `${stats.diskUsedGb} / ${stats.diskTotalGb} GB`
+                : monitoringEnabled
+                  ? 'Storage'
+                  : 'Nofaol'
+            }
+            percent={
+              stats
+                ? Math.round(
+                    (stats.diskUsedGb / (stats.diskTotalGb || 1)) * 100,
+                  )
+                : 0
+            }
             color="from-violet-500 to-indigo-500"
             loading={statsLoading}
           />
@@ -180,8 +227,22 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<Monitor size={18} />}
             name="GPU"
-            value={statsLoading ? '—' : stats?.gpuPercent != null ? `${stats.gpuPercent}%` : monitoringEnabled ? 'N/A' : '—'}
-            detail={stats?.gpuPercent != null ? 'Active' : monitoringEnabled ? 'Integrated / Standby' : 'Nofaol'}
+            value={
+              statsLoading
+                ? '—'
+                : stats?.gpuPercent != null
+                  ? `${stats.gpuPercent}%`
+                  : monitoringEnabled
+                    ? 'N/A'
+                    : '—'
+            }
+            detail={
+              stats?.gpuPercent != null
+                ? 'Active'
+                : monitoringEnabled
+                  ? 'Integrated / Standby'
+                  : 'Nofaol'
+            }
             percent={stats?.gpuPercent ?? 0}
             color="from-emerald-500 to-teal-500"
             loading={statsLoading}
@@ -194,64 +255,50 @@ export default function HomePage() {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40">
           Tools
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link
-            to="/tools/currency"
-            onClick={(e) => handleDevFeatureClick(e, 'currency', user?.role)}
-            className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center justify-between shadow-lg"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Coins size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors">
-                  Currency Converter
-                </p>
-                <p className="text-xs text-white/40">160+ currencies & charts</p>
-              </div>
-            </div>
-            <ArrowRight size={15} className="text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
-          </Link>
-
-          <Link
-            to="/tools/bg-remover"
-            onClick={(e) => handleDevFeatureClick(e, 'bg-remover', user?.role)}
-            className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center justify-between shadow-lg"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors">
-                  Remove background
-                </p>
-                <p className="text-xs text-white/40">Through ai</p>
-              </div>
-            </div>
-            <ArrowRight size={15} className="text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
-          </Link>
-
-          <Link
-            to="/tools/steam/steam-idler"
-            onClick={(e) => handleDevFeatureClick(e, 'steam-idler', user?.role)}
-            className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center justify-between shadow-lg"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Gamepad2 size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors">
-                  Steam Idler
-                </p>
-                <p className="text-xs text-white/40">Automated idling</p>
-              </div>
-            </div>
-            <ArrowRight size={15} className="text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
-          </Link>
-        </div>
+        {pinnedTools.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/[0.12] bg-[#111109] p-8 text-center">
+            <p className="text-sm font-medium text-white/70">
+              No favorite tools yet
+            </p>
+            <p className="mt-1 text-xs text-white/40">
+              Add tools from the Sidebar to show them here.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {TOOL_CATALOG.filter((tool) => pinnedTools.includes(tool.id)).map(
+              (tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link
+                    key={tool.id}
+                    to={tool.to}
+                    onClick={(e) =>
+                      handleDevFeatureClick(e, tool.id, user?.role)
+                    }
+                    className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Icon size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
+                        {tool.label}
+                      </p>
+                      <p className="text-xs text-white/40 truncate">
+                        {tool.description}
+                      </p>
+                    </div>
+                    <ArrowRight
+                      size={15}
+                      className="ml-auto shrink-0 text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all"
+                    />
+                  </Link>
+                );
+              },
+            )}
+          </div>
+        )}
       </section>
 
       {/* ── 3. OWNER ONLY: "SO'NGGI QO'SHILGANLAR" (RECENT PERFORMANCES) ── */}
@@ -305,7 +352,9 @@ export default function HomePage() {
                           alt={p.full_name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            (
+                              e.currentTarget as HTMLImageElement
+                            ).style.display = 'none';
                           }}
                         />
                       </div>
@@ -319,7 +368,10 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <ArrowRight size={14} className="text-white/20 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all shrink-0 ml-4" />
+                    <ArrowRight
+                      size={14}
+                      className="text-white/20 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all shrink-0 ml-4"
+                    />
                   </Link>
                 </li>
               ))}
@@ -358,7 +410,9 @@ function ResourceMetricCard({
           <span className="text-white/60">{icon}</span>
           {name}
         </span>
-        <span className="text-xs font-mono font-semibold text-white/80">{value}</span>
+        <span className="text-xs font-mono font-semibold text-white/80">
+          {value}
+        </span>
       </div>
 
       {/* Progress Bar */}
@@ -378,7 +432,11 @@ function ResourceMetricCard({
 function formatDate(iso: string): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('uz-UZ', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(iso).toLocaleDateString('uz-UZ', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   } catch {
     return iso;
   }
