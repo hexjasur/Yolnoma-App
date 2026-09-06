@@ -237,4 +237,40 @@ pub async fn open_in_new_window(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn open_agent_window(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+
+    if let Some(agent_window) = app.get_webview_window("agent-window") {
+        let _ = agent_window.show();
+        let _ = agent_window.unminimize();
+        let _ = agent_window.set_focus();
+        return Ok(());
+    }
+
+    let webview_url = if let Some(main_window) = app.get_webview_window("main") {
+        if let Ok(main_url) = main_window.url() {
+            let mut target_url = main_url;
+            target_url.set_fragment(Some("/agent"));
+            tauri::WebviewUrl::External(target_url)
+        } else {
+            tauri::WebviewUrl::App("index.html#/agent".into())
+        }
+    } else {
+        tauri::WebviewUrl::App("index.html#/agent".into())
+    };
+
+    tauri::WebviewWindowBuilder::new(&app, "agent-window", webview_url)
+        .title("Yolnoma Agent")
+        .inner_size(960.0, 680.0)
+        .min_inner_size(760.0, 520.0)
+        .center()
+        .decorations(true)
+        .resizable(true)
+        .build()
+        .map_err(|error| format!("Failed to create agent window: {}", error))?;
+
+    Ok(())
+}
+
 

@@ -199,6 +199,7 @@ pub fn run() {
             commands::proxy_request,
             commands::proxy_ep,
             commands::open_in_new_window,
+            commands::open_agent_window,
             // ── YouTube Video Downloader ──
             videos::download_youtube_video,
             videos::cancel_youtube_download,
