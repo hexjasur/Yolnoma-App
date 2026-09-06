@@ -49,3 +49,11 @@ export async function openInNewWindow(url: string, title?: string): Promise<void
     console.error('[Window] Failed to open in new window:', error);
   }
 }
+
+export async function openAgentWindow(): Promise<void> {
+  try {
+    await invoke('open_agent_window');
+  } catch (error) {
+    console.error('[Window] Failed to open agent window:', error);
+  }
+}

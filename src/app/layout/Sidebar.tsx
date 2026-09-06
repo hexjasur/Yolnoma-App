@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Star,
+  Bot,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
@@ -26,6 +27,7 @@ import { ConfirmModal } from '@/shared/ui';
 import { TOOL_CATALOG } from '@/config/toolCatalog';
 import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
 import type { LucideIcon } from 'lucide-react';
+import { openAgentWindow } from '@/shared/lib/window';
 
 type SidebarLink = {
   to: string;
@@ -37,6 +39,7 @@ type SidebarLink = {
 
 const links: SidebarLink[] = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
+  { to: '/agent', label: 'Yolnoma Agent', icon: Bot, name: 'agent' },
 
   {
     to: '/performances',
@@ -193,7 +196,14 @@ export default function Sidebar() {
               to={to}
               end={to === '/'}
               title={isCollapsed ? label : undefined}
-              onClick={(e) => handleDevFeatureClick(e, link.name, user?.role)}
+              onClick={(e) => {
+                if (link.name === 'agent') {
+                  e.preventDefault();
+                  void openAgentWindow();
+                  return;
+                }
+                handleDevFeatureClick(e, link.name, user?.role);
+              }}
               className={({ isActive }) =>
                 `group relative flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 ${isCollapsed ? 'justify-center px-2' : 'px-4'} ${
                   isActive

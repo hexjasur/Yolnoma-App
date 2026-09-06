@@ -28,6 +28,8 @@ import CrosshairOverlayWindow from '@/features/crosshair/pages/CrosshairOverlayW
 import ImageConverterPage from '@/features/image-converter/pages/ImageConverterPage';
 import PortScannerPage from '@/features/port-scanner/pages/PortScannerPage';
 import ArchiveExplorerPage from '@/features/archive-explorer/pages/ArchiveExplorerPage';
+import AiChatPage from '@/features/ai-chat/pages/AiChatPage';
+import AiAgentPage from '@/features/ai-agent/pages/AiAgentPage';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -38,10 +40,14 @@ export default function AppRoutes() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/session-limit" element={<SessionManagementPage />} />
-        <Route path="/crosshair-overlay-window" element={<CrosshairOverlayWindow />} />
+        <Route
+          path="/crosshair-overlay-window"
+          element={<CrosshairOverlayWindow />}
+        />
 
         {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
+          <Route path="/agent" element={<AiAgentPage />} />
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
 
@@ -62,12 +68,22 @@ export default function AppRoutes() {
               element={<BackgroundRemoverPage />}
             />
             <Route path="/tools/cleaner" element={<CleanerPage />} />
-            <Route path="/tools/crosshair-overlay" element={<CrosshairPage />} />
-            <Route path="/tools/image-converter" element={<ImageConverterPage />} />
+            <Route
+              path="/tools/crosshair-overlay"
+              element={<CrosshairPage />}
+            />
+            <Route
+              path="/tools/image-converter"
+              element={<ImageConverterPage />}
+            />
             <Route path="/tools/port-scanner" element={<PortScannerPage />} />
-            <Route path="/tools/archive-explorer" element={<ArchiveExplorerPage />} />
+            <Route
+              path="/tools/archive-explorer"
+              element={<ArchiveExplorerPage />}
+            />
+            <Route path="/tools/ai-chat" element={<AiChatPage />} />
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
-            <Route path='/tools/steam/review' element={<SteamReviewPage />} />
+            <Route path="/tools/steam/review" element={<SteamReviewPage />} />
             <Route
               path="/tools/steam/steam-idler"
               element={<SteamIdlerPage />}

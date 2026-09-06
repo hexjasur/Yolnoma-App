@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
+  Bot,
   BrushCleaning,
   Coins,
   Crosshair,
@@ -28,6 +29,7 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   { id: 'video-downloader', label: 'Video Downloader', description: 'Download videos locally', to: '/tools/video-downloader', icon: Download },
   { id: 'port-scanner', label: 'Port Scanner', description: 'Inspect local network ports', to: '/tools/port-scanner', icon: Radar },
   { id: 'archive-explorer', label: 'Archive Explorer', description: 'Browse compressed files', to: '/tools/archive-explorer', icon: Archive },
+  { id: 'ai-chat', label: 'AI Chat', description: 'Chat with OpenRouter models', to: '/tools/ai-chat', icon: Bot },
   { id: 'cleaner', label: 'Cleaner', description: 'Clean unwanted files', to: '/tools/cleaner', icon: BrushCleaning },
   { id: 'crosshair-overlay', label: 'Crosshair Overlay', description: 'Custom desktop crosshair', to: '/tools/crosshair-overlay', icon: Crosshair },
   { id: 'steam-sam', label: 'Steam SAM', description: 'Manage Steam achievements', to: '/tools/steam/sam', icon: Gamepad },
