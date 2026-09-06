@@ -142,6 +142,28 @@ export default function Sidebar() {
   const filteredLinks = [...links, ...toolLinks].filter((link) =>
     canAccessPage(user?.role, link.name),
   );
+  const navigationGroups = [
+    {
+      label: 'Home',
+      items: filteredLinks.filter((link) =>
+        ['dashboard', 'agent'].includes(link.name),
+      ),
+    },
+    {
+      label: 'Workspace',
+      items: filteredLinks.filter((link) =>
+        ['performances', 'videos', 'users', 'profile', 'marketplace'].includes(
+          link.name,
+        ),
+      ),
+    },
+    {
+      label: 'Tools',
+      items: filteredLinks
+        .filter((link) => TOOL_CATALOG.some((tool) => tool.id === link.name))
+        .sort((left, right) => left.label.localeCompare(right.label)),
+    },
+  ];
 
   return (
     <aside
@@ -185,110 +207,129 @@ export default function Sidebar() {
       <nav
         className={`flex-1 space-y-1 flex flex-col overflow-y-auto ${isCollapsed ? 'p-2' : 'p-3'}`}
       >
-        {filteredLinks.map((link) => {
-          const { to, label, icon: Icon } = link;
-          const inDev = link.inDevelopment || isFeatureInDevelopment(link.name);
-          const hasBypass = canAccessDevFeature(user?.role, link.name);
+        {navigationGroups.map(
+          (group) =>
+            group.items.length > 0 && (
+              <div key={group.label} className="space-y-1">
+                {!isCollapsed && (
+                  <div className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-faint)]">
+                    {group.label}
+                  </div>
+                )}
+                {group.items.map((link) => {
+                  const { to, label, icon: Icon } = link;
+                  const inDev =
+                    link.inDevelopment || isFeatureInDevelopment(link.name);
+                  const hasBypass = canAccessDevFeature(user?.role, link.name);
 
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              title={isCollapsed ? label : undefined}
-              onClick={(e) => {
-                if (link.name === 'agent') {
-                  e.preventDefault();
-                  void openAgentWindow();
-                  return;
-                }
-                handleDevFeatureClick(e, link.name, user?.role);
-              }}
-              className={({ isActive }) =>
-                `group relative flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 ${isCollapsed ? 'justify-center px-2' : 'px-4'} ${
-                  isActive
-                    ? 'bg-[var(--accent-glow)] text-[var(--text-primary)]'
-                    : inDev && !hasBypass
-                      ? 'text-[var(--text-muted)] opacity-80 hover:opacity-100 hover:bg-amber-500/[0.04]'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(242,237,230,0.04)]'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full transition-opacity duration-150 ${
-                      isActive ? 'opacity-100 bg-[var(--accent)]' : 'opacity-0'
-                    }`}
-                  />
-                  <Icon
-                    size={17}
-                    strokeWidth={1.75}
-                    className={
-                      isActive
-                        ? 'text-[var(--accent)]'
-                        : inDev && !hasBypass
-                          ? 'text-amber-400/60 group-hover:text-amber-400'
-                          : 'text-[var(--text-faint)] group-hover:text-[var(--text-muted)]'
-                    }
-                  />
-                  {!isCollapsed && <span className="truncate">{label}</span>}
-                  {!isCollapsed &&
-                    TOOL_CATALOG.some((tool) => tool.id === link.name) && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === '/'}
+                      title={isCollapsed ? label : undefined}
+                      onClick={(e) => {
+                        if (link.name === 'agent') {
                           e.preventDefault();
-                          e.stopPropagation();
-                          togglePinnedTool(link.name);
-                        }}
-                        className={`ml-auto rounded p-1 transition-colors ${
-                          pinnedTools.includes(link.name)
-                            ? 'text-[var(--accent)]'
-                            : 'text-[var(--text-faint)] hover:text-[var(--accent)]'
-                        }`}
-                        title={
-                          pinnedTools.includes(link.name)
-                            ? 'Remove from Dashboard'
-                            : 'Add to Dashboard'
+                          void openAgentWindow();
+                          return;
                         }
-                        aria-label={
-                          pinnedTools.includes(link.name)
-                            ? `Remove ${label} from Dashboard`
-                            : `Add ${label} to Dashboard`
-                        }
-                      >
-                        <Star
-                          size={13}
-                          fill={
-                            pinnedTools.includes(link.name)
-                              ? 'currentColor'
-                              : 'none'
-                          }
-                        />
-                      </button>
-                    )}
-                  {!isCollapsed && inDev && (
-                    <span
-                      className={`ml-auto text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                        hasBypass
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                      }`}
-                      title={
-                        hasBypass
-                          ? 'In Development (Access granted for your role)'
-                          : 'In Development (Locked)'
+                        handleDevFeatureClick(e, link.name, user?.role);
+                      }}
+                      className={({ isActive }) =>
+                        `group relative flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 ${isCollapsed ? 'justify-center px-2' : 'px-4'} ${
+                          isActive
+                            ? 'bg-[var(--accent-glow)] text-[var(--text-primary)]'
+                            : inDev && !hasBypass
+                              ? 'text-[var(--text-muted)] opacity-80 hover:opacity-100 hover:bg-amber-500/[0.04]'
+                              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(242,237,230,0.04)]'
+                        }`
                       }
                     >
-                      {hasBypass ? 'TEST' : 'DEV'}
-                    </span>
-                  )}
-                </>
-              )}
-            </NavLink>
-          );
-        })}
+                      {({ isActive }) => (
+                        <>
+                          <span
+                            className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full transition-opacity duration-150 ${
+                              isActive
+                                ? 'opacity-100 bg-[var(--accent)]'
+                                : 'opacity-0'
+                            }`}
+                          />
+                          <Icon
+                            size={17}
+                            strokeWidth={1.75}
+                            className={
+                              isActive
+                                ? 'text-[var(--accent)]'
+                                : inDev && !hasBypass
+                                  ? 'text-amber-400/60 group-hover:text-amber-400'
+                                  : 'text-[var(--text-faint)] group-hover:text-[var(--text-muted)]'
+                            }
+                          />
+                          {!isCollapsed && (
+                            <span className="truncate">{label}</span>
+                          )}
+                          {!isCollapsed &&
+                            TOOL_CATALOG.some(
+                              (tool) => tool.id === link.name,
+                            ) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  togglePinnedTool(link.name);
+                                }}
+                                className={`ml-auto rounded p-1 transition-colors ${
+                                  pinnedTools.includes(link.name)
+                                    ? 'text-[var(--accent)]'
+                                    : 'text-[var(--text-faint)] hover:text-[var(--accent)]'
+                                }`}
+                                title={
+                                  pinnedTools.includes(link.name)
+                                    ? 'Remove from Dashboard'
+                                    : 'Add to Dashboard'
+                                }
+                                aria-label={
+                                  pinnedTools.includes(link.name)
+                                    ? `Remove ${label} from Dashboard`
+                                    : `Add ${label} to Dashboard`
+                                }
+                              >
+                                <Star
+                                  size={13}
+                                  fill={
+                                    pinnedTools.includes(link.name)
+                                      ? 'currentColor'
+                                      : 'none'
+                                  }
+                                />
+                              </button>
+                            )}
+                          {!isCollapsed && inDev && (
+                            <span
+                              className={`ml-auto text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                hasBypass
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              }`}
+                              title={
+                                hasBypass
+                                  ? 'In Development (Access granted for your role)'
+                                  : 'In Development (Locked)'
+                              }
+                            >
+                              {hasBypass ? 'TEST' : 'DEV'}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            ),
+        )}
         {/* Plugin Navigation Section */}
         {pluginNavItems.length > 0 && (
           <div className="pt-3">

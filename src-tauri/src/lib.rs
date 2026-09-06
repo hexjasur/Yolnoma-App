@@ -88,7 +88,11 @@ pub fn run() {
             .manage(videos::DownloadState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_denylist(&["tabs-window", "agent-window"])
+                .build(),
+)
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.show();

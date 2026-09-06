@@ -27,7 +27,7 @@ type ScanMode = 'common' | 'range' | 'custom';
 
 const QUICK_PRESETS = [
   { label: 'Common (38 Ports)', mode: 'common' as ScanMode, icon: Globe },
-  { label: 'Web (80, 443, 8080, 8443)', ports: '80, 443, 8080, 8443, 3000, 5000', icon: Globe },
+  { label: 'Web (80, 443, 8080, 8443)', ports: '80, 443, 1420, 8080, 8443, 3000, 5000', icon: Globe },
   { label: 'Databases (SQL, Redis, Mongo)', ports: '3306, 5432, 6379, 27017, 1433, 1521', icon: Database },
   { label: 'Remote Access (SSH, RDP, VNC)', ports: '21, 22, 23, 3389, 5900', icon: Terminal },
 ];

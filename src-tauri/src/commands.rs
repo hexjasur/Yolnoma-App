@@ -231,7 +231,12 @@ pub async fn open_in_new_window(
             .decorations(true)
             .resizable(true);
 
-        builder.build().map_err(|e| format!("Failed to create tabs window: {}", e))?;
+        let new_window = builder
+            .build()
+            .map_err(|e| format!("Failed to create tabs window: {}", e))?;
+
+        let _ = new_window.set_fullscreen(false);
+        let _ = new_window.set_decorations(true);
     }
 
     Ok(())
@@ -260,7 +265,7 @@ pub async fn open_agent_window(app: tauri::AppHandle) -> Result<(), String> {
         tauri::WebviewUrl::App("index.html#/agent".into())
     };
 
-    tauri::WebviewWindowBuilder::new(&app, "agent-window", webview_url)
+    let agent_win = tauri::WebviewWindowBuilder::new(&app, "agent-window", webview_url)
         .title("Yolnoma Agent")
         .inner_size(960.0, 680.0)
         .min_inner_size(760.0, 520.0)
@@ -269,6 +274,8 @@ pub async fn open_agent_window(app: tauri::AppHandle) -> Result<(), String> {
         .resizable(true)
         .build()
         .map_err(|error| format!("Failed to create agent window: {}", error))?;
+
+    let _ = agent_win.set_fullscreen(false);
 
     Ok(())
 }

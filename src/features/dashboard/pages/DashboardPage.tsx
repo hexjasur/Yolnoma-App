@@ -100,7 +100,7 @@ export default function HomePage() {
               <p className="text-xs text-white/40 truncate max-w-md">
                 {monitoringEnabled
                   ? stats?.cpuModel || 'Protsessor va operativ xotira holati'
-                  : "Monitoring o'chirilgan (yoqish uchun o'ngdagi tugmani bosing)"}
+                  : "Monitoring disabled (press the button on the right to enable)"}
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function HomePage() {
                 }
               >
                 {!monitoringEnabled
-                  ? "O'chirilgan"
+                  ? "Disabled"
                   : isPaused
                     ? "To'xtatildi (fon)"
                     : 'Real-time (2s)'}
