@@ -16,6 +16,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.3",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-window-state": "^2",
+    "@yolnoma/plugin-sdk": "^0.1.11",
     "lightgallery": "^2.9.0",
     "lucide-react": "^1.30.0",
     "react": "^19.1.0",
