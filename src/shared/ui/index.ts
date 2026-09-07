@@ -4,5 +4,5 @@ export { default as ConfirmModal } from './ConfirmModal';
 export { default as Input }        from './Input';
 export { default as Textarea }     from './Textarea';
 export { default as ImageUpload }  from './ImageUpload';
+export { default as UpdateModal } from './UpdateModal';
 export { CardGridSkeleton, LineSkeleton } from './Skeleton';
-

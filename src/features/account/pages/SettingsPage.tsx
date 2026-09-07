@@ -12,13 +12,15 @@ import {
   Radio,
   LogOut,
   Info,
-  Laptop
+  Laptop,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '@/shared/api/http';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/shared/ui/Toast';
 import { ConfirmModal } from '@/shared/ui';
 import { getErrorMessage } from '@/shared/lib/errors';
+import { useUpdaterStore } from '@/shared/stores/updaterStore';
 
 interface SessionItem {
   id?: string;
@@ -46,6 +48,13 @@ interface SessionsApiResponse {
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const {
+    status: updaterStatus,
+    updateInfo,
+    progress: updaterProgress,
+    checkForUpdates,
+    openModal: openUpdateModal,
+  } = useUpdaterStore();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -346,6 +355,73 @@ export default function SettingsPage() {
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <p className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">SYSTEM</p>
             <p className="text-sm font-mono text-emerald-400 mt-1">Tauri 2.0 Desktop</p>
+          </div>
+        </div>
+
+        {/* Software Updates Row */}
+        <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between flex-wrap gap-3">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-[#F2EDE6]">Software Updates</p>
+            <p className="text-xs text-white/45">
+              {updaterStatus === 'checking' && (
+                <span className="text-amber-400/90 flex items-center gap-1.5">
+                  <Loader2 size={12} className="animate-spin" />
+                  Checking for new updates...
+                </span>
+              )}
+              {updaterStatus === 'update-available' && (
+                <span className="text-amber-400 font-medium flex items-center gap-1.5">
+                  <Sparkles size={12} />
+                  New version v{updateInfo?.version} is available!
+                </span>
+              )}
+              {updaterStatus === 'downloading' && (
+                <span className="text-[#D97757] font-medium flex items-center gap-1.5">
+                  <RefreshCw size={12} className="animate-spin" />
+                  Downloading update ({updaterProgress}%)...
+                </span>
+              )}
+              {updaterStatus === 'installing' && (
+                <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                  <Loader2 size={12} className="animate-spin" />
+                  Installing update and relaunching...
+                </span>
+              )}
+              {updaterStatus === 'up-to-date' && (
+                <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                  <CheckCircle2 size={12} />
+                  You are on the latest version
+                </span>
+              )}
+              {updaterStatus === 'error' && (
+                <span className="text-red-400 flex items-center gap-1.5">
+                  <AlertCircle size={12} />
+                  Failed to check for updates
+                </span>
+              )}
+              {updaterStatus === 'idle' && 'Check for new releases and security updates.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {updaterStatus === 'update-available' ? (
+              <button
+                onClick={openUpdateModal}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-[#D97757] to-amber-500 text-white shadow-md hover:brightness-110 transition-all cursor-pointer"
+              >
+                <Sparkles size={13} />
+                <span>Update to v{updateInfo?.version}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => checkForUpdates({ silent: false })}
+                disabled={updaterStatus === 'checking' || updaterStatus === 'downloading' || updaterStatus === 'installing'}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white/[0.04] border border-white/[0.08] text-white/80 hover:text-white hover:bg-white/[0.08] disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <RefreshCw size={13} className={updaterStatus === 'checking' ? 'animate-spin text-[#D97757]' : ''} />
+                <span>{updaterStatus === 'checking' ? 'Checking...' : 'Check for updates'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
