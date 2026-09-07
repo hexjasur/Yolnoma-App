@@ -96,7 +96,7 @@ jobs:
 
           $signature = Get-Content "updater-files/$env:UPDATER_SIG" -Raw
 
-          $baseUrl = "https://raw.githubusercontent.com/${{ github.repository_owner }}/Yolnoma-Updates/main"
+          $baseUrl = "https://raw.githubusercontent.com/Yolnoma/Yolnoma-Updates/main"
 
           $manifest = @{
             version = $version
@@ -128,7 +128,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $repo = "${{ github.repository_owner }}/Yolnoma-Updates"
+          $repo = "Yolnoma/Yolnoma-Updates"
 
           Write-Host "Cloning $repo..."
 
