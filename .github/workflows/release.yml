@@ -32,7 +32,6 @@ jobs:
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
@@ -46,3 +45,94 @@ jobs:
           releaseDraft: false
           prerelease: false
           generateReleaseNotes: true
+          updaterJsonPreferNsis: true
+
+      # ----------------------------------------
+      # Prepare updater files for Cloudflare R2
+      # ----------------------------------------
+
+      - name: Find updater artifacts
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path . -Recurse -Filter "*-setup.exe" |
+            Where-Object { $_.FullName -notmatch "\\node_modules\\" } |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            throw "NSIS setup.exe not found"
+          }
+
+          $sig = Get-Item "$($exe.FullName).sig"
+
+          if (-not $sig) {
+            throw "Signature file not found: $($exe.FullName).sig"
+          }
+
+          Write-Host "EXE: $($exe.FullName)"
+          Write-Host "SIG: $($sig.FullName)"
+
+          "UPDATER_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "UPDATER_SIG=$($sig.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Create R2 latest.json
+        shell: pwsh
+        run: |
+          $exe = Get-Item $env:UPDATER_EXE
+          $sig = Get-Item $env:UPDATER_SIG
+
+          $version = $exe.BaseName -replace '^Yolnoma_', ''
+          $version = $version -replace '_x64-setup$', ''
+
+          $signature = Get-Content $sig.FullName -Raw
+
+          $baseUrl = "https://pub-5f3bb5bd0dd94b44a02b1a1b0b3aef00.r2.dev"
+
+          $manifest = @{
+            version = $version
+            notes = "Bug fixes and improvements."
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            platforms = @{
+              "windows-x86_64-nsis" = @{
+                signature = $signature.Trim()
+                url = "$baseUrl/$($exe.Name)"
+              }
+            }
+          }
+
+          $manifest |
+            ConvertTo-Json -Depth 10 |
+            Set-Content -Path "latest.json" -Encoding utf8
+
+          Write-Host "Generated latest.json:"
+          Get-Content latest.json
+
+      # ----------------------------------------
+      # Upload updater files to Cloudflare R2
+      # ----------------------------------------
+
+      - name: Upload updater to Cloudflare R2
+        shell: pwsh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          $endpoint = "https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          $bucket = "yolnoma-updates"
+
+          aws s3 cp "$env:UPDATER_EXE" `
+            "s3://$bucket/" `
+            --endpoint-url "$endpoint" `
+            --content-type "application/octet-stream"
+
+          aws s3 cp "$env:UPDATER_SIG" `
+            "s3://$bucket/" `
+            --endpoint-url "$endpoint" `
+            --content-type "text/plain"
+
+          aws s3 cp "latest.json" `
+            "s3://$bucket/latest.json" `
+            --endpoint-url "$endpoint" `
+            --content-type "application/json"
+
+          Write-Host "R2 upload completed successfully."
