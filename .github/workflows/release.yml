@@ -9,11 +9,15 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # ============================================================================
+  # Job 1: Build & Sign Tauri Windows Application + Create Private Release
+  # ============================================================================
+  build:
+    name: Build & Release Tauri App
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -34,7 +38,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-
         with:
           tagName: v__VERSION__
           releaseName: "Yolnoma v__VERSION__"
@@ -47,106 +50,189 @@ jobs:
           generateReleaseNotes: true
           uploadUpdaterJson: false
 
-      # -----------------------------------
-      # Prepare NSIS updater files
-      # -----------------------------------
-
-      - name: Prepare updater files
+      # ------------------------------------------------------------------------
+      # Prepare & Validate NSIS Updater Files for Public Distribution
+      # ------------------------------------------------------------------------
+      - name: Prepare updater artifacts
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
           $nsisDir = "src-tauri/target/release/bundle/nsis"
+          Write-Host "Searching for NSIS installer in $nsisDir..."
 
-          $exe = Get-ChildItem $nsisDir -Filter "*-setup.exe" |
-            Select-Object -First 1
+          $exe = Get-ChildItem -Path $nsisDir -Filter "*-setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 
           if (-not $exe) {
-            throw "NSIS setup.exe not found"
+            Write-Host "Checking all bundle directories for setup.exe..."
+            $exe = Get-ChildItem -Path "src-tauri/target/release/bundle" -Filter "*setup.exe" -Recurse | Select-Object -First 1
           }
 
-          $sig = Get-Item "$($exe.FullName).sig"
+          if (-not $exe) {
+            throw "NSIS setup.exe installer not found in build outputs."
+          }
+
+          $sig = Get-Item "$($exe.FullName).sig" -ErrorAction SilentlyContinue
 
           if (-not $sig) {
-            throw "NSIS signature file not found"
+            $sig = Get-ChildItem -Path "src-tauri/target/release/bundle" -Filter "$($exe.Name).sig" -Recurse | Select-Object -First 1
           }
 
-          Write-Host "Updater EXE: $($exe.FullName)"
-          Write-Host "Updater SIG: $($sig.FullName)"
-
-          New-Item -ItemType Directory -Force -Path "updater-files" | Out-Null
-
-          Copy-Item $exe.FullName "updater-files/$($exe.Name)"
-          Copy-Item $sig.FullName "updater-files/$($sig.Name)"
-
-          "UPDATER_EXE=$($exe.Name)" | Out-File $env:GITHUB_ENV -Append
-          "UPDATER_SIG=$($sig.Name)" | Out-File $env:GITHUB_ENV -Append
-
-      # -----------------------------------
-      # Create latest.json automatically
-      # -----------------------------------
-
-      - name: Create latest.json
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $version = "${{ github.ref_name }}"
-          $version = $version -replace "^v", ""
-
-          $signature = Get-Content "updater-files/$env:UPDATER_SIG" -Raw
-
-          $baseUrl = "https://raw.githubusercontent.com/Yolnoma/Yolnoma-Updates/main"
-
-          $manifest = @{
-            version = $version
-            notes = "Bug fixes and improvements."
-            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-            platforms = @{
-              "windows-x86_64" = @{
-                signature = $signature.Trim()
-                url = "$baseUrl/$env:UPDATER_EXE"
-              }
-            }
+          if (-not $sig) {
+            throw "Signature file ($($exe.Name).sig) not found in build outputs."
           }
 
-          $manifest |
-            ConvertTo-Json -Depth 10 |
-            Set-Content "updater-files/latest.json" -Encoding utf8
+          Write-Host "Found installer: $($exe.FullName) ($($exe.Length) bytes)"
+          Write-Host "Found signature: $($sig.FullName) ($($sig.Length) bytes)"
 
-          Write-Host "Generated latest.json:"
-          Get-Content "updater-files/latest.json"
+          New-Item -ItemType Directory -Force -Path "updater-artifacts" | Out-Null
 
-      # -----------------------------------
-      # Push updater files to public repo
-      # -----------------------------------
+          Copy-Item $exe.FullName "updater-artifacts/$($exe.Name)" -Force
+          Copy-Item $sig.FullName "updater-artifacts/$($sig.Name)" -Force
 
-      - name: Publish updater files
+      # ------------------------------------------------------------------------
+      # Upload artifacts so Job 2 (or manual retries) can use them without rebuilding
+      # ------------------------------------------------------------------------
+      - name: Upload updater artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-artifacts
+          path: updater-artifacts/
+          if-no-files-found: error
+          retention-days: 7
+
+  # ============================================================================
+  # Job 2: Publish Updater (.exe, .sig, latest.json) to Public Repository
+  # Independent job: If publishing fails, retrying will NOT rebuild Tauri app.
+  # ============================================================================
+  publish-updates:
+    name: Publish Updater to Public Repo
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+      - name: Download updater artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: updater-artifacts
+          path: updater-files
+
+      - name: Generate latest.json and Publish to Public Repo
         shell: pwsh
         env:
           UPDATES_REPO_TOKEN: ${{ secrets.UPDATES_REPO_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
 
+          if ([string]::IsNullOrWhiteSpace($env:UPDATES_REPO_TOKEN)) {
+            throw "Secret UPDATES_REPO_TOKEN is missing or empty in repository secrets."
+          }
+
+          # 1. Locate downloaded artifacts
+          $exe = Get-ChildItem -Path "updater-files" -Filter "*.exe" | Select-Object -First 1
+          if (-not $exe) {
+            throw "Installer .exe not found in downloaded artifacts."
+          }
+
+          $sig = Get-ChildItem -Path "updater-files" -Filter "$($exe.Name).sig" | Select-Object -First 1
+          if (-not $sig) {
+            $sig = Get-ChildItem -Path "updater-files" -Filter "*.sig" | Select-Object -First 1
+          }
+
+          if (-not $sig) {
+            throw "Signature file ($($exe.Name).sig) not found in downloaded artifacts."
+          }
+
+          Write-Host "Installer file: $($exe.Name) ($($exe.Length) bytes)"
+          Write-Host "Signature file: $($sig.Name) ($($sig.Length) bytes)"
+
+          # 2. Extract signature content
+          $signature = (Get-Content $sig.FullName -Raw).Trim()
+          if ([string]::IsNullOrWhiteSpace($signature)) {
+            throw "Signature content is empty!"
+          }
+
+          # 3. Format release version (e.g. v0.9.53 -> 0.9.53)
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace "^v", ""
+          Write-Host "Releasing version: $version (Git tag: $tag)"
+
           $baseUrl = "https://raw.githubusercontent.com/Yolnoma/Yolnoma-Updates/main"
 
-          Write-Host "Cloning $repo..."
+          # 4. Construct latest.json according to Tauri 2 updater manifest schema
+          $manifest = [ordered]@{
+            version = $version
+            notes = "Yolnoma v$version - Bug fixes and improvements."
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = [ordered]@{
+              "windows-x86_64" = [ordered]@{
+                signature = $signature
+                url = "$baseUrl/$($exe.Name)"
+              }
+            }
+          }
 
-          git clone "https://x-access-token:$env:UPDATES_REPO_TOKEN@github.com/$repo.git" updates
+          $latestJsonPath = "updater-files/latest.json"
+          $jsonContent = $manifest | ConvertTo-Json -Depth 10
+          Set-Content -Path $latestJsonPath -Value $jsonContent -Encoding utf8
 
-          Write-Host "Copying updater files..."
+          Write-Host "Generated latest.json:"
+          Write-Host $jsonContent
 
-          Copy-Item "updater-files/$env:UPDATER_EXE" "updates/$env:UPDATER_EXE" -Force
-          Copy-Item "updater-files/$env:UPDATER_SIG" "updates/$env:UPDATER_SIG" -Force
-          Copy-Item "updater-files/latest.json" "updates/latest.json" -Force
+          # 5. Clone public repo, copy updater files, commit and push
+          $repoOwner = "Yolnoma"
+          $repoName = "Yolnoma-Updates"
+          $repoSlug = "$repoOwner/$repoName"
+          $publicRepoUrl = "https://github.com/$repoSlug.git"
+          $pushUrl = "https://x-access-token:$($env:UPDATES_REPO_TOKEN)@github.com/$repoSlug.git"
 
-          Set-Location updates
+          if (Test-Path "updates-repo") {
+            Remove-Item -Recurse -Force "updates-repo"
+          }
 
+          $isCloned = $false
+          try {
+            Write-Host "Attempting to clone public repository $repoSlug..."
+            git clone --quiet $publicRepoUrl updates-repo 2>$null
+            if ($LASTEXITCODE -eq 0 -and (Test-Path "updates-repo/.git")) {
+              $isCloned = $true
+            }
+          } catch {
+            $isCloned = $false
+          }
+
+          if ($isCloned) {
+            Write-Host "Successfully cloned existing repository $repoSlug."
+            Set-Location updates-repo
+            git checkout -B main
+          } else {
+            Write-Host "Repository is empty or fresh clone not possible. Initializing local git repository on branch main..."
+            New-Item -ItemType Directory -Force -Path "updates-repo" | Out-Null
+            Set-Location updates-repo
+            git init -b main
+          }
+
+          # Configure Git user identity for commit
           git config user.name "Yolnoma Release Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add .
+          # Copy update files into repository root
+          Copy-Item "../updater-files/$($exe.Name)" "./$($exe.Name)" -Force
+          Copy-Item "../updater-files/$($sig.Name)" "./$($sig.Name)" -Force
+          Copy-Item "../updater-files/latest.json" "./latest.json" -Force
 
-          git commit -m "release: v${{ github.ref_name }}"
+          # Stage and commit
+          git add -A
+          $status = git status --porcelain
+          if (-not $status) {
+            Write-Host "No changes detected. Repository is already up to date."
+          } else {
+            Write-Host "Committing update files for v$version..."
+            git commit -m "release: v$version"
 
-          git push origin main
+            Write-Host "Configuring remote origin and pushing to $repoSlug (main)..."
+            git remote remove origin 2>$null
+            git remote add origin $pushUrl
+            git push -u origin main --force
+            Write-Host "Successfully published v$version to $repoSlug!"
+          }

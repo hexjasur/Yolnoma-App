@@ -55,6 +55,9 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUxMzU0OEY5MEU4M0VCQzcKUldUSDY0TU8rVWcxVVNTWlo2RWhVTU5YUWQyMVpLRmt1NGxCMlAwZjh2TE5hRkZjREhJYjI4VzAK",
+      "endpoints": [
+        "https://raw.githubusercontent.com/Yolnoma/Yolnoma-Updates/main/latest.json"
+      ],
       "windows": {
         "installMode": "passive"
       }
