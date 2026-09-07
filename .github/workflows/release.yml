@@ -128,7 +128,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $repo = "Yolnoma/Yolnoma-Updates"
+          $baseUrl = "https://raw.githubusercontent.com/Yolnoma/Yolnoma-Updates/main"
 
           Write-Host "Cloning $repo..."
 
