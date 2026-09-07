@@ -29,7 +29,7 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "resources": {
       "resources/*": "./resources/"
     },
@@ -53,7 +53,12 @@
     }
   },
   "plugins": {
-    "updater": {},
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUxMzU0OEY5MEU4M0VCQzcKUldUSDY0TU8rVWcxVVNTWlo2RWhVTU5YUWQyMVpLRmt1NGxCMlAwZjh2TE5hRkZjREhJYjI4VzAK",
+      "windows": {
+        "installMode": "passive"
+      }
+    },
     "deep-link": {
       "desktop": {
         "schemes": [
