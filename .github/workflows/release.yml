@@ -124,15 +124,17 @@ jobs:
       - name: Publish updater files
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.UPDATES_REPO_TOKEN }}
+          UPDATES_REPO_TOKEN: ${{ secrets.UPDATES_REPO_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
 
-          gh auth setup-git
-
           $repo = "${{ github.repository_owner }}/Yolnoma-Updates"
 
-          git clone "https://github.com/$repo.git" updates
+          Write-Host "Cloning $repo..."
+
+          git clone "https://x-access-token:$env:UPDATES_REPO_TOKEN@github.com/$repo.git" updates
+
+          Write-Host "Copying updater files..."
 
           Copy-Item "updater-files/$env:UPDATER_EXE" "updates/$env:UPDATER_EXE" -Force
           Copy-Item "updater-files/$env:UPDATER_SIG" "updates/$env:UPDATER_SIG" -Force
