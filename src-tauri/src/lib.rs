@@ -5,6 +5,7 @@ use tauri_plugin_deep_link::DeepLinkExt;
 mod commands;
 #[path = "commands/videos.rs"]
 mod videos;
+mod account_storage;
 mod cleaner;
 mod crosshair;
 mod embedded_api_key;
@@ -83,6 +84,7 @@ pub fn run() {
         .manage(AuthState {
             user_id: Mutex::new(None),
         })
+        .manage(account_storage::ApiKeyCache::new())
         .manage(steam_idler::IdlingState::new())
         .manage(system_monitor::SystemMonitorState::new())
             .manage(videos::DownloadState::new())
@@ -200,6 +202,13 @@ pub fn run() {
             exit_app,
             hide_window,
             get_idling_count,
+            // ── Account Storage ──
+            account_storage::set_current_user,
+            account_storage::get_account_config,
+            account_storage::save_account_config,
+            account_storage::get_api_key,
+            account_storage::set_api_key,
+            account_storage::clear_api_key,
             commands::proxy_request,
             commands::proxy_ep,
             commands::open_in_new_window,

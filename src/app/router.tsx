@@ -47,7 +47,11 @@ export default function AppRoutes() {
 
         {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
-          <Route path="/agent" element={<AiAgentPage />} />
+          <Route path="/agent" element={
+            <DevelopmentGuard featureName="ai-agent">
+              <AiAgentPage />
+            </DevelopmentGuard>
+          } />
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
 
@@ -113,7 +117,7 @@ export default function AppRoutes() {
               }
             />
 
-            {/* VIDEO ROUTES — Owner only */}
+            {/* VIDEO ROUTES */}
             <Route
               path="/tools/video-downloader"
               element={<VideoDownloader />}

@@ -26,7 +26,7 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   { id: 'bg-remover', label: 'Remove background', description: 'Through AI', to: '/tools/bg-remover', icon: Sparkles },
   { id: 'steam-idler', label: 'Steam / Idler', description: 'Automated idling', to: '/tools/steam/steam-idler', icon: Gamepad2 },
   { id: 'image-converter', label: 'Image Converter', description: 'Convert and optimize images', to: '/tools/image-converter', icon: ImageIcon },
-  { id: 'video-downloader', label: 'Video Downloader', description: 'Download videos locally', to: '/tools/video-downloader', icon: Download },
+  { id: 'video-downloader', label: 'YT Video Downloader', description: 'Download videos locally', to: '/tools/video-downloader', icon: Download },
   { id: 'port-scanner', label: 'Port Scanner', description: 'Inspect local network ports', to: '/tools/port-scanner', icon: Radar },
   { id: 'archive-explorer', label: 'Archive Explorer', description: 'Browse compressed files', to: '/tools/archive-explorer', icon: Archive },
   { id: 'ai-chat', label: 'AI Chat', description: 'Chat with OpenRouter models', to: '/tools/ai-chat', icon: Bot },

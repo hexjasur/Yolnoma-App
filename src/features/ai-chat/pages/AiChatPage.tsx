@@ -20,9 +20,11 @@ import ApiKeyModal from '../components/ApiKeyModal';
 import { buildProjectContext } from '../context/projectContext';
 import {
   clearLegacyAiStorage,
-  getAccountStorageKeys,
-  loadAccountApiKey,
+  getAccountChatKey,
   loadAccountChat,
+  getApiKey,
+  saveApiKey,
+  removeApiKey,
 } from '../storage';
 
 export default function AiChatPage() {
@@ -53,24 +55,30 @@ export default function AiChatPage() {
   useEffect(() => {
     clearLegacyAiStorage();
     setStorageReady(false);
-    const accountKey = loadAccountApiKey(user);
-    setApiKey(accountKey);
-    setDraftKey(accountKey);
+
+    const userId = user?.id ?? '';
+    getApiKey(userId).then((key) => {
+      const accountKey = key ?? '';
+      setApiKey(accountKey);
+      setDraftKey(accountKey);
+      setShowKeyModal(
+        !accountKey &&
+          sessionStorage.getItem('yolnoma.ai-key-guide-dismissed') !== 'true',
+      );
+      setStorageReady(true);
+    });
+
     setMessages(loadAccountChat(user));
-    setShowKeyModal(
-      !accountKey &&
-        sessionStorage.getItem('yolnoma.ai-key-guide-dismissed') !== 'true',
-    );
-    setStorageReady(true);
   }, [user?.id, user?.email]);
 
   useEffect(() => {
     if (!storageReady) return;
     localStorage.setItem(
-      getAccountStorageKeys(user).chat,
+      getAccountChatKey(user),
       JSON.stringify(messages),
     );
   }, [messages, storageReady, user]);
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -170,19 +178,21 @@ export default function AiChatPage() {
     });
   }, [modelCategory, models]);
 
-  const saveKey = () => {
+  const saveKey = async () => {
     const cleanKey = draftKey.trim();
+    const userId = user?.id ?? '';
     if (cleanKey) {
-      localStorage.setItem(getAccountStorageKeys(user).apiKey, cleanKey);
+      await saveApiKey(userId, cleanKey);
       setApiKey(cleanKey);
       setError('');
       setShowKeyModal(false);
     } else {
-      localStorage.removeItem(getAccountStorageKeys(user).apiKey);
+      await removeApiKey(userId);
       setApiKey('');
       setShowKeyModal(true);
     }
   };
+
 
   const dismissKeyGuide = () => {
     sessionStorage.setItem('yolnoma.ai-key-guide-dismissed', 'true');
@@ -410,10 +420,10 @@ export default function AiChatPage() {
               iconOnly
               title="Remove API key"
               aria-label="Remove API key"
-              onClick={() => {
+              onClick={async () => {
                 if (!window.confirm('Remove the saved OpenRouter API key?'))
                   return;
-                localStorage.removeItem(getAccountStorageKeys(user).apiKey);
+                await removeApiKey(user?.id ?? '');
                 setApiKey('');
                 setDraftKey('');
                 setShowKeyModal(true);

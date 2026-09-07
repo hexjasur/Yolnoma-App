@@ -9,7 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: UserProfile | null;
   loading: boolean;
-  login: (userData: UserProfile, accessToken: string, refreshToken: string, sessionId?: string) => void;
+  login: (userData: UserProfile, accessToken: string, refreshToken: string, sessionId?: string) => Promise<void> | void;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<UserProfile>) => void;
 }

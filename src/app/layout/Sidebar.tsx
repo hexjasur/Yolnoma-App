@@ -39,7 +39,7 @@ type SidebarLink = {
 
 const links: SidebarLink[] = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
-  { to: '/agent', label: 'Yolnoma Agent', icon: Bot, name: 'agent' },
+  { to: '/agent', label: 'Yolnoma Agent', icon: Bot, name: 'agent', inDevelopment: true, },
 
   {
     to: '/performances',

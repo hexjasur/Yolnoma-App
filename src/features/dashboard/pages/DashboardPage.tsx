@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -15,30 +15,19 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { handleDevFeatureClick } from '@/config/features';
 import { TOOL_CATALOG } from '@/config/toolCatalog';
 import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
+import { useAccountConfigStore } from '@/shared/stores/accountConfigStore';
 
 export default function HomePage() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
   const { pinnedTools } = usePinnedTools();
 
-  // Real-time system monitoring toggle (default: false / OFF)
-  const [monitoringEnabled, setMonitoringEnabled] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('yolnoma_system_monitoring_enabled');
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
+  // Real-time system monitoring toggle — persisted in config.json
+  const monitoringEnabled = useAccountConfigStore((s) => s.config.systemMonitoring);
+  const updateConfig = useAccountConfigStore((s) => s.updateConfig);
 
   const toggleMonitoring = () => {
-    setMonitoringEnabled((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('yolnoma_system_monitoring_enabled', String(next));
-      } catch {}
-      return next;
-    });
+    updateConfig({ systemMonitoring: !monitoringEnabled });
   };
 
   // Native local system stats with 2s visibility-aware polling (only when enabled)
