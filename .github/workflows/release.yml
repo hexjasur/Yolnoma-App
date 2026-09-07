@@ -45,17 +45,20 @@ jobs:
           releaseDraft: false
           prerelease: false
           generateReleaseNotes: true
-          updaterJsonPreferNsis: true
+          uploadUpdaterJson: false
 
-      # ----------------------------------------
-      # Prepare updater files for Cloudflare R2
-      # ----------------------------------------
+      # -----------------------------------
+      # Prepare NSIS updater files
+      # -----------------------------------
 
-      - name: Find updater artifacts
+      - name: Prepare updater files
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path . -Recurse -Filter "*-setup.exe" |
-            Where-Object { $_.FullName -notmatch "\\node_modules\\" } |
+          $ErrorActionPreference = "Stop"
+
+          $nsisDir = "src-tauri/target/release/bundle/nsis"
+
+          $exe = Get-ChildItem $nsisDir -Filter "*-setup.exe" |
             Select-Object -First 1
 
           if (-not $exe) {
@@ -65,74 +68,83 @@ jobs:
           $sig = Get-Item "$($exe.FullName).sig"
 
           if (-not $sig) {
-            throw "Signature file not found: $($exe.FullName).sig"
+            throw "NSIS signature file not found"
           }
 
-          Write-Host "EXE: $($exe.FullName)"
-          Write-Host "SIG: $($sig.FullName)"
+          Write-Host "Updater EXE: $($exe.FullName)"
+          Write-Host "Updater SIG: $($sig.FullName)"
 
-          "UPDATER_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "UPDATER_SIG=$($sig.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          New-Item -ItemType Directory -Force -Path "updater-files" | Out-Null
 
-      - name: Create R2 latest.json
+          Copy-Item $exe.FullName "updater-files/$($exe.Name)"
+          Copy-Item $sig.FullName "updater-files/$($sig.Name)"
+
+          "UPDATER_EXE=$($exe.Name)" | Out-File $env:GITHUB_ENV -Append
+          "UPDATER_SIG=$($sig.Name)" | Out-File $env:GITHUB_ENV -Append
+
+      # -----------------------------------
+      # Create latest.json automatically
+      # -----------------------------------
+
+      - name: Create latest.json
         shell: pwsh
         run: |
-          $exe = Get-Item $env:UPDATER_EXE
-          $sig = Get-Item $env:UPDATER_SIG
+          $ErrorActionPreference = "Stop"
 
-          $version = $exe.BaseName -replace '^Yolnoma_', ''
-          $version = $version -replace '_x64-setup$', ''
+          $version = "${{ github.ref_name }}"
+          $version = $version -replace "^v", ""
 
-          $signature = Get-Content $sig.FullName -Raw
+          $signature = Get-Content "updater-files/$env:UPDATER_SIG" -Raw
 
-          $baseUrl = "https://pub-5f3bb5bd0dd94b44a02b1a1b0b3aef00.r2.dev"
+          $baseUrl = "https://raw.githubusercontent.com/${{ github.repository_owner }}/Yolnoma-Updates/main"
 
           $manifest = @{
             version = $version
             notes = "Bug fixes and improvements."
             pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
             platforms = @{
-              "windows-x86_64-nsis" = @{
+              "windows-x86_64" = @{
                 signature = $signature.Trim()
-                url = "$baseUrl/$($exe.Name)"
+                url = "$baseUrl/$env:UPDATER_EXE"
               }
             }
           }
 
           $manifest |
             ConvertTo-Json -Depth 10 |
-            Set-Content -Path "latest.json" -Encoding utf8
+            Set-Content "updater-files/latest.json" -Encoding utf8
 
           Write-Host "Generated latest.json:"
-          Get-Content latest.json
+          Get-Content "updater-files/latest.json"
 
-      # ----------------------------------------
-      # Upload updater files to Cloudflare R2
-      # ----------------------------------------
+      # -----------------------------------
+      # Push updater files to public repo
+      # -----------------------------------
 
-      - name: Upload updater to Cloudflare R2
+      - name: Publish updater files
         shell: pwsh
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
+          GH_TOKEN: ${{ secrets.UPDATES_REPO_TOKEN }}
         run: |
-          $endpoint = "https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com"
-          $bucket = "yolnoma-updates"
+          $ErrorActionPreference = "Stop"
 
-          aws s3 cp "$env:UPDATER_EXE" `
-            "s3://$bucket/" `
-            --endpoint-url "$endpoint" `
-            --content-type "application/octet-stream"
+          gh auth setup-git
 
-          aws s3 cp "$env:UPDATER_SIG" `
-            "s3://$bucket/" `
-            --endpoint-url "$endpoint" `
-            --content-type "text/plain"
+          $repo = "${{ github.repository_owner }}/Yolnoma-Updates"
 
-          aws s3 cp "latest.json" `
-            "s3://$bucket/latest.json" `
-            --endpoint-url "$endpoint" `
-            --content-type "application/json"
+          git clone "https://github.com/$repo.git" updates
 
-          Write-Host "R2 upload completed successfully."
+          Copy-Item "updater-files/$env:UPDATER_EXE" "updates/$env:UPDATER_EXE" -Force
+          Copy-Item "updater-files/$env:UPDATER_SIG" "updates/$env:UPDATER_SIG" -Force
+          Copy-Item "updater-files/latest.json" "updates/latest.json" -Force
+
+          Set-Location updates
+
+          git config user.name "Yolnoma Release Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+
+          git commit -m "release: v${{ github.ref_name }}"
+
+          git push origin main
