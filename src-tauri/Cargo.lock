@@ -6613,7 +6613,7 @@ dependencies = [
 
 [[package]]
 name = "yolnoma-app"
-version = "0.9.101"
+version = "0.9.102"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
