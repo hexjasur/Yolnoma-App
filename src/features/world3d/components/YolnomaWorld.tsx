@@ -1,33 +1,16 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TOOL_CATALOG } from '@/config/toolCatalog';
 
 type WorldNode = { id: string; title: string; subtitle: string; color: string; position: [number, number, number] };
 
-const CORE_NODES: WorldNode[] = [
-  { id: 'observatory', title: 'OBSERVATORY', subtitle: 'Weather & sky', color: '#7dd3fc', position: [0, 2.8, -7] },
-  { id: 'developer', title: 'DEVELOPER LAB', subtitle: 'Build & decode', color: '#c4b5fd', position: [-7, 1.8, 0] },
-  { id: 'file-forest', title: 'FILE FOREST', subtitle: 'Explore storage', color: '#86efac', position: [7, 1.8, 0] },
-  { id: 'system', title: 'SYSTEM CONTROL', subtitle: 'Monitor resources', color: '#fbbf24', position: [0, 1.8, 7] },
-];
-
-const ORBIT_TOOLS = [
-  ['currency', 'CURRENCY', '#fbbf24'], ['bg-remover', 'BG REMOVER', '#f0abfc'],
-  ['steam-idler', 'STEAM IDLER', '#93c5fd'], ['image-converter', 'IMAGE CONVERTER', '#fdba74'],
-  ['video-downloader', 'VIDEO DOWNLOADER', '#fda4af'], ['port-scanner', 'PORT SCANNER', '#67e8f9'],
-  ['archive-explorer', 'ARCHIVE EXPLORER', '#d8b4fe'], ['ai-chat', 'AI CHAT', '#a7f3d0'],
-  ['cleaner', 'CLEANER', '#fca5a5'], ['crosshair-overlay', 'CROSSHAIR', '#fde68a'],
-  ['vi', 'VI COUNTDOWN', '#fda4af'], ['steam-sam', 'STEAM SAM', '#bfdbfe'],
-  ['steam-review', 'STEAM REVIEW', '#c4b5fd'],
-] as const;
-
-const WORLD_NODES: WorldNode[] = [
-  ...CORE_NODES,
-  ...ORBIT_TOOLS.map(([id, title, color], index) => {
-    const angle = (index / ORBIT_TOOLS.length) * Math.PI * 2 - Math.PI / 2;
-    return { id, title, subtitle: 'Open workspace', color, position: [Math.cos(angle) * 12, 1.1, Math.sin(angle) * 12] as [number, number, number] };
-  }),
-];
+const NODE_COLORS = ['#fbbf24', '#f0abfc', '#93c5fd', '#fdba74', '#fda4af', '#67e8f9', '#d8b4fe', '#a7f3d0', '#fca5a5', '#fde68a'];
+const WORLD_TOOLS = TOOL_CATALOG.filter((tool) => tool.id !== 'world-3d');
+const WORLD_NODES: WorldNode[] = WORLD_TOOLS.map((tool, index) => {
+  const angle = (index / WORLD_TOOLS.length) * Math.PI * 2 - Math.PI / 2;
+  return { id: tool.id, title: tool.label.toUpperCase(), subtitle: 'Open workspace', color: NODE_COLORS[index % NODE_COLORS.length], position: [Math.cos(angle) * 12, 1.1, Math.sin(angle) * 12] as [number, number, number] };
+});
 
 function createTextSprite(text: string, color: string, scale = 1) {
   const canvas = document.createElement('canvas');
@@ -72,6 +55,12 @@ function createTree() {
   ];
   const trunkEnd = new THREE.Vector3(0, 4.6, 0);
   group.add(makeBranch(new THREE.Vector3(0, 0, 0), trunkEnd, 0.65, bark));
+  // Flared roots make the tree feel planted instead of floating above the island.
+  for (let index = 0; index < 8; index += 1) {
+    const angle = (index / 8) * Math.PI * 2;
+    const rootEnd = new THREE.Vector3(Math.cos(angle) * 1.7, 0.08, Math.sin(angle) * 1.7);
+    group.add(makeBranch(new THREE.Vector3(0, 0.18, 0), rootEnd, 0.2, bark));
+  }
   const branchEnds = [
     new THREE.Vector3(-2.8, 5.2, 0.2), new THREE.Vector3(2.6, 5.4, -0.3),
     new THREE.Vector3(-1.5, 7.2, 0), new THREE.Vector3(1.5, 7.4, 0.3),
@@ -86,6 +75,11 @@ function createTree() {
     cloud.castShadow = true;
     cloud.userData.isLeaf = true;
     group.add(cloud);
+    const accent = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), new THREE.MeshStandardMaterial({ color: index % 2 ? '#f4c6a5' : '#f6df9b', emissive: '#7a4935', emissiveIntensity: 0.5 }));
+    accent.position.copy(end).add(new THREE.Vector3(index % 2 ? 0.6 : -0.6, 0.7, 0.2));
+    accent.castShadow = true;
+    accent.userData.isBlossom = true;
+    group.add(accent);
   });
   const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 2), leafMaterials[1]);
   crown.position.set(0, 9.8, 0);
@@ -93,6 +87,10 @@ function createTree() {
   crown.castShadow = true;
   crown.userData.isLeaf = true;
   group.add(crown);
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(2.15, 0.018, 8, 64), new THREE.MeshBasicMaterial({ color: '#f5c77a', transparent: true, opacity: 0.28 }));
+  halo.rotation.x = Math.PI / 2;
+  halo.position.set(0, 9.8, 0);
+  group.add(halo);
   const label = createTextSprite('YOLNOMA TREE', '#f5c77a', 0.9);
   label.position.set(0, 12, 0);
   group.add(label);
