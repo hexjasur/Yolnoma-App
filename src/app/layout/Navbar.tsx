@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Globe,
   Settings,
-  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 
