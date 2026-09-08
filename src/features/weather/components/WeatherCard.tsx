@@ -11,6 +11,7 @@ import {
   Thermometer,
   Wind,
 } from 'lucide-react';
+import { useAccountConfigStore } from '@/shared/stores/accountConfigStore';
 
 type WeatherResponse = {
   latitude: number;
@@ -32,12 +33,6 @@ type WeatherResponse = {
 };
 
 type Location = { latitude: number; longitude: number; label: string };
-
-const DEFAULT_LOCATION: Location = {
-  latitude: 41.3111,
-  longitude: 69.2797,
-  label: 'Toshkent',
-};
 
 const weatherLabel = (code: number) => {
   if (code === 0) return 'Ochiq osmon';
@@ -66,11 +61,17 @@ const dayLabel = (date: string, index: number) => {
 };
 
 export default function WeatherCard() {
-  const [location, setLocation] = useState<Location>(DEFAULT_LOCATION);
+  const savedLocation = useAccountConfigStore((state) => state.config.weatherLocation);
+  const updateConfig = useAccountConfigStore((state) => state.updateConfig);
+  const [location, setLocation] = useState<Location | null>(null);
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingGps, setUsingGps] = useState(false);
+
+  useEffect(() => {
+    setLocation(savedLocation ?? null);
+  }, [savedLocation]);
 
   const loadWeather = useCallback(async (target: Location) => {
     setLoading(true);
@@ -95,7 +96,7 @@ export default function WeatherCard() {
   }, []);
 
   useEffect(() => {
-    void loadWeather(location);
+    if (location) void loadWeather(location);
   }, [loadWeather, location]);
 
   const requestLocation = () => {
@@ -106,16 +107,18 @@ export default function WeatherCard() {
     setUsingGps(true);
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        setLocation({
+        const nextLocation = {
           latitude: coords.latitude,
           longitude: coords.longitude,
           label: 'Your location',
-        });
+        };
+        setLocation(nextLocation);
+        void updateConfig({ weatherLocation: nextLocation });
         setUsingGps(false);
       },
       () => {
         setUsingGps(false);
-        setError('Location access denied. Tashkent is currently being displayed.');
+        setError('Location access denied. Allow location access to load weather.');
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
     );
@@ -141,7 +144,7 @@ export default function WeatherCard() {
             </p>
             <div className="mt-2 flex items-center gap-2">
               <MapPin size={16} className="text-sky-300" />
-              <h2 className="text-xl font-semibold text-white">{location.label}</h2>
+              <h2 className="text-xl font-semibold text-white">{location?.label ?? 'Location not set'}</h2>
             </div>
             <p className="mt-1 text-xs text-white/40">Open-Meteo · No API key required</p>
           </div>
@@ -149,7 +152,7 @@ export default function WeatherCard() {
             <button type="button" onClick={requestLocation} disabled={usingGps} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-50" title="GPS orqali joylashuvni aniqlash">
               <LocateFixed size={14} className={usingGps ? 'animate-pulse' : ''} /> {usingGps ? 'Determining' : 'My location'}
             </button>
-            <button type="button" onClick={() => void loadWeather(location)} disabled={loading} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50" title="Refresh">
+            <button type="button" onClick={requestLocation} disabled={loading || usingGps} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50" title="Refresh location">
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
@@ -157,7 +160,14 @@ export default function WeatherCard() {
 
         {error && <p className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">{error}</p>}
 
-        {loading && !weather ? (
+        {!location ? (
+          <div className="rounded-2xl border border-dashed border-sky-300/20 bg-sky-300/[0.04] p-8 text-center">
+            <LocateFixed size={28} className="mx-auto mb-3 text-sky-300" />
+            <p className="text-sm font-medium text-white">Location kerak</p>
+            <p className="mx-auto mt-1 max-w-md text-xs text-white/45">Weather ko‘rsatish uchun joylashuvingizni tasdiqlang. Tanlangan location account config.json fayliga saqlanadi.</p>
+            <button type="button" onClick={requestLocation} disabled={usingGps} className="mt-4 rounded-xl bg-sky-300 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50">{usingGps ? 'Aniqlanmoqda…' : 'Allow my location'}</button>
+          </div>
+        ) : loading && !weather ? (
           <div className="h-28 animate-pulse rounded-2xl bg-white/[0.04]" />
         ) : current ? (
           <>

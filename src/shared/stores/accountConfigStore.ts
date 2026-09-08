@@ -18,11 +18,18 @@ export interface AccountConfig {
   systemMonitoring: boolean;
   /** Tool IDs pinned (★ favourite) on the Dashboard. */
   savedTools: string[];
+  /** Last user-approved geolocation used by the Dashboard weather widget. */
+  weatherLocation?: {
+    latitude: number;
+    longitude: number;
+    label: string;
+  };
 }
 
 const DEFAULT_CONFIG: AccountConfig = {
   systemMonitoring: false,
   savedTools: [],
+  weatherLocation: undefined,
 };
 
 interface AccountConfigState {
