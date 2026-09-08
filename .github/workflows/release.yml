@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -111,13 +113,18 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download updater artifacts
         uses: actions/download-artifact@v4
         with:
           name: updater-artifacts
           path: updater-files
 
-      - name: Generate latest.json and Publish to Public Repo
+      - name: Generate Release Notes and Publish to Public Repo
         shell: pwsh
         env:
           UPDATES_REPO_TOKEN: ${{ secrets.UPDATES_REPO_TOKEN }}
@@ -157,12 +164,130 @@ jobs:
           $version = $tag -replace "^v", ""
           Write-Host "Releasing version: $version (Git tag: $tag)"
 
+          # ----------------------------------------------------------------
+          # 4. Automatic release notes from Git commit history
+          # ----------------------------------------------------------------
+
+          # Find the previous release tag (the tag immediately before $tag)
+          $allTags = git tag --sort=-version:refname 2>$null
+          $prevTag = $null
+          $foundCurrent = $false
+          foreach ($t in $allTags) {
+            if ($t -eq $tag) {
+              $foundCurrent = $true
+              continue
+            }
+            if ($foundCurrent) {
+              $prevTag = $t
+              break
+            }
+          }
+
+          if ($prevTag) {
+            Write-Host "Previous release tag: $prevTag — comparing $prevTag..$tag"
+            $range = "$prevTag..$tag"
+          } else {
+            Write-Host "No previous tag found. Using all commits up to $tag"
+            $range = $tag
+          }
+
+          # Get one-line commit messages in the range
+          $rawCommits = git log $range --pretty=format:"%s" 2>$null
+
+          # Conventional Commit type -> emoji section mapping
+          $typeMap = [ordered]@{
+            "feat"     = "✨ What's New"
+            "fix"      = "🐛 Bug Fixes"
+            "perf"     = "⚡ Performance"
+            "refactor" = "🔧 Improvements"
+            "docs"     = "📚 Documentation"
+            "chore"    = "🔧 Maintenance"
+          }
+
+          # Collect entries per section
+          $sections = [ordered]@{}
+          foreach ($key in $typeMap.Keys) { $sections[$key] = [System.Collections.Generic.List[string]]::new() }
+
+          # Regex that matches any supported type prefix (with optional scope)
+          $prefixPattern = '(?i)\b(feat|fix|perf|refactor|docs|chore)(\([^)]*\))?:\s*'
+
+          foreach ($msg in $rawCommits) {
+            if ([string]::IsNullOrWhiteSpace($msg)) { continue }
+
+            # Skip merge commits
+            if ($msg -match '^Merge ') { continue }
+
+            # Split the commit message on every occurrence of a type prefix.
+            # Strategy: find all match positions, then slice text between them.
+            $matches_ = [regex]::Matches($msg, $prefixPattern)
+
+            if ($matches_.Count -eq 0) { continue }   # no recognized prefix — skip
+
+            for ($i = 0; $i -lt $matches_.Count; $i++) {
+              $m        = $matches_[$i]
+              $type     = $m.Groups[1].Value.ToLower()
+
+              # Text starts right after this prefix
+              $textStart = $m.Index + $m.Length
+
+              # Text ends just before the next prefix (or at end of string)
+              if ($i + 1 -lt $matches_.Count) {
+                $textEnd = $matches_[$i + 1].Index
+              } else {
+                $textEnd = $msg.Length
+              }
+
+              $text = $msg.Substring($textStart, $textEnd - $textStart).Trim()
+
+              if ([string]::IsNullOrWhiteSpace($text)) { continue }
+
+              # Capitalize first letter
+              $text = $text.Substring(0,1).ToUpper() + $text.Substring(1)
+
+              if ($sections.Contains($type)) {
+                $sections[$type].Add($text)
+              }
+            }
+          }
+
+          # Build the human-readable release notes string
+          $noteLines = [System.Collections.Generic.List[string]]::new()
+
+          foreach ($type in $typeMap.Keys) {
+            $entries = $sections[$type]
+            if ($entries.Count -eq 0) { continue }
+
+            $noteLines.Add($typeMap[$type])
+            $noteLines.Add("")
+            foreach ($entry in $entries) {
+              $noteLines.Add("• $entry")
+            }
+            $noteLines.Add("")
+          }
+
+          # Trim trailing blank line
+          while ($noteLines.Count -gt 0 -and $noteLines[$noteLines.Count - 1] -eq "") {
+            $noteLines.RemoveAt($noteLines.Count - 1)
+          }
+
+          if ($noteLines.Count -eq 0) {
+            $releaseNotes = "Bug fixes and improvements."
+          } else {
+            $releaseNotes = $noteLines -join "`n"
+          }
+
+          Write-Host "--- Generated Release Notes ---"
+          Write-Host $releaseNotes
+          Write-Host "-------------------------------"
+
+          # ----------------------------------------------------------------
+          # 5. Construct latest.json according to Tauri 2 updater manifest schema
+          # ----------------------------------------------------------------
           $baseUrl = "https://raw.githubusercontent.com/Yolnoma/Yolnoma-Updates/main"
 
-          # 4. Construct latest.json according to Tauri 2 updater manifest schema
           $manifest = [ordered]@{
             version = $version
-            notes = "Yolnoma v$version - Bug fixes and improvements."
+            notes = $releaseNotes
             pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             platforms = [ordered]@{
               "windows-x86_64" = [ordered]@{
@@ -179,7 +304,7 @@ jobs:
           Write-Host "Generated latest.json:"
           Write-Host $jsonContent
 
-          # 5. Clone public repo, copy updater files, commit and push
+          # 6. Clone public repo, copy updater files, commit and push
           $repoOwner = "Yolnoma"
           $repoName = "Yolnoma-Updates"
           $repoSlug = "$repoOwner/$repoName"
