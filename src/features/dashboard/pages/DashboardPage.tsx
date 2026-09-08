@@ -16,6 +16,7 @@ import { handleDevFeatureClick } from '@/config/features';
 import { TOOL_CATALOG } from '@/config/toolCatalog';
 import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
 import { useAccountConfigStore } from '@/shared/stores/accountConfigStore';
+import WeatherCard from '@/features/weather/components/WeatherCard';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -67,6 +68,9 @@ export default function HomePage() {
           Computer system resource monitoring and a set of essential tools
         </p>
       </div>
+
+      {/* ── 1.5. WEEKLY WEATHER ── */}
+      <WeatherCard />
 
       {/* ── 1. CORE FEATURE: SYSTEM OVERVIEW MONITORING ── */}
       <section className="rounded-3xl border border-white/[0.08] bg-[#111109] p-7 md:p-8 shadow-2xl relative overflow-hidden">
