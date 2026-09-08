@@ -229,6 +229,8 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
+    renderer.domElement.tabIndex = 0;
+    renderer.domElement.style.outline = 'none';
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -282,14 +284,46 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    const pressedKeys = new Set<string>();
+    const preventContextMenu = (event: MouseEvent) => event.preventDefault();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      const key = event.key.toLowerCase();
+      if (['w', 'a', 's', 'd', 'shift'].includes(key)) {
+        event.preventDefault();
+        pressedKeys.add(key);
+      }
+    };
+    const handleKeyUp = (event: KeyboardEvent) => pressedKeys.delete(event.key.toLowerCase());
     const click = (event: MouseEvent) => { const rect = renderer.domElement.getBoundingClientRect(); pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1; pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1; raycaster.setFromCamera(pointer, camera); const hit = raycaster.intersectObjects(scene.children, true).find((item) => item.object.userData.nodeId); if (hit?.object.userData.nodeId) onSelectRef.current?.(hit.object.userData.nodeId); };
     renderer.domElement.addEventListener('click', click);
+    renderer.domElement.addEventListener('contextmenu', preventContextMenu);
+    renderer.domElement.addEventListener('mousedown', () => renderer.domElement.focus());
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    window.addEventListener('keyup', handleKeyUp);
     const clock = new THREE.Clock();
     let frame = 0;
     const animate = () => {
       frame = requestAnimationFrame(animate);
-      const elapsed = clock.getElapsedTime();
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
       controls.update();
+      const moveDirection = new THREE.Vector3();
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
+      const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+      if (pressedKeys.has('w')) moveDirection.add(forward);
+      if (pressedKeys.has('s')) moveDirection.sub(forward);
+      if (pressedKeys.has('d')) moveDirection.add(right);
+      if (pressedKeys.has('a')) moveDirection.sub(right);
+      if (moveDirection.lengthSq() > 0) {
+        const speed = (pressedKeys.has('shift') ? 8 : 4.5) * delta;
+        moveDirection.normalize().multiplyScalar(speed);
+        camera.position.add(moveDirection);
+        controls.target.add(moveDirection);
+      }
       tree.children.filter((child) => child.userData.isLeaf).forEach((leaf, index) => {
         const gust = Math.sin(elapsed * 0.7 + index * 0.8) * 0.07 + Math.sin(elapsed * 1.8 + index) * 0.025;
         leaf.userData.windVelocity += (gust - leaf.userData.windAngle) * 0.018;
@@ -323,7 +357,7 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     animate();
     const resize = () => { if (!mount) return; camera.aspect = mount.clientWidth / mount.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(mount.clientWidth, mount.clientHeight); };
     window.addEventListener('resize', resize);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', resize); renderer.domElement.removeEventListener('click', click); controls.dispose(); renderer.dispose(); mount.removeChild(renderer.domElement); scene.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose()); else object.material.dispose(); } }); };
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', resize); window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); renderer.domElement.removeEventListener('click', click); renderer.domElement.removeEventListener('contextmenu', preventContextMenu); controls.dispose(); renderer.dispose(); mount.removeChild(renderer.domElement); scene.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose()); else object.material.dispose(); } }); };
   }, []);
 
   return <div ref={mountRef} className="absolute inset-0" />;
