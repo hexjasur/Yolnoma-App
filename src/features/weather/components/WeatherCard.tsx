@@ -88,7 +88,7 @@ export default function WeatherCard() {
       if (!response.ok) throw new Error('Weather service returned an error');
       setWeather((await response.json()) as WeatherResponse);
     } catch {
-      setError('Ob-havo ma’lumotlarini yuklab bo‘lmadi. Qayta urinib ko‘ring.');
+      setError('Unable to load weather information. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ export default function WeatherCard() {
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
-      setError('Bu qurilmada geolokatsiya mavjud emas.');
+      setError('This device does not have geolocation.');
       return;
     }
     setUsingGps(true);
@@ -109,13 +109,13 @@ export default function WeatherCard() {
         setLocation({
           latitude: coords.latitude,
           longitude: coords.longitude,
-          label: 'Sizning joylashuvingiz',
+          label: 'Your location',
         });
         setUsingGps(false);
       },
       () => {
         setUsingGps(false);
-        setError('Joylashuvga ruxsat berilmadi. Hozir Toshkent ko‘rsatilmoqda.');
+        setError('Location access denied. Tashkent is currently being displayed.');
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
     );
@@ -137,19 +137,19 @@ export default function WeatherCard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300/80">
-              <CloudSun size={14} /> Haftalik ob-havo
+              <CloudSun size={14} /> Weekly weather
             </p>
             <div className="mt-2 flex items-center gap-2">
               <MapPin size={16} className="text-sky-300" />
               <h2 className="text-xl font-semibold text-white">{location.label}</h2>
             </div>
-            <p className="mt-1 text-xs text-white/40">Open-Meteo · API key kerak emas</p>
+            <p className="mt-1 text-xs text-white/40">Open-Meteo · No API key required</p>
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={requestLocation} disabled={usingGps} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-50" title="GPS orqali joylashuvni aniqlash">
-              <LocateFixed size={14} className={usingGps ? 'animate-pulse' : ''} /> {usingGps ? 'Aniqlanmoqda' : 'Joylashuvim'}
+              <LocateFixed size={14} className={usingGps ? 'animate-pulse' : ''} /> {usingGps ? 'Determining' : 'My location'}
             </button>
-            <button type="button" onClick={() => void loadWeather(location)} disabled={loading} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50" title="Yangilash">
+            <button type="button" onClick={() => void loadWeather(location)} disabled={loading} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50" title="Refresh">
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
@@ -166,13 +166,13 @@ export default function WeatherCard() {
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-400/15 text-sky-300">{weatherIcon(current.weather_code, 36)}</div>
                 <div>
                   <p className="text-4xl font-semibold tracking-tight text-white">{Math.round(current.temperature_2m)}°</p>
-                  <p className="text-sm text-white/60">{weatherLabel(current.weather_code)} · his qilinishi {Math.round(current.apparent_temperature)}°</p>
+                  <p className="text-sm text-white/60">{weatherLabel(current.weather_code)} · being felt {Math.round(current.apparent_temperature)}°</p>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4 text-xs text-white/50">
-                <div><Thermometer size={14} className="mb-1 text-rose-300" /><span>{Math.round(current.apparent_temperature)}°</span><p>His qilinishi</p></div>
-                <div><Droplets size={14} className="mb-1 text-cyan-300" /><span>{current.relative_humidity_2m}%</span><p>Namlik</p></div>
-                <div><Wind size={14} className="mb-1 text-emerald-300" /><span>{Math.round(current.wind_speed_10m)} km/s</span><p>Shamol</p></div>
+                <div><Thermometer size={14} className="mb-1 text-rose-300" /><span>{Math.round(current.apparent_temperature)}°</span><p>Being felt</p></div>
+                <div><Droplets size={14} className="mb-1 text-cyan-300" /><span>{current.relative_humidity_2m}%</span><p>Humidity</p></div>
+                <div><Wind size={14} className="mb-1 text-emerald-300" /><span>{Math.round(current.wind_speed_10m)} km/s</span><p>Wind</p></div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -181,7 +181,7 @@ export default function WeatherCard() {
                   <p className="text-[11px] font-semibold capitalize text-white/60">{dayLabel(day.date, days.indexOf(day))}</p>
                   <div className="my-2 flex justify-center text-sky-300">{weatherIcon(day.code, 20)}</div>
                   <p className="text-sm font-semibold text-white">{day.high}° <span className="font-normal text-white/35">{day.low}°</span></p>
-                  <p className="mt-1 text-[10px] text-cyan-300/70">{day.rain}% yomg‘ir</p>
+                  <p className="mt-1 text-[10px] text-cyan-300/70">{day.rain}% rain</p>
                 </div>
               ))}
             </div>
