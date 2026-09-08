@@ -4,11 +4,29 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 type WorldNode = { id: string; title: string; subtitle: string; color: string; position: [number, number, number] };
 
-const WORLD_NODES: WorldNode[] = [
+const CORE_NODES: WorldNode[] = [
   { id: 'observatory', title: 'OBSERVATORY', subtitle: 'Weather & sky', color: '#7dd3fc', position: [0, 2.8, -7] },
   { id: 'developer', title: 'DEVELOPER LAB', subtitle: 'Build & decode', color: '#c4b5fd', position: [-7, 1.8, 0] },
   { id: 'file-forest', title: 'FILE FOREST', subtitle: 'Explore storage', color: '#86efac', position: [7, 1.8, 0] },
   { id: 'system', title: 'SYSTEM CONTROL', subtitle: 'Monitor resources', color: '#fbbf24', position: [0, 1.8, 7] },
+];
+
+const ORBIT_TOOLS = [
+  ['currency', 'CURRENCY', '#fbbf24'], ['bg-remover', 'BG REMOVER', '#f0abfc'],
+  ['steam-idler', 'STEAM IDLER', '#93c5fd'], ['image-converter', 'IMAGE CONVERTER', '#fdba74'],
+  ['video-downloader', 'VIDEO DOWNLOADER', '#fda4af'], ['port-scanner', 'PORT SCANNER', '#67e8f9'],
+  ['archive-explorer', 'ARCHIVE EXPLORER', '#d8b4fe'], ['ai-chat', 'AI CHAT', '#a7f3d0'],
+  ['cleaner', 'CLEANER', '#fca5a5'], ['crosshair-overlay', 'CROSSHAIR', '#fde68a'],
+  ['vi', 'VI COUNTDOWN', '#fda4af'], ['steam-sam', 'STEAM SAM', '#bfdbfe'],
+  ['steam-review', 'STEAM REVIEW', '#c4b5fd'],
+] as const;
+
+const WORLD_NODES: WorldNode[] = [
+  ...CORE_NODES,
+  ...ORBIT_TOOLS.map(([id, title, color], index) => {
+    const angle = (index / ORBIT_TOOLS.length) * Math.PI * 2 - Math.PI / 2;
+    return { id, title, subtitle: 'Open workspace', color, position: [Math.cos(angle) * 12, 1.1, Math.sin(angle) * 12] as [number, number, number] };
+  }),
 ];
 
 function createTextSprite(text: string, color: string, scale = 1) {
