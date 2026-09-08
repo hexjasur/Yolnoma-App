@@ -27,4 +27,4 @@ dist-ssr
 src-tauri/.envlibs/
 resources
 
-secret.txt
+docs/Tauri_Singer.txt
