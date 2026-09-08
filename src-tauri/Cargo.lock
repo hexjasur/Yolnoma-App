@@ -6613,7 +6613,7 @@ dependencies = [
 
 [[package]]
 name = "yolnoma-app"
-version = "0.9.54"
+version = "0.9.101"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -6633,6 +6633,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-deep-link",
  "tauri-plugin-dialog",
+ "tauri-plugin-fs",
  "tauri-plugin-opener",
  "tauri-plugin-process",
  "tauri-plugin-single-instance",

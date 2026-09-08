@@ -40,6 +40,7 @@ type SidebarLink = {
 const links: SidebarLink[] = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
   { to: '/agent', label: 'Yolnoma Agent', icon: Bot, name: 'agent', inDevelopment: true, },
+  { to: '/codebase-agent', label: 'Codebase Agent', icon: Bot, name: 'codebase-agent' },
 
   {
     to: '/performances',
@@ -146,7 +147,7 @@ export default function Sidebar() {
     {
       label: 'Home',
       items: filteredLinks.filter((link) =>
-        ['dashboard', 'agent'].includes(link.name),
+        ['dashboard', 'agent', 'codebase-agent'].includes(link.name),
       ),
     },
     {

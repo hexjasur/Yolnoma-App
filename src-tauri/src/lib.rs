@@ -112,6 +112,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             // Register deep link scheme in Windows Registry (HKCU\Software\Classes\yolnoma)
             #[cfg(any(windows, target_os = "linux"))]

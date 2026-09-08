@@ -30,6 +30,7 @@ import PortScannerPage from '@/features/port-scanner/pages/PortScannerPage';
 import ArchiveExplorerPage from '@/features/archive-explorer/pages/ArchiveExplorerPage';
 import AiChatPage from '@/features/ai-chat/pages/AiChatPage';
 import AiAgentPage from '@/features/ai-agent/pages/AiAgentPage';
+import CodebaseAgentPage from '@/features/codebase-agent/pages/CodebaseAgentPage';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -47,15 +48,25 @@ export default function AppRoutes() {
 
         {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
-          <Route path="/agent" element={
-            <DevelopmentGuard featureName="ai-agent">
-              <AiAgentPage />
-            </DevelopmentGuard>
-          } />
+          <Route
+            path="/agent"
+            element={
+                <AiAgentPage />
+            }
+          />
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
 
-            {/* IN-DEVELOPMENT PROTECTED ROUTES */}
+            <Route
+              path="/codebase-agent"
+              element={
+                <DevelopmentGuard featureName="codebase-agent">
+                  <CodebaseAgentPage />
+                </DevelopmentGuard>
+              }
+              />
+
+              {/* IN-DEVELOPMENT PROTECTED ROUTES */}
             <Route
               path="/marketplace"
               element={
