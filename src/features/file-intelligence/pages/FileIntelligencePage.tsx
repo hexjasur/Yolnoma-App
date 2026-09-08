@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { readDir, stat } from '@tauri-apps/plugin-fs';
+import { readDir, readFile, stat } from '@tauri-apps/plugin-fs';
 import { Files, FolderOpen, HardDrive, Search, Trash2 } from 'lucide-react';
 
 type Entry = { name: string; path: string; size: number; hash?: string };
@@ -32,7 +32,10 @@ async function scanFolder(root: string) {
       else {
         fileCount += 1;
         const metadata = await stat(child);
-        files.push({ name: entry.name, path: child, size: metadata.size ?? 0 });
+        const bytes = await readFile(child);
+        const digest = await crypto.subtle.digest('SHA-256', bytes);
+        const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+        files.push({ name: entry.name, path: child, size: metadata.size ?? 0, hash });
       }
     }
     if (fileCount === 0 && visible.length > 0) emptyFolders.push({ name: current.split(/[\\/]/).pop() || current, path: current, fileCount: 0 });
@@ -70,7 +73,7 @@ export default function FileIntelligencePage() {
   const duplicates = useMemo(() => {
     const byName = new Map<string, Entry[]>();
     files.forEach((file) => {
-      const key = `${file.name.toLowerCase()}::${file.size}`;
+      const key = file.hash || `${file.name.toLowerCase()}::${file.size}`;
       byName.set(key, [...(byName.get(key) || []), file]);
     });
     return [...byName.values()].filter((group) => group.length > 1);
