@@ -52,8 +52,8 @@ function createGrassField() {
     new THREE.MeshStandardMaterial({ color: '#4f9560', roughness: 1 }),
     new THREE.MeshStandardMaterial({ color: '#77ae62', roughness: 1 }),
   ];
-  const bladeGeometry = new THREE.ConeGeometry(0.045, 0.38, 3);
-  for (let index = 0; index < 260; index += 1) {
+  const bladeGeometry = new THREE.ConeGeometry(0.055, 0.48, 3);
+  for (let index = 0; index < 900; index += 1) {
     const angle = Math.random() * Math.PI * 2;
     const radius = 2.4 + Math.sqrt(Math.random()) * 12;
     const blade = new THREE.Mesh(bladeGeometry, grassMaterials[index % grassMaterials.length]);
@@ -70,10 +70,10 @@ function createGrassField() {
 
 function createMoon() {
   const moon = new THREE.Group();
-  const sphere = new THREE.Mesh(new THREE.SphereGeometry(2.2, 32, 32), new THREE.MeshStandardMaterial({ color: '#dce7f5', emissive: '#9db7dd', emissiveIntensity: 0.7, roughness: 0.8 }));
-  sphere.position.set(-25, 26, -34);
+  const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), new THREE.MeshStandardMaterial({ color: '#dce7f5', emissive: '#9db7dd', emissiveIntensity: 0.7, roughness: 0.8 }));
+  sphere.position.set(-11, 15, -18);
   moon.add(sphere);
-  const halo = new THREE.Mesh(new THREE.SphereGeometry(3.5, 32, 32), new THREE.MeshBasicMaterial({ color: '#a9c9f5', transparent: true, opacity: 0.075, depthWrite: false }));
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(3, 32, 32), new THREE.MeshBasicMaterial({ color: '#a9c9f5', transparent: true, opacity: 0.075, depthWrite: false }));
   halo.position.copy(sphere.position);
   moon.add(halo);
   return moon;
@@ -149,11 +149,13 @@ function createTree() {
   branchEnds.forEach((end, index) => {
     const anchor = index < 5 ? new THREE.Vector3(0, 3.4 + index * 0.9, 0) : new THREE.Vector3(0, 2.5, 0);
     group.add(makeBranch(anchor, end, index < 5 ? 0.25 : 0.32, bark));
-    const cloud = new THREE.Mesh(new THREE.IcosahedronGeometry(index === 4 ? 1.75 : 1.35, 2), leafMaterials[index % leafMaterials.length]);
+    const cloud = new THREE.Mesh(new THREE.SphereGeometry(index === 4 ? 1.75 : 1.35, 18, 12), leafMaterials[index % leafMaterials.length]);
     cloud.position.copy(end).add(new THREE.Vector3(0, 0.75, 0));
     cloud.scale.set(1.25, 0.95, 1.05);
     cloud.castShadow = true;
     cloud.userData.isLeaf = true;
+    cloud.userData.windAngle = 0;
+    cloud.userData.windVelocity = 0;
     group.add(cloud);
     const accent = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), new THREE.MeshStandardMaterial({ color: index % 2 ? '#f4c6a5' : '#f6df9b', emissive: '#7a4935', emissiveIntensity: 0.5 }));
     accent.position.copy(end).add(new THREE.Vector3(index % 2 ? 0.6 : -0.6, 0.7, 0.2));
@@ -161,11 +163,13 @@ function createTree() {
     accent.userData.isBlossom = true;
     group.add(accent);
   });
-  const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 2), leafMaterials[1]);
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(1.9, 20, 14), leafMaterials[1]);
   crown.position.set(0, 9.8, 0);
   crown.scale.set(1.3, 1.05, 1.2);
   crown.castShadow = true;
   crown.userData.isLeaf = true;
+  crown.userData.windAngle = 0;
+  crown.userData.windVelocity = 0;
   group.add(crown);
   const halo = new THREE.Mesh(new THREE.TorusGeometry(2.15, 0.018, 8, 64), new THREE.MeshBasicMaterial({ color: '#f5c77a', transparent: true, opacity: 0.28 }));
   halo.rotation.x = Math.PI / 2;
@@ -217,7 +221,7 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     scene.background = new THREE.Color('#07131d');
     scene.fog = new THREE.FogExp2('#07131d', 0.018);
     const camera = new THREE.PerspectiveCamera(42, mount.clientWidth / mount.clientHeight, 0.1, 200);
-    camera.position.set(15, 12, 18);
+    camera.position.set(15, 9.5, 18);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
@@ -230,7 +234,7 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
-    controls.target.set(0, 2.8, 0);
+    controls.target.set(0, 2.25, 0);
     controls.minDistance = 9;
     controls.maxDistance = 34;
     controls.maxPolarAngle = Math.PI / 2.05;
@@ -267,6 +271,7 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     scene.add(campfire);
 
     const tree = createTree();
+    tree.scale.setScalar(0.78);
     scene.add(tree);
     WORLD_NODES.forEach((node) => scene.add(createNode(node)));
 
@@ -281,7 +286,40 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     renderer.domElement.addEventListener('click', click);
     const clock = new THREE.Clock();
     let frame = 0;
-    const animate = () => { frame = requestAnimationFrame(animate); const elapsed = clock.getElapsedTime(); controls.update(); tree.children.filter((child) => child.userData.isLeaf).forEach((leaf, index) => { leaf.rotation.z = Math.sin(elapsed * 0.72 + index) * 0.045; leaf.rotation.x = Math.cos(elapsed * 0.55 + index) * 0.032; }); grass.children.forEach((blade) => { blade.rotation.z = Math.sin(elapsed * 1.1 + blade.userData.windPhase) * blade.userData.windStrength; blade.rotation.x = Math.cos(elapsed * 0.9 + blade.userData.windPhase) * blade.userData.windStrength * 0.45; }); campfire.children.filter((child) => child.userData.isFlame).forEach((flame, index) => { flame.rotation.z = Math.sin(elapsed * 4 + index) * 0.12; flame.scale.y = (index ? 1.6 : 1.45) + Math.sin(elapsed * 5 + index) * 0.16; }); campfire.children.filter((child) => child.type === 'Group').forEach((emberGroup) => emberGroup.children.forEach((ember) => { ember.position.y += Math.sin(elapsed * 1.8 + ember.userData.emberPhase) * 0.002; })); fireflies.children.forEach((dot) => { dot.position.y += Math.sin(elapsed * 1.2 + dot.userData.phase) * 0.0015; ((dot as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.45 + (Math.sin(elapsed * 2 + dot.userData.phase) + 1) * 0.25; }); stars.rotation.y = elapsed * 0.002; renderer.render(scene, camera); };
+    const animate = () => {
+      frame = requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+      controls.update();
+      tree.children.filter((child) => child.userData.isLeaf).forEach((leaf, index) => {
+        const gust = Math.sin(elapsed * 0.7 + index * 0.8) * 0.07 + Math.sin(elapsed * 1.8 + index) * 0.025;
+        leaf.userData.windVelocity += (gust - leaf.userData.windAngle) * 0.018;
+        leaf.userData.windVelocity *= 0.92;
+        leaf.userData.windAngle += leaf.userData.windVelocity;
+        leaf.rotation.z = leaf.userData.windAngle;
+        leaf.rotation.x = leaf.userData.windAngle * 0.65;
+      });
+      grass.children.forEach((blade) => {
+        const gust = Math.sin(elapsed * 1.05 + blade.userData.windPhase) * blade.userData.windStrength + Math.sin(elapsed * 2.3 + blade.userData.windPhase) * 0.018;
+        blade.userData.windVelocity = (blade.userData.windVelocity ?? 0) + (gust - (blade.userData.windAngle ?? 0)) * 0.045;
+        blade.userData.windVelocity *= 0.86;
+        blade.userData.windAngle = (blade.userData.windAngle ?? 0) + blade.userData.windVelocity;
+        blade.rotation.z = blade.userData.windAngle;
+        blade.rotation.x = blade.userData.windAngle * 0.35;
+      });
+      campfire.children.filter((child) => child.userData.isFlame).forEach((flame, index) => {
+        flame.rotation.z = Math.sin(elapsed * 4 + index) * 0.12;
+        flame.scale.y = (index ? 1.6 : 1.45) + Math.sin(elapsed * 5 + index) * 0.16;
+      });
+      campfire.children.filter((child) => child.type === 'Group').forEach((emberGroup) => emberGroup.children.forEach((ember) => {
+        ember.position.y += Math.sin(elapsed * 1.8 + ember.userData.emberPhase) * 0.002;
+      }));
+      fireflies.children.forEach((dot) => {
+        dot.position.y += Math.sin(elapsed * 1.2 + dot.userData.phase) * 0.0015;
+        ((dot as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.45 + (Math.sin(elapsed * 2 + dot.userData.phase) + 1) * 0.25;
+      });
+      stars.rotation.y = elapsed * 0.002;
+      renderer.render(scene, camera);
+    };
     animate();
     const resize = () => { if (!mount) return; camera.aspect = mount.clientWidth / mount.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(mount.clientWidth, mount.clientHeight); };
     window.addEventListener('resize', resize);
