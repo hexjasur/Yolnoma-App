@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Globe,
   Settings,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 
@@ -20,7 +21,9 @@ export default function Navbar() {
   const [copied, setCopied] = useState(false);
 
   // Clean path formatting for yolnoma:// URL
-  const cleanPath = location.pathname.startsWith('/') ? location.pathname.slice(1) : location.pathname;
+  const cleanPath = location.pathname.startsWith('/')
+    ? location.pathname.slice(1)
+    : location.pathname;
   const currentAppUrl = `yolnoma://app/${cleanPath || 'dashboard'}${location.search}`;
 
   const handleCopyUrl = async () => {
@@ -149,6 +152,16 @@ export default function Navbar() {
             <span>USER</span>
           </div>
         )}
+
+        {/* <button
+          onClick={() => checkForUpdates({
+            silent: false
+          })}
+          disabled={updaterStatus === 'checking' || updaterStatus === 'downloading' || updaterStatus === 'installing'}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white/[0.04] border border-white/[0.08] text-white/80 hover:text-white hover:bg-white/[0.08] disabled:opacity-50 transition-all cursor-pointer"
+        >
+          <RefreshCw className={updaterStatus === 'checking' ? 'animate-spin text-[#D97757]' : ''} size={13} />
+        </button> */}
 
         <button
           type="button"

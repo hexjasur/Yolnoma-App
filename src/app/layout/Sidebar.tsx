@@ -32,15 +32,26 @@ import { openAgentWindow } from '@/shared/lib/window';
 type SidebarLink = {
   to: string;
   label: string;
-  icon: LucideIcon;
+  icon: LucideIcon | string;
   name: string;
   inDevelopment?: boolean;
 };
 
 const links: SidebarLink[] = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
-  { to: '/agent', label: 'Yolnoma Agent', icon: Bot, name: 'agent', inDevelopment: true, },
-  { to: '/codebase-agent', label: 'Codebase Agent', icon: Bot, name: 'codebase-agent' },
+  {
+    to: '/agent',
+    label: 'Yolnoma Agent',
+    icon: Bot,
+    name: 'agent',
+    inDevelopment: true,
+  },
+  {
+    to: '/codebase-agent',
+    label: 'Codebase Agent',
+    icon: Bot,
+    name: 'codebase-agent',
+  },
 
   {
     to: '/performances',
@@ -168,7 +179,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`relative shrink-0 border-r border-[var(--border)] bg-[var(--bg-elevated)] flex flex-col ${isResizing ? '' : 'transition-[width] duration-200'}`}
+      className={`select-none relative shrink-0 border-r border-[var(--border)] bg-[var(--bg-elevated)] flex flex-col ${isResizing ? '' : 'transition-[width] duration-200'}`}
       style={{ width: isCollapsed ? COLLAPSED_SIDEBAR_WIDTH : width }}
     >
       {/* Brand */}
@@ -247,84 +258,94 @@ export default function Sidebar() {
                         }`
                       }
                     >
-                      {({ isActive }) => (
-                        <>
-                          <span
-                            className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full transition-opacity duration-150 ${
-                              isActive
-                                ? 'opacity-100 bg-[var(--accent)]'
-                                : 'opacity-0'
-                            }`}
-                          />
-                          <Icon
-                            size={17}
-                            strokeWidth={1.75}
-                            className={
-                              isActive
-                                ? 'text-[var(--accent)]'
-                                : inDev && !hasBypass
-                                  ? 'text-amber-400/60 group-hover:text-amber-400'
-                                  : 'text-[var(--text-faint)] group-hover:text-[var(--text-muted)]'
-                            }
-                          />
-                          {!isCollapsed && (
-                            <span className="truncate">{label}</span>
-                          )}
-                          {!isCollapsed &&
-                            TOOL_CATALOG.some(
-                              (tool) => tool.id === link.name,
-                            ) && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  togglePinnedTool(link.name);
-                                }}
-                                className={`ml-auto rounded p-1 transition-colors ${
-                                  pinnedTools.includes(link.name)
-                                    ? 'text-[var(--accent)]'
-                                    : 'text-[var(--text-faint)] hover:text-[var(--accent)]'
+                      {({ isActive }) => {
+                        const iconClassName = isActive
+                          ? 'text-[var(--accent)]'
+                          : inDev && !hasBypass
+                            ? 'text-amber-400/60 group-hover:text-amber-400'
+                            : 'text-[var(--text-faint)] group-hover:text-[var(--text-muted)]';
+
+                        return (
+                          <>
+                            <span
+                              className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full transition-opacity duration-150 ${
+                                isActive
+                                  ? 'opacity-100 bg-[var(--accent)]'
+                                  : 'opacity-0'
+                              }`}
+                            />
+                            {typeof Icon === 'string' ? (
+                              <img
+                                src={Icon}
+                                alt=""
+                                className={`h-[17px] w-[17px] object-contain ${iconClassName}`}
+                              />
+                            ) : (
+                              <Icon
+                                size={17}
+                                strokeWidth={1.75}
+                                className={iconClassName}
+                              />
+                            )}
+                            {!isCollapsed && (
+                              <span className="truncate">{label}</span>
+                            )}
+                            {!isCollapsed &&
+                              TOOL_CATALOG.some(
+                                (tool) => tool.id === link.name,
+                              ) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    togglePinnedTool(link.name);
+                                  }}
+                                  className={`ml-auto rounded p-1 transition-colors ${
+                                    pinnedTools.includes(link.name)
+                                      ? 'text-[var(--accent)]'
+                                      : 'text-[var(--text-faint)] hover:text-[var(--accent)]'
+                                  }`}
+                                  title={
+                                    pinnedTools.includes(link.name)
+                                      ? 'Remove from Dashboard'
+                                      : 'Add to Dashboard'
+                                  }
+                                  aria-label={
+                                    pinnedTools.includes(link.name)
+                                      ? `Remove ${label} from Dashboard`
+                                      : `Add ${label} to Dashboard`
+                                  }
+                                >
+                                  <Star
+                                    size={13}
+                                    fill={
+                                      pinnedTools.includes(link.name)
+                                        ? 'currentColor'
+                                        : 'none'
+                                    }
+                                  />
+                                </button>
+                              )}
+                            {!isCollapsed && inDev && (
+                              <span
+                                className={`ml-auto text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                  hasBypass
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                 }`}
                                 title={
-                                  pinnedTools.includes(link.name)
-                                    ? 'Remove from Dashboard'
-                                    : 'Add to Dashboard'
-                                }
-                                aria-label={
-                                  pinnedTools.includes(link.name)
-                                    ? `Remove ${label} from Dashboard`
-                                    : `Add ${label} to Dashboard`
+                                  hasBypass
+                                    ? 'In Development (Access granted for your role)'
+                                    : 'In Development (Locked)'
                                 }
                               >
-                                <Star
-                                  size={13}
-                                  fill={
-                                    pinnedTools.includes(link.name)
-                                      ? 'currentColor'
-                                      : 'none'
-                                  }
-                                />
-                              </button>
+                                {hasBypass ? 'TEST' : 'DEV'}
+                              </span>
                             )}
-                          {!isCollapsed && inDev && (
-                            <span
-                              className={`ml-auto text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                                hasBypass
-                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                              }`}
-                              title={
-                                hasBypass
-                                  ? 'In Development (Access granted for your role)'
-                                  : 'In Development (Locked)'
-                              }
-                            >
-                              {hasBypass ? 'TEST' : 'DEV'}
-                            </span>
-                          )}
-                        </>
-                      )}
+                          </>
+                        );
+                      }}
                     </NavLink>
                   );
                 })}

@@ -31,6 +31,7 @@ import ArchiveExplorerPage from '@/features/archive-explorer/pages/ArchiveExplor
 import AiChatPage from '@/features/ai-chat/pages/AiChatPage';
 import AiAgentPage from '@/features/ai-agent/pages/AiAgentPage';
 import CodebaseAgentPage from '@/features/codebase-agent/pages/CodebaseAgentPage';
+import ViCountdown from '@/features/vi/pages/ViCountdown';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -48,12 +49,7 @@ export default function AppRoutes() {
 
         {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
-          <Route
-            path="/agent"
-            element={
-                <AiAgentPage />
-            }
-          />
+          <Route path="/agent" element={<AiAgentPage />} />
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
 
@@ -64,9 +60,9 @@ export default function AppRoutes() {
                   <CodebaseAgentPage />
                 </DevelopmentGuard>
               }
-              />
+            />
 
-              {/* IN-DEVELOPMENT PROTECTED ROUTES */}
+            {/* IN-DEVELOPMENT PROTECTED ROUTES */}
             <Route
               path="/marketplace"
               element={
@@ -75,6 +71,8 @@ export default function AppRoutes() {
                 </DevelopmentGuard>
               }
             />
+
+            <Route path="/tools/vi" element={<ViCountdown />} />
 
             {/* STABLE TOOLS */}
             <Route path="/tools/currency" element={<CurrencyConverterPage />} />
