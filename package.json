@@ -19,6 +19,7 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.11.0",
     "@tauri-apps/plugin-window-state": "^2",
+    "@types/three": "^0.185.4",
     "@yolnoma/plugin-sdk": "^0.1.11",
     "lightgallery": "^2.9.0",
     "lucide-react": "^1.30.0",
@@ -26,6 +27,7 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.18.2",
     "tailwindcss": "^4.3.3",
+    "three": "^0.185.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
