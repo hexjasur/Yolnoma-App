@@ -35,13 +35,13 @@ type WeatherResponse = {
 type Location = { latitude: number; longitude: number; label: string };
 
 const weatherLabel = (code: number) => {
-  if (code === 0) return 'Ochiq osmon';
-  if (code <= 3) return 'Bulutli';
-  if (code <= 48) return 'Tumanli';
-  if (code <= 67 || (code >= 80 && code <= 82)) return 'Yomg‘irli';
-  if (code >= 71 && code <= 77) return 'Qorli';
-  if (code >= 95) return 'Momaqaldiroq';
-  return 'O‘zgaruvchan';
+  if (code === 0) return 'Open Sky';
+  if (code <= 3) return 'Cloudy';
+  if (code <= 48) return 'Foggy';
+  if (code <= 67 || (code >= 80 && code <= 82)) return 'Rainy';
+  if (code >= 71 && code <= 77) return 'Snowy';
+  if (code >= 95) return 'Thunderstorm';
+  return 'Variable';
 };
 
 const weatherIcon = (code: number, size = 22) => {
@@ -163,9 +163,9 @@ export default function WeatherCard() {
         {!location ? (
           <div className="rounded-2xl border border-dashed border-sky-300/20 bg-sky-300/[0.04] p-8 text-center">
             <LocateFixed size={28} className="mx-auto mb-3 text-sky-300" />
-            <p className="text-sm font-medium text-white">Location kerak</p>
-            <p className="mx-auto mt-1 max-w-md text-xs text-white/45">Weather ko‘rsatish uchun joylashuvingizni tasdiqlang. Tanlangan location account config.json fayliga saqlanadi.</p>
-            <button type="button" onClick={requestLocation} disabled={usingGps} className="mt-4 rounded-xl bg-sky-300 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50">{usingGps ? 'Aniqlanmoqda…' : 'Allow my location'}</button>
+            <p className="text-sm font-medium text-white">Location needed</p>
+            <p className="mx-auto mt-1 max-w-md text-xs text-white/45">Confirm your location to display the weather.</p>
+            <button type="button" onClick={requestLocation} disabled={usingGps} className="mt-4 rounded-xl bg-sky-300 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50">{usingGps ? 'Determining…' : 'Allow my location'}</button>
           </div>
         ) : loading && !weather ? (
           <div className="h-28 animate-pulse rounded-2xl bg-white/[0.04]" />

@@ -11,7 +11,6 @@ import {
   ImageIcon,
   Radar,
   Sparkles,
-  Files,
   Wrench,
 } from 'lucide-react';
 import ViIcon from '@/assets/VI.svg';
@@ -38,6 +37,5 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   { id: 'vi', label: 'VI COUNTDOWN', description: 'Countdown GTA VI', to: '/vi', icon: ViIcon },
   { id: 'steam-sam', label: 'Steam / SAM', description: 'Manage Steam achievements', to: '/tools/steam/sam', icon: Gamepad },
   { id: 'steam-review', label: 'Steam / Review', description: 'Review Steam games', to: '/tools/steam/review', icon: Gamepad2 },
-  { id: 'file-intelligence', label: 'File Intelligence', description: 'Duplicates, largest & empty folders', to: '/tools/file-intelligence', icon: Files },
   { id: 'developer-tools', label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', to: '/tools/developer-tools', icon: Wrench },
 ];
