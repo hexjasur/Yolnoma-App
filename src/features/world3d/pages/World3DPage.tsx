@@ -3,33 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CloudSun, Compass, Maximize2, Sparkles, Trees, X } from 'lucide-react';
 import YolnomaWorld from '../components/YolnomaWorld';
 import { openInNewWindow, useIsStandalone } from '@/shared/lib/window';
+import { TOOL_CATALOG } from '@/config/toolCatalog';
 
-const NODE_ROUTES: Record<string, string> = {
-  observatory: '/',
-  developer: '/tools/developer-tools',
-  'file-forest': '/',
-  system: '/',
-  currency: '/tools/currency',
-  'bg-remover': '/tools/bg-remover',
-  'steam-idler': '/tools/steam/steam-idler',
-  'image-converter': '/tools/image-converter',
-  'video-downloader': '/tools/video-downloader',
-  'port-scanner': '/tools/port-scanner',
-  'archive-explorer': '/tools/archive-explorer',
-  'ai-chat': '/tools/ai-chat',
-  cleaner: '/tools/cleaner',
-  'crosshair-overlay': '/tools/crosshair-overlay',
-  vi: '/vi',
-  'steam-sam': '/tools/steam/sam',
-  'steam-review': '/tools/steam/review',
-};
-
-const NODE_LABELS: Record<string, string> = {
-  observatory: 'Observatory', developer: 'Developer Lab', 'file-forest': 'File Forest', system: 'System Control',
-  currency: 'Currency Converter', 'bg-remover': 'Background Remover', 'steam-idler': 'Steam Idler', 'image-converter': 'Image Converter',
-  'video-downloader': 'Video Downloader', 'port-scanner': 'Port Scanner', 'archive-explorer': 'Archive Explorer', 'ai-chat': 'AI Chat',
-  cleaner: 'Cleaner', 'crosshair-overlay': 'Crosshair Overlay', vi: 'VI Countdown', 'steam-sam': 'Steam SAM', 'steam-review': 'Steam Review',
-};
+const NODE_ROUTES = Object.fromEntries(TOOL_CATALOG.map((tool) => [tool.id, tool.to])) as Record<string, string>;
+const NODE_LABELS = Object.fromEntries(TOOL_CATALOG.map((tool) => [tool.id, tool.label])) as Record<string, string>;
 
 export default function World3DPage() {
   const isStandalone = useIsStandalone();
