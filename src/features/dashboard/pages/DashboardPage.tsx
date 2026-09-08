@@ -8,7 +8,6 @@ import {
   Layers,
   Shield,
   Monitor,
-  Gauge,
   Lightbulb,
   Clock3,
 } from 'lucide-react';
@@ -54,9 +53,7 @@ export default function HomePage() {
   const displayName = user?.displayName || user?.display_name || user?.email?.split('@')[0] || 'there';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const ramPercent = stats ? (stats.ramUsedGb / Math.max(stats.ramTotalGb, 1)) * 100 : 0;
   const diskPercent = stats ? (stats.diskUsedGb / Math.max(stats.diskTotalGb, 1)) * 100 : 0;
-  const healthScore = stats ? Math.max(0, Math.round(100 - stats.cpuPercent * 0.25 - ramPercent * 0.3 - diskPercent * 0.45)) : null;
   const freeDisk = stats ? Math.max(0, stats.diskTotalGb - stats.diskUsedGb).toFixed(1) : '—';
 
   return (
@@ -82,14 +79,10 @@ export default function HomePage() {
 
       {/* ── DAILY BRIEF ── */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <BriefCard icon={<Gauge size={17} />} label="System health" value={healthScore == null ? '—' : `${healthScore}%`} detail={healthScore == null ? 'Enable monitoring' : healthScore > 80 ? 'Everything looks good' : 'Needs attention'} />
         <BriefCard icon={<HardDrive size={17} />} label="Disk space" value={`${freeDisk} GB free`} detail="Available storage" />
         <BriefCard icon={<Clock3 size={17} />} label="Last action" value="Dashboard opened" detail="Ready for your next task" />
         <BriefCard icon={<Lightbulb size={17} />} label="Suggested action" value={diskPercent > 80 ? 'Run Cleaner' : 'Explore Developer Tools'} detail={diskPercent > 80 ? 'Storage is getting full' : 'Useful tools are waiting'} />
       </section>
-
-      {/* ── 1.5. WEEKLY WEATHER ── */}
-      <WeatherCard />
 
       {/* ── 1. CORE FEATURE: SYSTEM OVERVIEW MONITORING ── */}
       <section className="rounded-3xl border border-white/[0.08] bg-[#111109] p-7 md:p-8 shadow-2xl relative overflow-hidden">
@@ -261,6 +254,9 @@ export default function HomePage() {
           />
         </div>
       </section>
+
+      {/* ── 1.5. WEEKLY WEATHER ── */}
+      <WeatherCard />
 
       {/* ── 2. QUICK TOOLS SHORTCUTS ── */}
       <section className="space-y-4">
