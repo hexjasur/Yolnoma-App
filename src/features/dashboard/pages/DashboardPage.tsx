@@ -16,6 +16,7 @@ import { handleDevFeatureClick } from '@/config/features';
 import { TOOL_CATALOG } from '@/config/toolCatalog';
 import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
 import { useAccountConfigStore } from '@/shared/stores/accountConfigStore';
+import WeatherCard from '@/features/weather/components/WeatherCard';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -47,6 +48,10 @@ export default function HomePage() {
       .slice(0, 5);
   }, [items, isOwner]);
 
+  const displayName = user?.displayName || user?.display_name || user?.email?.split('@')[0] || 'there';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
     <div
       className="space-y-10 max-w-5xl mx-auto pb-16"
@@ -61,10 +66,10 @@ export default function HomePage() {
           )}
         </p>
         <h1 className="font-serif text-4xl md:text-5xl font-medium tracking-tight text-white m-0 leading-tight">
-          Yolnoma Dashboard
+          {greeting}, {displayName}
         </h1>
         <p className="mt-2 text-sm text-white/40 max-w-2xl">
-          Computer system resource monitoring and a set of essential tools
+          Your personal command center for system health and everyday tools.
         </p>
       </div>
 
@@ -238,6 +243,9 @@ export default function HomePage() {
           />
         </div>
       </section>
+
+      {/* ── 1.5. WEEKLY WEATHER ── */}
+      <WeatherCard />
 
       {/* ── 2. QUICK TOOLS SHORTCUTS ── */}
       <section className="space-y-4">

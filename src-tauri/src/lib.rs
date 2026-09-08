@@ -1,5 +1,4 @@
-use std::sync::Mutex;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 
 mod commands;
@@ -14,76 +13,17 @@ mod steam_idler;
 mod system_monitor;
 mod port_scanner;
 mod archive;
+mod app_commands;
+mod app_state;
+mod deep_link;
 
-pub struct AuthState {
-    pub user_id: Mutex<Option<String>>,
-}
-
-#[tauri::command]
-fn ping() -> String {
-    "pong".to_string()
-}
-
-/// Stop all idle processes and exit the program.
-#[tauri::command]
-async fn exit_app(
-    state: tauri::State<'_, steam_idler::IdlingState>,
-    app: tauri::AppHandle,
-) -> Result<(), String> {
-    // Stop all idling processes
-    let mut processes = state.processes.lock().await;
-    for (_, mut h) in processes.drain() {
-        let _ = h.child.kill().await;
-    }
-    drop(processes);
-    // Exiting the program
-    app.exit(0);
-    Ok(())
-}
-
-/// Hide window (minimize to tray)
-#[tauri::command]
-fn hide_window(window: tauri::WebviewWindow) -> Result<(), String> {
-    window.hide().map_err(|e| e.to_string())
-}
-
-/// Check idle state (for tray tooltip)
-#[tauri::command]
-async fn get_idling_count(
-    state: tauri::State<'_, steam_idler::IdlingState>,
-) -> Result<usize, String> {
-    let processes = state.processes.lock().await;
-    Ok(processes.len())
-}
-
-/// Dispatch a parsed `yolnoma://` URL to the appropriate Tauri event.
-///
-/// | URL host        | Emitted event          | Payload             |
-/// |-----------------|------------------------|---------------------|
-/// | `auth`          | `auth-code-received`   | one-time code       |
-/// | `session-limit` | `session-limit-reached`| temp_code           |
-fn handle_yolnoma_url(app: &tauri::AppHandle, url: &url::Url) {
-    match url.host_str().unwrap_or("") {
-        "auth" => {
-            if let Some((_, code)) = url.query_pairs().find(|(k, _)| k == "code") {
-                let _ = app.emit("auth-code-received", code.to_string());
-            }
-        }
-        "session-limit" => {
-            if let Some((_, temp_code)) = url.query_pairs().find(|(k, _)| k == "temp_code") {
-                let _ = app.emit("session-limit-reached", temp_code.to_string());
-            }
-        }
-        _ => {}
-    }
-}
+// Kept public for feature modules that use the shared authentication state.
+pub use app_state::AuthState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(AuthState {
-            user_id: Mutex::new(None),
-        })
+        .manage(app_state::AuthState::new())
         .manage(account_storage::ApiKeyCache::new())
         .manage(steam_idler::IdlingState::new())
         .manage(system_monitor::SystemMonitorState::new())
@@ -104,7 +44,7 @@ pub fn run() {
             for arg in args {
                 if arg.starts_with("yolnoma://") {
                     if let Ok(parsed_url) = url::Url::parse(&arg) {
-                        handle_yolnoma_url(app, &parsed_url);
+                        deep_link::handle_url(app, &parsed_url);
                     }
                 }
             }
@@ -124,7 +64,7 @@ pub fn run() {
             app.deep_link().on_open_url(move |event| {
                 for parsed_url in event.urls() {
                     if parsed_url.scheme() == "yolnoma" {
-                        handle_yolnoma_url(&handle, &parsed_url);
+                        deep_link::handle_url(&handle, &parsed_url);
                     }
                 }
             });
@@ -162,10 +102,7 @@ pub fn run() {
                         // Barcha idling jarayonlarini to'xtatamiz, keyin chiqamiz
                         let state = app.state::<steam_idler::IdlingState>();
                         tauri::async_runtime::block_on(async {
-                            let mut processes = state.processes.lock().await;
-                            for (_, mut h) in processes.drain() {
-                                let _ = h.child.kill().await;
-                            }
+                            app_commands::stop_idling_processes(&state).await;
                         });
                         // 500ms kutib, Steam trigger bo'lsin
                         std::thread::sleep(std::time::Duration::from_millis(500));
@@ -201,10 +138,10 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            ping,
-            exit_app,
-            hide_window,
-            get_idling_count,
+            app_commands::ping,
+            app_commands::exit_app,
+            app_commands::hide_window,
+            app_commands::get_idling_count,
             // ── Account Storage ──
             account_storage::set_current_user,
             account_storage::get_account_config,

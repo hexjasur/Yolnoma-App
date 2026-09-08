@@ -39,11 +39,21 @@ impl ApiKeyCache {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WeatherLocation {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AccountConfig {
     #[serde(default)]
     pub system_monitoring: bool,
     #[serde(default)]
     pub saved_tools: Vec<String>,
+    #[serde(default)]
+    pub weather_location: Option<WeatherLocation>,
 }
 
 impl Default for AccountConfig {
@@ -51,6 +61,7 @@ impl Default for AccountConfig {
         AccountConfig {
             system_monitoring: false,
             saved_tools: vec![],
+            weather_location: None,
         }
     }
 }
@@ -389,6 +400,7 @@ mod tests {
         let config = AccountConfig {
             system_monitoring: true,
             saved_tools: vec!["ai-chat".to_string(), "cleaner".to_string()],
+            weather_location: None,
         };
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("\"systemMonitoring\":true"));
@@ -457,4 +469,3 @@ mod tests {
         assert!(decrypt_result.is_err());
     }
 }
-
