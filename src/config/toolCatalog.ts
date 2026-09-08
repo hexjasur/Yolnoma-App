@@ -33,7 +33,7 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   { id: 'ai-chat', label: 'AI Chat', description: 'Chat with OpenRouter models', to: '/tools/ai-chat', icon: Bot },
   { id: 'cleaner', label: 'Cleaner', description: 'Clean unwanted files', to: '/tools/cleaner', icon: BrushCleaning },
   { id: 'crosshair-overlay', label: 'Crosshair Overlay', description: 'Custom desktop crosshair', to: '/tools/crosshair-overlay', icon: Crosshair },
-  { id: 'vi', label: 'Vi Countdown', description: 'Countdown GTA VI', to: '/tools/vi', icon: ViIcon },
+  { id: 'vi', label: 'VI COUNTDOWN', description: 'Countdown GTA VI', to: '/vi', icon: ViIcon },
   { id: 'steam-sam', label: 'Steam / SAM', description: 'Manage Steam achievements', to: '/tools/steam/sam', icon: Gamepad },
   { id: 'steam-review', label: 'Steam / Review', description: 'Review Steam games', to: '/tools/steam/review', icon: Gamepad2 },
 ];

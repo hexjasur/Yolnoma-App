@@ -72,7 +72,7 @@ export default function AppRoutes() {
               }
             />
 
-            <Route path="/tools/vi" element={<ViCountdown />} />
+            <Route path="/vi" element={<ViCountdown />} />
 
             {/* STABLE TOOLS */}
             <Route path="/tools/currency" element={<CurrencyConverterPage />} />

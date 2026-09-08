@@ -1,40 +1,37 @@
+import { images } from '@/shared/assets/images';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import gta6MainMusic from '../audio/GTA 6 - Official Main Theme Music - Dan Allen Gaming.mp3'
 
-// ---------------------------------------------------------------------------
-// Assets
-// ---------------------------------------------------------------------------
-const HERO_IMG =
-  'https://www.rockstargames.com/VI/_next/static/media/Jason_and_Lucia_Robbery_landscape.09c8a~do21h4p.jpg?akim=1&imdensity=1&imwidth=3840';
-const LOGO_IMG =
-  'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d6/Grand_Theft_Auto_VI_logo_%28with_gradient%29.svg/1280px-Grand_Theft_Auto_VI_logo_%28with_gradient%29.svg.png?utm_source=simple.wikipedia.org&utm_campaign=index&utm_content=thumbnail';
+const HERO_IMG = images.vi.VI_HERO_IMG;
+const LOGO_IMG = images.vi.VI_LOGO_IMG;
 
 const SECTIONS = [
   {
-    img: 'https://oyster.ignimgs.com/mediawiki/apis.ign.com/gta-6/4/42/Vlcsnap-2023-12-04-18h59m30s080.png',
+    img: images.vi.VI_LEONIDA,
     title: 'Leonida',
     text: 'Palm trees at sunset, neon lights, and bustling coastal cities—the new world inspired by Vice City is now bigger, more vibrant, and more detailed.',
     align: 'left',
   },
   {
-    img: 'https://cdn.mos.cms.futurecdn.net/9uJvFhNUF9bhHHyCEbRHaD.jpg',
+    img: images.vi.VI_THOP,
     title: 'Two heroes, one path',
     text: 'Jason and Lucia are the only two people who trust each other. Their story is not about money, but about the struggle to survive together.',
     align: 'right',
   },
   {
-    img: 'https://cdn.mos.cms.futurecdn.net/EhSthkSscGVzbZ78QNNiGD.jpg',
+    img: images.vi.VI_VC_LEONIDA,
     title: 'The city never sleeps.',
     text: 'Every street and every neighborhood has its own story. This time, Rockstar has created a world that is far deeper and more alive than before.',
     align: 'left',
   },
   {
-    img: 'https://kotaku.com/app/uploads/2026/06/ULTIMATE_EDITION_01-1200x675.jpg',
+    img: images.vi.VI_JasonLucia,
     title: 'Jason and Lucia',
     text: 'Rather than just cosmetics',
     align: 'right',
   },
   {
-    img: 'https://www.gamespot.com/wp-content/uploads/2026/07/Real_Dimez_landscape_3bb4fa.jpg',
+    img: images.vi.VI_DIAZ,
     title: 'Real Dimez',
     text: "Leonida's street culture is a battle for fashion, music, and status. In this world, everything depends on appearances.",
     align: 'left',
@@ -43,9 +40,6 @@ const SECTIONS = [
 
 const RELEASE_DATE = new Date('2026-11-19T00:00:00');
 
-// ---------------------------------------------------------------------------
-// Countdown hook
-// ---------------------------------------------------------------------------
 function useCountdown(target: Date) {
   const [remaining, setRemaining] = useState(
     () => target.getTime() - Date.now(),
@@ -67,9 +61,6 @@ function useCountdown(target: Date) {
   return { days, hours, minutes, seconds, done: clamped <= 0 };
 }
 
-// ---------------------------------------------------------------------------
-// Reveal-on-scroll hook (IntersectionObserver based)
-// ---------------------------------------------------------------------------
 function useReveal<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
   const [visible, setVisible] = useState(false);
@@ -93,9 +84,6 @@ function useReveal<T extends HTMLElement>() {
   return { ref, visible };
 }
 
-// ---------------------------------------------------------------------------
-// Parallax section (scroll-driven background movement)
-// ---------------------------------------------------------------------------
 function ParallaxPanel({
   img,
   title,
@@ -117,9 +105,9 @@ function ParallaxPanel({
     if (!wrap || !imgEl) return;
     const rect = wrap.getBoundingClientRect();
     const vh = window.innerHeight || 1;
-    const progress = (vh - rect.top) / (vh + rect.height); // 0 -> 1 across viewport transit
+    const progress = (vh - rect.top) / (vh + rect.height);
     const clamped = Math.min(1, Math.max(0, progress));
-    const shift = (clamped - 0.5) * 60; // -30px .. +30px
+    const shift = (clamped - 0.5) * 60;
     imgEl.style.transform = `scale(1.15) translateY(${shift}px)`;
   }, []);
 
@@ -152,9 +140,6 @@ function ParallaxPanel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Countdown digit block
-// ---------------------------------------------------------------------------
 function TimeBlock({ value, label }: { value: number; label: string }) {
   const padded = String(value).padStart(2, '0');
   return (
@@ -165,14 +150,12 @@ function TimeBlock({ value, label }: { value: number; label: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
 function ViCountdown() {
   const { days, hours, minutes, seconds } = useCountdown(RELEASE_DATE);
   const heroImgRef = useRef<HTMLDivElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // subtle hero parallax on scroll
   useEffect(() => {
     const onScroll = () => {
       const el = heroImgRef.current;
@@ -184,6 +167,20 @@ function ViCountdown() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const toggleMusic = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      audio.currentTime = 0;
+      audio.play().catch((err) => console.error('play error:', err));
+      setIsPlaying(true);
+    }
+  }, [isPlaying]);
 
   return (
     <div className="vi-root">
@@ -209,6 +206,36 @@ function ViCountdown() {
 
         @media (prefers-reduced-motion: reduce) {
           .vi-root * { transition: none !important; animation: none !important; }
+        }
+
+        /* ---------- MUSIC BUTTON (FIXED RIGHT, FULL VIEWPORT) ---------- */
+        .music-button {
+          position: fixed;
+          right: 52px;
+          bottom: 32px;
+          z-index: 9999;
+          width: 64px;
+          height: 64px;
+          border: none;
+          background: rgba(255, 63, 158, 0.15);
+          border: 2px solid rgba(47, 232, 214, 0.5);
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          backdrop-filter: blur(8px);
+        }
+        .music-button:hover {
+          background: rgba(255, 63, 158, 0.25);
+          border-color: var(--cyan);
+          transform: scale(1.12);
+        }
+        .music-button span {
+          font-size: 28px;
+          color: var(--cyan);
+          transition: opacity 0.3s ease;
         }
 
         /* ---------- HERO ---------- */
@@ -247,7 +274,7 @@ function ViCountdown() {
           max-width: 900px;
         }
         .hero-logo {
-          width: min(78vw, 560px);
+          width: min(78vw, 400px);
           filter: drop-shadow(0 12px 40px rgba(255, 63, 158, 0.35));
           animation: logo-in 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
@@ -424,8 +451,22 @@ function ViCountdown() {
         @media (max-width: 640px) {
           .panel { min-height: 80vh; }
           .panel-copy--left, .panel-copy--right { margin-left: 20px; margin-right: 20px; text-align: left; }
+          .music-button {
+            left: 16px;
+            bottom: 16px;
+            width: 50px;
+            height: 50px;
+          }
         }
       `}</style>
+
+      <audio ref={audioRef} loop>
+        <source src={gta6MainMusic} type="audio/mpeg" />
+      </audio>
+
+      <button className="music-button" onClick={toggleMusic}>
+        <span>{isPlaying ? '⏸' : '▶'}</span>
+      </button>
 
       {/* HERO */}
       <header className="hero">

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
@@ -9,6 +9,11 @@ import {
   ChevronDown,
   X,
   FolderOpen,
+  AlertCircle,
+  RefreshCw,
+  HardDriveDownload,
+  Loader2,
+  Check,
 } from 'lucide-react';
 
 interface VideoPreview {
@@ -38,6 +43,29 @@ interface DownloadJob {
   active: boolean;
 }
 
+interface VideoLibrariesStatus {
+  yolnoma_dl: boolean;
+  yolnoma_codec: boolean;
+  all_installed: boolean;
+  resources_dir: string;
+}
+
+interface LibraryDownloadProgress {
+  current_file: string;
+  file_display_name: string;
+  current_file_index: number;
+  total_files: number;
+  downloaded_bytes: number;
+  total_bytes: number;
+  percent: number;
+  overall_downloaded_bytes: number;
+  overall_total_bytes: number;
+  overall_percent: number;
+  speed: string;
+  status: string;
+  error_message: string | null;
+}
+
 const QUALITIES = [
   { value: 'best', label: 'Best' },
   { value: '2160p', label: '4K (2160p)' },
@@ -56,10 +84,42 @@ export function VideoDownloader() {
   const [previewError, setPreviewError] = useState('');
   const nextTaskId = useRef(1);
 
+  // Media library download & status states
+  const [librariesStatus, setLibrariesStatus] = useState<VideoLibrariesStatus | null>(null);
+  const [isCheckingLibraries, setIsCheckingLibraries] = useState(true);
+  const [isDownloadingLibraries, setIsDownloadingLibraries] = useState(false);
+  const [libraryProgress, setLibraryProgress] = useState<LibraryDownloadProgress | null>(null);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+
   const qualityRef = useRef<HTMLDivElement>(null);
 
+  const formatSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+  };
+
+  const checkLibraries = useCallback(async () => {
+    try {
+      setIsCheckingLibraries(true);
+      const status = await invoke<VideoLibrariesStatus>('check_youtube_libraries');
+      setLibrariesStatus(status);
+      return status;
+    } catch (e) {
+      console.error('Failed to check YouTube libraries:', e);
+      return null;
+    } finally {
+      setIsCheckingLibraries(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const unlisten = listen('video-download-progress', (event) => {
+    void checkLibraries();
+  }, [checkLibraries]);
+
+  useEffect(() => {
+    const unlistenProgress = listen('video-download-progress', (event) => {
       const progress = event.payload as DownloadProgress;
       setJobs((current) =>
         current.map((job) =>
@@ -67,8 +127,25 @@ export function VideoDownloader() {
         ),
       );
     });
+
+    const unlistenLibProgress = listen<LibraryDownloadProgress>(
+      'youtube-library-download-progress',
+      (event) => {
+        const progress = event.payload;
+        setLibraryProgress(progress);
+        if (progress.status === 'completed') {
+          setIsDownloadingLibraries(false);
+          setLibraryError(null);
+        } else if (progress.status === 'error' && progress.error_message) {
+          setIsDownloadingLibraries(false);
+          setLibraryError(progress.error_message);
+        }
+      },
+    );
+
     return () => {
-      unlisten.then((fn) => fn());
+      unlistenProgress.then((fn) => fn());
+      unlistenLibProgress.then((fn) => fn());
     };
   }, []);
 
@@ -85,8 +162,94 @@ export function VideoDownloader() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
+  const loadPreview = useCallback(async () => {
+    const targetUrl = url.trim();
+    if (!targetUrl) return;
+
+    // If libraries are known to be missing, do not attempt fetching preview yet
+    if (librariesStatus && !librariesStatus.all_installed) {
+      return;
+    }
+
+    setPreviewLoading(true);
+    setPreviewError('');
+    setPreview(null);
+    try {
+      const result = await invoke<VideoPreview>('preview_youtube_video', {
+        url: targetUrl,
+      });
+      setPreview(result);
+    } catch (error) {
+      const errStr = String(error);
+      if (
+        errStr.toLowerCase().includes('missing') ||
+        errStr.toLowerCase().includes('not found') ||
+        errStr.toLowerCase().includes('os error 2')
+      ) {
+        // Refresh library status instead of showing cryptic error
+        void checkLibraries();
+      } else {
+        setPreviewError(errStr);
+      }
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [url, librariesStatus, checkLibraries]);
+
+  const downloadLibraries = async () => {
+    setIsDownloadingLibraries(true);
+    setLibraryError(null);
+    setLibraryProgress(null);
+
+    try {
+      await invoke('download_youtube_libraries');
+      const updatedStatus = await checkLibraries();
+      if (updatedStatus?.all_installed) {
+        setIsDownloadingLibraries(false);
+        setLibraryError(null);
+        setLibraryProgress(null);
+
+        // Auto retry video preview if a valid YouTube URL was already entered
+        const targetUrl = url.trim();
+        if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(targetUrl)) {
+          setPreviewLoading(true);
+          setPreviewError('');
+          setPreview(null);
+          try {
+            const result = await invoke<VideoPreview>('preview_youtube_video', {
+              url: targetUrl,
+            });
+            setPreview(result);
+          } catch (error) {
+            setPreviewError(String(error));
+          } finally {
+            setPreviewLoading(false);
+          }
+        }
+      }
+    } catch (e) {
+      setIsDownloadingLibraries(false);
+      setLibraryError(String(e));
+    }
+  };
+
+  const cancelLibraryDownload = async () => {
+    try {
+      await invoke('cancel_youtube_library_download');
+    } catch (e) {
+      console.error('Failed to cancel library download:', e);
+    } finally {
+      setIsDownloadingLibraries(false);
+    }
+  };
+
   const download = async () => {
     if (!url.trim() || !preview) {
+      return;
+    }
+
+    // Check if libraries are missing
+    if (librariesStatus && !librariesStatus.all_installed) {
       return;
     }
 
@@ -137,37 +300,20 @@ export function VideoDownloader() {
     }
   };
 
-  const loadPreview = async () => {
-    const targetUrl = url.trim();
-    if (!targetUrl) return;
-
-    setPreviewLoading(true);
-    setPreviewError('');
-    setPreview(null);
-    try {
-      const result = await invoke<VideoPreview>('preview_youtube_video', {
-        url: targetUrl,
-      });
-      setPreview(result);
-    } catch (error) {
-      setPreviewError(String(error));
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
-
   useEffect(() => {
     const targetUrl = url.trim();
     if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(targetUrl)) {
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      void loadPreview();
-    }, 500);
-
-    return () => window.clearTimeout(timer);
-  }, [url]);
+    // If libraries are installed, trigger preview loading
+    if (librariesStatus?.all_installed) {
+      const timer = window.setTimeout(() => {
+        void loadPreview();
+      }, 500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [url, librariesStatus?.all_installed, loadPreview]);
 
   const cancelDownload = async (taskId: number) => {
     try {
@@ -200,13 +346,6 @@ export function VideoDownloader() {
     }
   };
 
-  const formatSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-  };
-
   const currentQuality = QUALITIES.find((q) => q.value === quality)!;
   const activeCount = jobs.filter((job) => job.active).length;
   const formatDuration = (seconds: number | null) => {
@@ -217,6 +356,8 @@ export function VideoDownloader() {
       .padStart(2, '0');
     return `${minutes}:${remainingSeconds}`;
   };
+
+  const isLibrariesMissing = Boolean(!isCheckingLibraries && librariesStatus && !librariesStatus.all_installed);
 
   return (
     <div className="min-h-[75vh] flex items-start justify-center pt-16 px-6">
@@ -235,6 +376,146 @@ export function VideoDownloader() {
           </p>
         </div>
 
+        {/* Missing Libraries or Active Library Download Card */}
+        {(isLibrariesMissing || isDownloadingLibraries || libraryError) && (
+          <div className="bg-[#181410] border border-[#D97757]/30 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in duration-300">
+            {isDownloadingLibraries ? (
+              /* Active Library Download Progress View */
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-[#D97757]/15 border border-[#D97757]/30 flex items-center justify-center text-[#D97757]">
+                      <Loader2 size={18} className="animate-spin" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-[#F2EDE6]">
+                        Downloading Media Libraries…
+                      </h3>
+                      <p className="text-xs text-white/50">
+                        {libraryProgress?.file_display_name || 'Preparing downloads…'}{' '}
+                        {libraryProgress?.total_files
+                          ? `(${libraryProgress.current_file_index}/${libraryProgress.total_files})`
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={cancelLibraryDownload}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] text-xs text-white/70 hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300 transition-all"
+                  >
+                    <X size={13} />
+                    <span>Cancel</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs font-mono text-white/60">
+                    <span className="text-[#D97757] font-bold">
+                      {(libraryProgress?.overall_percent ?? 0).toFixed(1)}%
+                    </span>
+                    <span>{libraryProgress?.speed || '—'}</span>
+                    <span>
+                      {formatSize(libraryProgress?.overall_downloaded_bytes || 0)} /{' '}
+                      {formatSize(libraryProgress?.overall_total_bytes || 144359183)}
+                    </span>
+                  </div>
+
+                  <div className="w-full h-2.5 rounded-full bg-white/[0.06] overflow-hidden p-0.5">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#D97757] to-[#E59880] transition-all duration-200"
+                      style={{
+                        width: `${Math.min(libraryProgress?.overall_percent ?? 0, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : libraryError ? (
+              /* Library Download Error View with Retry */
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 text-xs text-red-200/90">
+                  <div className="w-9 h-9 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                    <AlertCircle size={18} />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-red-300">Library Download Failed</h4>
+                    <p className="text-white/60 leading-relaxed">{libraryError}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={downloadLibraries}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D97757] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#D97757]/90 active:scale-95 transition-all shadow-lg shadow-[#D97757]/20"
+                  >
+                    <RefreshCw size={14} />
+                    <span>Retry Download</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Missing Libraries Banner & Download Prompt */
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-[#D97757]/15 border border-[#D97757]/30 flex items-center justify-center text-[#D97757] shrink-0 mt-0.5">
+                    <HardDriveDownload size={20} />
+                  </div>
+                  <div className="space-y-1 flex-1">
+                    <h3 className="text-sm sm:text-base font-medium text-[#F2EDE6]">
+                      Required Media Libraries Missing
+                    </h3>
+                    <p className="text-xs text-white/55 leading-relaxed">
+                      To extract YouTube video streams and merge high-fidelity audio up to 4K resolution, Yolnoma requires the video engine and FFmpeg codec libraries.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs">
+                    <span className="text-white/80 font-medium">Video Engine (yolnoma_dl)</span>
+                    {librariesStatus?.yolnoma_dl ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-400 font-medium text-[11px]">
+                        <Check size={12} /> Installed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-amber-400 font-medium text-[11px]">
+                        Missing
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs">
+                    <span className="text-white/80 font-medium">FFmpeg Codec (yolnoma_codec)</span>
+                    {librariesStatus?.yolnoma_codec ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-400 font-medium text-[11px]">
+                        <Check size={12} /> Installed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-amber-400 font-medium text-[11px]">
+                        Missing
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={downloadLibraries}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D97757] px-6 py-2.5 text-xs font-semibold text-white hover:bg-[#D97757]/90 active:scale-95 transition-all shadow-lg shadow-[#D97757]/20"
+                  >
+                    <Download size={15} strokeWidth={2} />
+                    <span>Download Libraries (~144 MB)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* URL input bar */}
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -247,7 +528,7 @@ export function VideoDownloader() {
                 setPreviewError('');
               }}
               placeholder="Paste YouTube URL: https://youtube.com/watch?v=... or https://youtu.be/..."
-              disabled={activeCount >= 3}
+              disabled={activeCount >= 3 || isDownloadingLibraries}
               className="w-full rounded-2xl bg-white/[0.04] border border-white/10 px-5 py-3.5 text-sm text-[#F2EDE6]
                          placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-[#D97757]/40
                          focus:border-[#D97757]/50 transition-all disabled:opacity-50"
@@ -326,7 +607,7 @@ export function VideoDownloader() {
                     <button
                       type="button"
                       onClick={() => setQualityOpen((v) => !v)}
-                      disabled={activeCount >= 3}
+                      disabled={activeCount >= 3 || isLibrariesMissing}
                       className="w-full inline-flex items-center justify-between gap-2 rounded-xl bg-white/[0.04] border border-white/10
                                  px-3.5 py-2.5 text-xs text-[#F2EDE6] hover:bg-white/[0.08] transition-colors
                                  disabled:opacity-50"
@@ -366,13 +647,13 @@ export function VideoDownloader() {
 
                   <button
                     onClick={download}
-                    disabled={activeCount >= 3}
+                    disabled={activeCount >= 3 || isLibrariesMissing}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D97757] px-6 py-2.5 text-xs
                                font-semibold text-white hover:bg-[#D97757]/90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed
                                transition-all shadow-lg shadow-[#D97757]/20 shrink-0"
                   >
                     <Download size={15} strokeWidth={2} />
-                    <span>{activeCount >= 3 ? 'Queue full' : 'Download Video'}</span>
+                    <span>{activeCount >= 3 ? 'Queue full' : isLibrariesMissing ? 'Libraries Required' : 'Download Video'}</span>
                   </button>
                 </div>
               </div>

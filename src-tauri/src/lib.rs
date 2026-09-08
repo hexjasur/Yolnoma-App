@@ -224,6 +224,9 @@ pub fn run() {
             videos::preview_youtube_video,
             videos::check_yt_dlp_installed,
             videos::check_ffmpeg_installed,
+            videos::check_youtube_libraries,
+            videos::download_youtube_libraries,
+            videos::cancel_youtube_library_download,
             // ── Plugins System ──
             commands::list_local_plugins,
             commands::read_plugin_source,
