@@ -11,13 +11,13 @@ export const ROLES = {
 // NOTE: 'users' page is strictly for owner and admin only.
 // NOTE: 'performances' and 'videos' pages are strictly for owner only.
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
-  [ROLES.OWNER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'performances', 'videos', 'users', 'settings', 'profile'],
+  [ROLES.OWNER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'file-intelligence', 'developer-tools', 'marketplace', 'performances', 'videos', 'users', 'settings', 'profile'],
 
-  [ROLES.ADMIN]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'users', 'settings', 'profile'],
+  [ROLES.ADMIN]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'file-intelligence', 'developer-tools', 'marketplace', 'users', 'settings', 'profile'],
 
-  [ROLES.TESTER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'vi', 'steam-review', 'marketplace', 'settings', 'profile'],
+  [ROLES.TESTER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'vi', 'steam-review', 'file-intelligence', 'developer-tools', 'marketplace', 'settings', 'profile'],
 
-  [ROLES.USER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'settings', 'profile'],
+  [ROLES.USER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'file-intelligence', 'developer-tools', 'marketplace', 'settings', 'profile'],
 };
 
 // ===== PAGE ROLES (auto-generated from ROLE_PERMISSIONS) =====
