@@ -45,6 +45,86 @@ function makeBranch(start: THREE.Vector3, end: THREE.Vector3, radius: number, ma
   return mesh;
 }
 
+function createGrassField() {
+  const field = new THREE.Group();
+  const grassMaterials = [
+    new THREE.MeshStandardMaterial({ color: '#2d7048', roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: '#4f9560', roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: '#77ae62', roughness: 1 }),
+  ];
+  const bladeGeometry = new THREE.ConeGeometry(0.045, 0.38, 3);
+  for (let index = 0; index < 260; index += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 2.4 + Math.sqrt(Math.random()) * 12;
+    const blade = new THREE.Mesh(bladeGeometry, grassMaterials[index % grassMaterials.length]);
+    blade.position.set(Math.cos(angle) * radius, 0.18, Math.sin(angle) * radius);
+    blade.scale.set(0.7 + Math.random() * 0.8, 0.7 + Math.random() * 0.9, 0.7 + Math.random() * 0.8);
+    blade.rotation.y = Math.random() * Math.PI;
+    blade.userData.windPhase = Math.random() * Math.PI * 2;
+    blade.userData.windStrength = 0.045 + Math.random() * 0.08;
+    blade.castShadow = true;
+    field.add(blade);
+  }
+  return field;
+}
+
+function createMoon() {
+  const moon = new THREE.Group();
+  const sphere = new THREE.Mesh(new THREE.SphereGeometry(2.2, 32, 32), new THREE.MeshStandardMaterial({ color: '#dce7f5', emissive: '#9db7dd', emissiveIntensity: 0.7, roughness: 0.8 }));
+  sphere.position.set(-25, 26, -34);
+  moon.add(sphere);
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(3.5, 32, 32), new THREE.MeshBasicMaterial({ color: '#a9c9f5', transparent: true, opacity: 0.075, depthWrite: false }));
+  halo.position.copy(sphere.position);
+  moon.add(halo);
+  return moon;
+}
+
+function createCampfire() {
+  const group = new THREE.Group();
+  group.position.set(0, 0, 2.4);
+  const stoneMaterial = new THREE.MeshStandardMaterial({ color: '#4a5250', roughness: 1 });
+  for (let index = 0; index < 9; index += 1) {
+    const angle = (index / 9) * Math.PI * 2;
+    const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 0), stoneMaterial);
+    stone.position.set(Math.cos(angle) * 0.8, 0.25, Math.sin(angle) * 0.8);
+    stone.scale.set(1.25, 0.72, 0.95);
+    stone.castShadow = true;
+    group.add(stone);
+  }
+  const logMaterial = new THREE.MeshStandardMaterial({ color: '#6a3822', roughness: 0.95 });
+  for (let index = 0; index < 3; index += 1) {
+    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 1.15, 10), logMaterial);
+    log.rotation.z = Math.PI / 2;
+    log.rotation.y = index * 1.05;
+    log.position.y = 0.48 + index * 0.06;
+    log.castShadow = true;
+    group.add(log);
+  }
+  const flameMaterial = new THREE.MeshBasicMaterial({ color: '#ff9f43', transparent: true, opacity: 0.85 });
+  const flame = new THREE.Mesh(new THREE.IcosahedronGeometry(0.58, 2), flameMaterial);
+  flame.position.y = 1.15;
+  flame.scale.set(0.7, 1.45, 0.7);
+  flame.userData.isFlame = true;
+  group.add(flame);
+  const innerFlame = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1), new THREE.MeshBasicMaterial({ color: '#fff3b0', transparent: true, opacity: 0.95 }));
+  innerFlame.position.y = 1.08;
+  innerFlame.scale.y = 1.6;
+  innerFlame.userData.isFlame = true;
+  group.add(innerFlame);
+  const light = new THREE.PointLight('#ff8a3d', 3.2, 8, 2);
+  light.position.y = 1.25;
+  group.add(light);
+  const embers = new THREE.Group();
+  for (let index = 0; index < 12; index += 1) {
+    const ember = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), new THREE.MeshBasicMaterial({ color: '#ffcf70' }));
+    ember.position.set((Math.random() - 0.5) * 0.7, 0.8 + Math.random() * 2.2, (Math.random() - 0.5) * 0.7);
+    ember.userData.emberPhase = Math.random() * Math.PI * 2;
+    embers.add(ember);
+  }
+  group.add(embers);
+  return group;
+}
+
 function createTree() {
   const group = new THREE.Group();
   const bark = new THREE.MeshStandardMaterial({ color: '#543b2a', roughness: 0.92 });
@@ -180,6 +260,11 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     path.rotation.x = -Math.PI / 2;
     path.position.y = 0.015;
     scene.add(path);
+    const grass = createGrassField();
+    scene.add(grass);
+    scene.add(createMoon());
+    const campfire = createCampfire();
+    scene.add(campfire);
 
     const tree = createTree();
     scene.add(tree);
@@ -196,7 +281,7 @@ export default function YolnomaWorld({ onSelect }: { onSelect?: (nodeId: string)
     renderer.domElement.addEventListener('click', click);
     const clock = new THREE.Clock();
     let frame = 0;
-    const animate = () => { frame = requestAnimationFrame(animate); const elapsed = clock.getElapsedTime(); controls.update(); tree.children.filter((child) => child.userData.isLeaf).forEach((leaf, index) => { leaf.rotation.z = Math.sin(elapsed * 0.55 + index) * 0.025; leaf.rotation.x = Math.cos(elapsed * 0.42 + index) * 0.018; }); fireflies.children.forEach((dot) => { dot.position.y += Math.sin(elapsed * 1.2 + dot.userData.phase) * 0.0015; ((dot as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.45 + (Math.sin(elapsed * 2 + dot.userData.phase) + 1) * 0.25; }); stars.rotation.y = elapsed * 0.002; renderer.render(scene, camera); };
+    const animate = () => { frame = requestAnimationFrame(animate); const elapsed = clock.getElapsedTime(); controls.update(); tree.children.filter((child) => child.userData.isLeaf).forEach((leaf, index) => { leaf.rotation.z = Math.sin(elapsed * 0.72 + index) * 0.045; leaf.rotation.x = Math.cos(elapsed * 0.55 + index) * 0.032; }); grass.children.forEach((blade) => { blade.rotation.z = Math.sin(elapsed * 1.1 + blade.userData.windPhase) * blade.userData.windStrength; blade.rotation.x = Math.cos(elapsed * 0.9 + blade.userData.windPhase) * blade.userData.windStrength * 0.45; }); campfire.children.filter((child) => child.userData.isFlame).forEach((flame, index) => { flame.rotation.z = Math.sin(elapsed * 4 + index) * 0.12; flame.scale.y = (index ? 1.6 : 1.45) + Math.sin(elapsed * 5 + index) * 0.16; }); campfire.children.filter((child) => child.type === 'Group').forEach((emberGroup) => emberGroup.children.forEach((ember) => { ember.position.y += Math.sin(elapsed * 1.8 + ember.userData.emberPhase) * 0.002; })); fireflies.children.forEach((dot) => { dot.position.y += Math.sin(elapsed * 1.2 + dot.userData.phase) * 0.0015; ((dot as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.45 + (Math.sin(elapsed * 2 + dot.userData.phase) + 1) * 0.25; }); stars.rotation.y = elapsed * 0.002; renderer.render(scene, camera); };
     animate();
     const resize = () => { if (!mount) return; camera.aspect = mount.clientWidth / mount.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(mount.clientWidth, mount.clientHeight); };
     window.addEventListener('resize', resize);
