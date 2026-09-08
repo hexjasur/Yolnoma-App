@@ -12,9 +12,12 @@ export const ROLES = {
 // NOTE: 'performances' and 'videos' pages are strictly for owner only.
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   [ROLES.OWNER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'performances', 'videos', 'users', 'settings', 'profile'],
+
   [ROLES.ADMIN]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'users', 'settings', 'profile'],
-  [ROLES.TESTER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'settings', 'profile'],
-  [ROLES.USER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'settings', 'profile'],
+
+  [ROLES.TESTER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'vi', 'steam-review', 'marketplace', 'settings', 'profile'],
+
+  [ROLES.USER]: ['dashboard', 'agent', 'codebase-agent', 'currency', 'bg-remover', 'cleaner', 'crosshair-overlay', 'vi', 'image-converter', 'video-downloader', 'port-scanner', 'archive-explorer', 'ai-chat', 'steam-idler', 'steam-sam', 'steam-review', 'marketplace', 'settings', 'profile'],
 };
 
 // ===== PAGE ROLES (auto-generated from ROLE_PERMISSIONS) =====
