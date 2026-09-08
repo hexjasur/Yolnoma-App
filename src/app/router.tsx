@@ -32,6 +32,7 @@ import AiChatPage from '@/features/ai-chat/pages/AiChatPage';
 import AiAgentPage from '@/features/ai-agent/pages/AiAgentPage';
 import CodebaseAgentPage from '@/features/codebase-agent/pages/CodebaseAgentPage';
 import ViCountdown from '@/features/vi/pages/ViCountdown';
+import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsPage';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -96,6 +97,7 @@ export default function AppRoutes() {
             />
             <Route path="/tools/ai-chat" element={<AiChatPage />} />
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
+            <Route path="/tools/developer-tools" element={<DeveloperToolsPage />} />
             <Route path="/tools/steam/review" element={<SteamReviewPage />} />
             <Route
               path="/tools/steam/steam-idler"
