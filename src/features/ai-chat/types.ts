@@ -13,9 +13,24 @@ export type OpenRouterModel = {
 
 export type ModelCategory = 'all' | 'free' | 'paid';
 
+export type ToolCall = {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+};
+
 export type OpenRouterResponse = {
-  choices?: Array<{ message?: { content?: string } }>;
-  error?: { message?: string; code?: number };
+  choices?: Array<{
+    message?: {
+      content?: string;
+      tool_calls?: ToolCall[];
+    };
+  }>;
+  error?: {
+    message?: string;
+    code?: number;
+    metadata?: { raw?: string };
+  };
   data?: OpenRouterModel[];
 };
 

@@ -8,7 +8,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { getApiKey } from '@/features/ai-chat/storage';
 import { fetchOpenRouterModels, getShortModelName } from '@/features/ai-chat/api/openRouterApi';
 import { DEFAULT_MODELS, type OpenRouterModel } from '@/features/ai-chat/types';
-import type { ProxyResponse } from '@/features/ai-chat/types';
+import type { ProxyResponse, ToolCall } from '@/features/ai-chat/types';
 
 // ---------- Config ----------
 
@@ -25,12 +25,6 @@ const MAX_FILE_CHARS = 24000;
 const MAX_ITERATIONS = 15;
 
 // ---------- Types ----------
-
-type ToolCall = {
-  id: string;
-  type: 'function';
-  function: { name: string; arguments: string };
-};
 
 type AgentMessage = {
   role: 'system' | 'user' | 'assistant' | 'tool';
