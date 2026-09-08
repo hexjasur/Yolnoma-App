@@ -7,6 +7,10 @@
  * - Real-time download progress tracking (0-100%)
  * - NSIS passive installation and app relaunch
  * - Non-intrusive error reporting
+ * - Infinite update loop protection: if an update for version X is attempted
+ *   but the app still starts on the previous version after relaunch, version X
+ *   is recorded as a failed target and will not be offered again until a newer
+ *   version (Y > X) becomes available.
  */
 
 import { create } from 'zustand';
@@ -58,9 +62,52 @@ interface UpdaterState {
   reset: () => void;
 }
 
-// Module-level reference to the active Tauri Update instance
+// ---------------------------------------------------------------------------
+// Infinite-update-loop protection
+// ---------------------------------------------------------------------------
+// Before installing we persist the target version to localStorage.
+// On the next startup, if the running version still equals the old version
+// (meaning the installer silently failed or did nothing), we skip offering
+// that same version again.
+// A genuinely newer version is always allowed through.
+// ---------------------------------------------------------------------------
+const FAILED_TARGET_KEY = 'yolnoma.updater.failed-target';
+
+function getFailedTarget(): string | null {
+  try {
+    return localStorage.getItem(FAILED_TARGET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setFailedTarget(version: string): void {
+  try {
+    localStorage.setItem(FAILED_TARGET_KEY, version);
+  } catch {
+    // localStorage unavailable (e.g. test environment) — ignore
+  }
+}
+
+function clearFailedTarget(): void {
+  try {
+    localStorage.removeItem(FAILED_TARGET_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Module-level concurrency guards
+// ---------------------------------------------------------------------------
+// isChecking prevents overlapping check() calls.
+// isInstalling prevents overlapping downloadAndInstall() calls.
+// Both mirror the corresponding Zustand status values but live outside the
+// store so they are not susceptible to stale-closure capture.
+// ---------------------------------------------------------------------------
 let activeUpdate: Update | null = null;
 let isChecking = false;
+let isInstalling = false;
 
 export const useUpdaterStore = create<UpdaterState>((set, get) => ({
   status: 'idle',
@@ -76,19 +123,53 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     const { silent } = options;
     const currentStatus = get().status;
 
-    // Prevent duplicate or overlapping checks
-    if (isChecking || currentStatus === 'checking' || currentStatus === 'downloading' || currentStatus === 'installing') {
+    // Prevent duplicate or overlapping checks / installs
+    if (
+      isChecking ||
+      isInstalling ||
+      currentStatus === 'checking' ||
+      currentStatus === 'downloading' ||
+      currentStatus === 'installing'
+    ) {
       return false;
     }
 
     isChecking = true;
     set({ status: 'checking', error: null });
 
-    let currentVersion = '0.9.53';
+    let currentVersion: string;
     try {
       currentVersion = await getVersion();
-    } catch {
-      // Fallback if running outside Tauri context
+    } catch (err: unknown) {
+      reportError('AutoUpdater:GetVersion', err);
+      const msg = getErrorMessage(err, 'Could not determine current application version.');
+      set({ status: 'error', error: msg });
+      if (!silent) {
+        toast.error(msg);
+      }
+      isChecking = false;
+      return false;
+    }
+
+    if (!currentVersion || typeof currentVersion !== 'string') {
+      const msg = 'Current application version is unavailable.';
+      set({ status: 'error', error: msg });
+      if (!silent) {
+        toast.error(msg);
+      }
+      isChecking = false;
+      return false;
+    }
+
+    // -----------------------------------------------------------------------
+    // Detect whether a previously attempted update actually succeeded.
+    // If the running version now matches the previously stored failed-target,
+    // the update DID succeed — clear the guard.
+    // -----------------------------------------------------------------------
+    const failedTarget = getFailedTarget();
+    if (failedTarget && failedTarget === currentVersion) {
+      // Running version matches what we tried to install → success. Clear it.
+      clearFailedTarget();
     }
 
     try {
@@ -96,6 +177,24 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
       set({ lastChecked: new Date() });
 
       if (update && update.available) {
+        // -------------------------------------------------------------------
+        // Infinite-loop guard: skip if this exact version was already
+        // attempted and the app is still running the previous version.
+        // -------------------------------------------------------------------
+        const currentFailedTarget = getFailedTarget();
+        if (currentFailedTarget && update.version === currentFailedTarget) {
+          activeUpdate = null;
+          const skipMsg = `Update to v${update.version} previously failed. It will not be offered again until a newer version is released.`;
+          set({ status: 'error', error: skipMsg });
+
+          if (!silent) {
+            toast.error(`Update v${update.version} failed on last attempt. Waiting for a newer release.`);
+          }
+
+          isChecking = false;
+          return false;
+        }
+
         activeUpdate = update;
         const info: UpdateInfo = {
           version: update.version,
@@ -148,13 +247,25 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
 
   downloadAndInstall: async () => {
     const { status } = get();
-    if (status === 'downloading' || status === 'installing') return;
+
+    // Concurrency guard — do not allow two simultaneous install attempts
+    if (isInstalling || status === 'downloading' || status === 'installing') return;
 
     if (!activeUpdate) {
       toast.error('No update package is currently loaded. Please check for updates again.');
       return;
     }
 
+    // -----------------------------------------------------------------------
+    // Record the target version BEFORE starting the install.
+    // If the app restarts and is still on the current (old) version, this key
+    // will cause checkForUpdates to skip offering the same version again.
+    // The key is cleared automatically on the next startup if the running
+    // version has advanced to the target.
+    // -----------------------------------------------------------------------
+    setFailedTarget(activeUpdate.version);
+
+    isInstalling = true;
     set({
       status: 'downloading',
       progress: 0,
@@ -197,12 +308,15 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
         }
       });
 
-      // Once download & passive install finishes, relaunch the application
+      // Once download & passive install finishes, relaunch the application.
+      // On the next startup, if the version has advanced, clearFailedTarget()
+      // is called in checkForUpdates and everything continues normally.
       set({ status: 'installing', progress: 100 });
       await relaunch();
     } catch (err: unknown) {
       reportError('AutoUpdater:Download', err);
       const msg = getErrorMessage(err, 'Failed to download or install update.');
+      isInstalling = false;
       set({
         status: 'error',
         error: msg,
@@ -222,6 +336,7 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
   reset: () => {
     activeUpdate = null;
     isChecking = false;
+    isInstalling = false;
     set({
       status: 'idle',
       updateInfo: null,
@@ -233,3 +348,4 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     });
   },
 }));
+

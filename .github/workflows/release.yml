@@ -31,6 +31,11 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
       - name: Install dependencies
         run: npm ci
 
@@ -51,6 +56,98 @@ jobs:
           prerelease: false
           generateReleaseNotes: true
           uploadUpdaterJson: false
+
+      # ------------------------------------------------------------------------
+      # Validate: actual built NSIS installer artifact version matches the Git tag
+      # Prevents the infinite-updater-loop failure (e.g. tag v0.9.102 on 0.9.101 artifact)
+      # This step inspects the actual generated installer output before any artifact
+      # is uploaded so publish-updates cannot proceed on a mismatch.
+      # ------------------------------------------------------------------------
+      - name: Validate built installer matches Git tag
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $tag = "${{ github.ref_name }}"
+          $expectedVersion = $tag -replace "^v", ""
+
+          Write-Host "Git release tag  : $tag"
+          Write-Host "Expected version : $expectedVersion"
+
+          # 1. Locate the generated NSIS installer from the build outputs
+          $nsisDir = "src-tauri/target/release/bundle/nsis"
+          $exe = Get-ChildItem -Path $nsisDir -Filter "*-setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+
+          if (-not $exe) {
+            Write-Host "Checking all bundle directories for setup.exe..."
+            $exe = Get-ChildItem -Path "src-tauri/target/release/bundle" -Filter "*setup.exe" -Recurse | Select-Object -First 1
+          }
+
+          if (-not $exe) {
+            Write-Host "::error::NSIS setup.exe installer was not found in build outputs."
+            exit 1
+          }
+
+          Write-Host "Found generated installer: $($exe.Name)"
+
+          # 2. Extract the actual version from the generated installer artifact filename
+          # Tauri NSIS naming: <productName>_<version>_<arch>-setup.exe (e.g., Yolnoma_0.9.102_x64-setup.exe)
+          $artifactVersion = $null
+          if ($exe.Name -match '_([0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[0-9A-Za-z.-]+)?)_') {
+            $artifactVersion = $Matches[1]
+          } elseif ($exe.Name -match '^.*?_(?<ver>[^_]+)_.*-setup\.exe$') {
+            $artifactVersion = $Matches.ver
+          }
+
+          # 3. Read PE binary VersionInfo if available on Windows
+          $peVersion = $null
+          try {
+            $verInfo = (Get-Item $exe.FullName).VersionInfo
+            if ($verInfo.ProductVersion) {
+              $peVersion = $verInfo.ProductVersion.Trim()
+            } elseif ($verInfo.FileVersion) {
+              $peVersion = $verInfo.FileVersion.Trim()
+            }
+          } catch {
+            Write-Host "Could not read PE VersionInfo: $($_.Exception.Message)"
+          }
+
+          # 4. Also read source config version for verification
+          $tauriConf = Get-Content "src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
+          $configVersion = $tauriConf.version
+
+          Write-Host "----------------------------------------"
+          Write-Host "Expected Tag Version     : $expectedVersion"
+          Write-Host "Installer File Name      : $($exe.Name)"
+          Write-Host "Installer Version String : $artifactVersion"
+          if ($peVersion) {
+            Write-Host "PE Binary VersionInfo    : $peVersion"
+          }
+          Write-Host "tauri.conf.json Version  : $configVersion"
+          Write-Host "----------------------------------------"
+
+          # 5. Validate that the actual build output matches the release tag version
+          $mismatch = $false
+          if (-not $artifactVersion -or $artifactVersion -ne $expectedVersion) {
+            $mismatch = $true
+          }
+
+          if ($mismatch) {
+            Write-Host ""
+            Write-Host "::error::Release version mismatch!"
+            Write-Host "::error::Git tag                  : $tag"
+            Write-Host "::error::Expected version         : $expectedVersion"
+            Write-Host "::error::Generated installer file : $($exe.Name)"
+            Write-Host "::error::Installer output version : $artifactVersion"
+            Write-Host "::error::Source config version    : $configVersion"
+            Write-Host "::error::Release was stopped to prevent publishing a broken updater."
+            Write-Host ""
+            Write-Host "Fix: Bump the version in src-tauri/tauri.conf.json and src-tauri/Cargo.toml"
+            Write-Host "     to match Git tag '$tag' before releasing."
+            exit 1
+          }
+
+          Write-Host "Artifact version validation passed: $($exe.Name) corresponds to Git tag $tag ✓"
 
       # ------------------------------------------------------------------------
       # Prepare & Validate NSIS Updater Files for Public Distribution
@@ -340,6 +437,22 @@ jobs:
           # Configure Git user identity for commit
           git config user.name "Yolnoma Release Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # ----------------------------------------------------------------
+          # Remove stale installer/signature files from previous releases.
+          # Only the current version's files should exist in the public repo.
+          # latest.json is NOT deleted here — it will be overwritten below.
+          # ----------------------------------------------------------------
+          $oldExe = Get-ChildItem -Path "." -Filter "*.exe" -ErrorAction SilentlyContinue
+          foreach ($f in $oldExe) {
+            Write-Host "Removing old installer: $($f.Name)"
+            Remove-Item $f.FullName -Force
+          }
+          $oldSig = Get-ChildItem -Path "." -Filter "*.sig" -ErrorAction SilentlyContinue
+          foreach ($f in $oldSig) {
+            Write-Host "Removing old signature: $($f.Name)"
+            Remove-Item $f.FullName -Force
+          }
 
           # Copy update files into repository root
           Copy-Item "../updater-files/$($exe.Name)" "./$($exe.Name)" -Force

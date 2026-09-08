@@ -33,7 +33,7 @@
     "resources": {
       "resources/*": "./resources/"
     },
-    "targets": "all",
+    "targets": ["nsis"],
     "publisher": "JK Software",
     "icon": [
       "icons/32x32.png",
