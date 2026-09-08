@@ -78,11 +78,15 @@ pub fn run() {
             let show = MenuItemBuilder::new("Show")
                 .id("show")
                 .build(app)?;
+            let world_show = MenuItemBuilder::new("3D Show")
+                .id("world-3d-show")
+                .build(app)?;
             let quit = MenuItemBuilder::new("Exit")
                 .id("quit")
                 .build(app)?;
             let menu = MenuBuilder::new(app)
                 .item(&show)
+                .item(&world_show)
                 .item(&quit)
                 .build()?;
 
@@ -97,6 +101,13 @@ pub fn run() {
                             let _ = w.show();
                             let _ = w.set_focus();
                         }
+                    }
+                    "world-3d-show" => {
+                        let _ = tauri::async_runtime::block_on(commands::open_in_new_window(
+                            app.clone(),
+                            "/tools/world-3d".to_string(),
+                            Some("Yolnoma World".to_string()),
+                        ));
                     }
                     "quit" => {
                         // Barcha idling jarayonlarini to'xtatamiz, keyin chiqamiz
