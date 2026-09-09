@@ -133,7 +133,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
           marginTop: 6,
           margin: '6px 0 0',
         }}>
-          Ultimate Utility
+          Swiss Army Knife
         </p>
       </div>
 
