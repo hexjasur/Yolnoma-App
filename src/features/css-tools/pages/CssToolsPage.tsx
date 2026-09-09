@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Code2, Minimize2, PanelRight, WandSparkles } from 'lucide-react';
+import { Code2, Minimize2, Palette, PanelRight, WandSparkles } from 'lucide-react';
 import ToolNavigation from '@/features/developer-tools/components/ToolNavigation';
 import MinifyTool from '../components/MinifyTool';
 import GradientGeneratorTool from '../components/GradientGeneratorTool';
 import ScrollbarGeneratorTool from '../components/ScrollbarGeneratorTool';
+import ColorPickerTool from '../components/ColorPickerTool';
 
-type Tab = 'minify' | 'gradient-generator' | 'scrollbar-generator';
+type Tab = 'minify' | 'gradient-generator' | 'scrollbar-generator' | 'color-picker';
 type TabDefinition = [Tab, string, LucideIcon];
 const tabs: TabDefinition[] = [
   ['minify', 'Minify', Minimize2],
   ['gradient-generator', 'Gradient CSS', WandSparkles],
   ['scrollbar-generator', 'Scrollbar CSS', PanelRight],
+  ['color-picker', 'Color Picker', Palette],
 ];
 const tabIds = new Set<Tab>(tabs.map(([id]) => id));
 
@@ -50,6 +52,7 @@ export default function CssToolsPage() {
           {tab === 'minify' && <MinifyTool />}
           {tab === 'gradient-generator' && <GradientGeneratorTool />}
           {tab === 'scrollbar-generator' && <ScrollbarGeneratorTool />}
+          {tab === 'color-picker' && <ColorPickerTool />}
         </main>
       </div>
     </div>
