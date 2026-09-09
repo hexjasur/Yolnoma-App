@@ -61,7 +61,7 @@ export default function DeveloperToolsPage() {
   const [jwt, setJwt] = useState('');
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [color, setColor] = useState('#D97757');
-  const [qrText, setQrText] = useState('https://github.com/hexjasur/Yolnoma-App');
+  const [qrText, setQrText] = useState('https://yolnoma.uz');
   const [uuid, setUuid] = useState(() => crypto.randomUUID());
   const [copied, setCopied] = useState(false);
   const [colorPicking, setColorPicking] = useState(false);
