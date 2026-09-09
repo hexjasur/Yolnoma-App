@@ -27,25 +27,37 @@ export default function HomePage() {
   const [draggedToolId, setDraggedToolId] = useState<string | null>(null);
 
   // Real-time system monitoring toggle — persisted in config.json
-  const monitoringEnabled = useAccountConfigStore((s) => s.config.systemMonitoring);
+  const monitoringEnabled = useAccountConfigStore(
+    (s) => s.config.systemMonitoring,
+  );
   const updateConfig = useAccountConfigStore((s) => s.updateConfig);
 
   const toggleMonitoring = () => {
     updateConfig({ systemMonitoring: !monitoringEnabled });
   };
 
-  const handleToolDragStart = (event: DragEvent<HTMLDivElement>, toolId: string) => {
+  const handleToolDragStart = (
+    event: DragEvent<HTMLDivElement>,
+    toolId: string,
+  ) => {
     setDraggedToolId(toolId);
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', toolId);
   };
 
-  const handleToolDrop = (event: DragEvent<HTMLDivElement>, targetToolId: string) => {
+  const handleToolDrop = (
+    event: DragEvent<HTMLDivElement>,
+    targetToolId: string,
+  ) => {
     event.preventDefault();
-    const sourceToolId = event.dataTransfer.getData('text/plain') || draggedToolId;
+    const sourceToolId =
+      event.dataTransfer.getData('text/plain') || draggedToolId;
     if (!sourceToolId || sourceToolId === targetToolId) return;
 
-    movePinnedTool(pinnedTools.indexOf(sourceToolId), pinnedTools.indexOf(targetToolId));
+    movePinnedTool(
+      pinnedTools.indexOf(sourceToolId),
+      pinnedTools.indexOf(targetToolId),
+    );
   };
 
   // Native local system stats with 2s visibility-aware polling (only when enabled)
@@ -65,9 +77,14 @@ export default function HomePage() {
       .slice(0, 5);
   }, [items, isOwner]);
 
-  const displayName = user?.displayName || user?.display_name || user?.email?.split('@')[0] || 'there';
+  const displayName =
+    user?.displayName ||
+    user?.display_name ||
+    user?.email?.split('@')[0] ||
+    'there';
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
     <div
@@ -111,7 +128,7 @@ export default function HomePage() {
               <p className="text-xs text-white/40 truncate max-w-md">
                 {monitoringEnabled
                   ? stats?.cpuModel || 'Protsessor va operativ xotira holati'
-                  : "Monitoring disabled (press the button on the right to enable)"}
+                  : 'Monitoring disabled (press the button on the right to enable)'}
               </p>
             </div>
           </div>
@@ -138,7 +155,7 @@ export default function HomePage() {
                 }
               >
                 {!monitoringEnabled
-                  ? "Disabled"
+                  ? 'Disabled'
                   : isPaused
                     ? "To'xtatildi (fon)"
                     : 'Real-time (2s)'}
@@ -261,10 +278,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 1.5. WEEKLY WEATHER ── */}
-      <WeatherCard />
-
-      {/* ── 2. QUICK TOOLS SHORTCUTS ── */}
+      {/* ── 1.5. QUICK TOOLS SHORTCUTS ── */}
       <section className="space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40">
           Tools
@@ -281,49 +295,59 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {pinnedTools.map((toolId) => {
-                const tool = TOOL_CATALOG.find((candidate) => candidate.id === toolId);
-                if (!tool) return null;
-                return (
-                  <div
-                    key={tool.id}
-                    draggable
-                    onDragStart={(event) => handleToolDragStart(event, tool.id)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => handleToolDrop(event, tool.id)}
-                    onDragEnd={() => setDraggedToolId(null)}
-                    className={`group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg ${draggedToolId === tool.id ? 'cursor-grabbing opacity-50' : 'cursor-grab'}`}
+              const tool = TOOL_CATALOG.find(
+                (candidate) => candidate.id === toolId,
+              );
+              if (!tool) return null;
+              return (
+                <div
+                  key={tool.id}
+                  draggable
+                  onDragStart={(event) => handleToolDragStart(event, tool.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => handleToolDrop(event, tool.id)}
+                  onDragEnd={() => setDraggedToolId(null)}
+                  className={`group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg ${draggedToolId === tool.id ? 'cursor-grabbing opacity-50' : 'cursor-grab'}`}
+                >
+                  <Link
+                    to={tool.to}
+                    draggable={false}
+                    onClick={(event) =>
+                      handleDevFeatureClick(event, tool.id, user?.role)
+                    }
+                    className="flex min-w-0 flex-1 items-center gap-3.5"
                   >
-                    <Link
-                      to={tool.to}
-                      draggable={false}
-                      onClick={(event) => handleDevFeatureClick(event, tool.id, user?.role)}
-                      className="flex min-w-0 flex-1 items-center gap-3.5"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <ToolIcon icon={tool.icon} className="h-5 w-5 object-contain" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
-                          {tool.label}
-                        </p>
-                        <p className="text-xs text-white/40 truncate">
-                          {tool.description}
-                        </p>
-                      </div>
-                    </Link>
-                    <GripVertical
-                      size={18}
-                      aria-label="Drag to reorder"
-                      className="ml-auto shrink-0 text-white/35 transition-colors group-hover:text-[var(--accent)]"
-                    />
-                  </div>
-                );
-              })}
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <ToolIcon
+                        icon={tool.icon}
+                        className="h-5 w-5 object-contain"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
+                        {tool.label}
+                      </p>
+                      <p className="text-xs text-white/40 truncate">
+                        {tool.description}
+                      </p>
+                    </div>
+                  </Link>
+                  <GripVertical
+                    size={18}
+                    aria-label="Drag to reorder"
+                    className="ml-auto shrink-0 text-white/35 transition-colors group-hover:text-[var(--accent)]"
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
 
-      {/* ── 3. OWNER ONLY: "SO'NGGI QO'SHILGANLAR" (RECENT PERFORMANCES) ── */}
+      {/* ── 2. WEEKLY WEATHER ── */}
+      <WeatherCard />
+
+      {/* ── 3. OWNER ONLY: (RECENT PERFORMANCES) ── */}
       {isOwner && (
         <section className="rounded-3xl border border-white/[0.08] bg-[#111109] overflow-hidden shadow-xl">
           <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between">

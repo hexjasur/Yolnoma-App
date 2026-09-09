@@ -439,7 +439,7 @@ export default function Sidebar() {
       >
         {!isCollapsed && (
           <p className="text-[11px] text-[var(--text-faint)] px-2 font-mono">
-            {version ? `v${version} — @ 2026 JK Software` : 'Loading…'}
+            {version ? `v${version} — @ 2026 Yolnoma` : 'Loading…'}
           </p>
         )}
       </div>
