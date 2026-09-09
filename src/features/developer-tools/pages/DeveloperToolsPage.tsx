@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Binary, Braces, Code2, FileText, Globe2, Hash, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
+import { Binary, Braces, Code2, FileText, Globe2, Hash, LockKeyhole, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
@@ -12,8 +12,9 @@ import CurlConverterTool from '../components/CurlConverterTool';
 import RegexVisualizerTool from '../components/RegexVisualizerTool';
 import LoremIpsumTool from '../components/LoremIpsumTool';
 import IpLookupTool from '../components/IpLookupTool';
+import BcryptTool from '../components/BcryptTool';
 
-type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter' | 'regex-visualizer' | 'lorem-ipsum' | 'ip-lookup';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter' | 'regex-visualizer' | 'lorem-ipsum' | 'ip-lookup' | 'bcrypt';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
@@ -27,6 +28,7 @@ const tabs: TabDefinition[] = [
   ['regex-visualizer', 'Regex Visualizer', Regex],
   ['lorem-ipsum', 'Lorem Ipsum', FileText],
   ['ip-lookup', 'IP Lookup', Globe2],
+  ['bcrypt', 'Bcrypt Tool', LockKeyhole],
 ];
 
 const tabIds = new Set<Tab>(tabs.map(([id]) => id));
@@ -82,6 +84,7 @@ export default function DeveloperToolsPage() {
           {tab === 'regex-visualizer' && <RegexVisualizerTool />}
           {tab === 'lorem-ipsum' && <LoremIpsumTool />}
           {tab === 'ip-lookup' && <IpLookupTool />}
+          {tab === 'bcrypt' && <BcryptTool />}
         </main>
       </div>
     </div>
