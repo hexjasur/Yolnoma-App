@@ -206,7 +206,6 @@ function createDeer() {
     group.add(leg);
     legs.push(leg);
   }
-  const antlers = [];
   for (let side = -1; side <= 1; side += 2) {
     const antler1 = new THREE.Mesh(
       new THREE.ConeGeometry(0.05, 0.6, 6),
