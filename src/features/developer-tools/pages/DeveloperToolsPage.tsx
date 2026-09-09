@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Binary, Braces, Code2, FileText, Globe2, Hash, LockKeyhole, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
+import { ArrowLeftRight, Binary, Braces, Code2, FileText, Globe2, Hash, LockKeyhole, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
@@ -13,8 +13,9 @@ import RegexVisualizerTool from '../components/RegexVisualizerTool';
 import LoremIpsumTool from '../components/LoremIpsumTool';
 import IpLookupTool from '../components/IpLookupTool';
 import BcryptTool from '../components/BcryptTool';
+import DiffCheckerTool from '../components/DiffCheckerTool';
 
-type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter' | 'regex-visualizer' | 'lorem-ipsum' | 'ip-lookup' | 'bcrypt';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter' | 'regex-visualizer' | 'lorem-ipsum' | 'ip-lookup' | 'bcrypt' | 'diff-checker';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
@@ -29,6 +30,7 @@ const tabs: TabDefinition[] = [
   ['lorem-ipsum', 'Lorem Ipsum', FileText],
   ['ip-lookup', 'IP Lookup', Globe2],
   ['bcrypt', 'Bcrypt Tool', LockKeyhole],
+  ['diff-checker', 'Diff Checker', ArrowLeftRight],
 ];
 
 const tabIds = new Set<Tab>(tabs.map(([id]) => id));
@@ -85,6 +87,7 @@ export default function DeveloperToolsPage() {
           {tab === 'lorem-ipsum' && <LoremIpsumTool />}
           {tab === 'ip-lookup' && <IpLookupTool />}
           {tab === 'bcrypt' && <BcryptTool />}
+          {tab === 'diff-checker' && <DiffCheckerTool />}
         </main>
       </div>
     </div>
