@@ -16,6 +16,7 @@ mod archive;
 mod app_commands;
 mod app_state;
 mod deep_link;
+mod git_tools;
 
 // Kept public for feature modules that use the shared authentication state.
 pub use app_state::AuthState;
@@ -154,6 +155,7 @@ pub fn run() {
             app_commands::hide_window,
             app_commands::pick_screen_color,
             app_commands::read_codebase_file,
+            git_tools::get_git_changes,
             app_commands::get_idling_count,
             // ── Account Storage ──
             account_storage::set_current_user,
