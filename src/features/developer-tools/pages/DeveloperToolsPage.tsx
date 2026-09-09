@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Braces,
   Check,
@@ -46,7 +46,7 @@ function ToolButton({ active, icon: Icon, label, onClick }: { active: boolean; i
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 border-l-2 px-4 py-3 text-left text-sm transition ${active ? 'border-[var(--accent)] bg-[var(--accent-glow)] text-white' : 'border-transparent text-white/50 hover:bg-white/[0.04] hover:text-white'}`}
+      className={`flex min-w-[150px] flex-1 items-center gap-3 border-l-2 px-4 py-3 text-left text-sm transition ${active ? 'border-[var(--accent)] bg-[var(--accent-glow)] text-white' : 'border-transparent text-white/50 hover:bg-white/[0.04] hover:text-white'}`}
     >
       <Icon size={17} className={active ? 'text-[var(--accent)]' : 'text-white/35'} />
       {label}
@@ -63,6 +63,9 @@ export default function DeveloperToolsPage() {
   const [qrText, setQrText] = useState('https://github.com/hexjasur/Yolnoma-App');
   const [uuid, setUuid] = useState(() => crypto.randomUUID());
   const [copied, setCopied] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  const syncingScroll = useRef(false);
 
   const jsonResult = useMemo(() => {
     try {
@@ -105,6 +108,18 @@ export default function DeveloperToolsPage() {
     void copy(next);
   };
 
+  const syncScroll = (source: HTMLTextAreaElement | HTMLElement, target: HTMLTextAreaElement | HTMLElement) => {
+    if (syncingScroll.current) return;
+    syncingScroll.current = true;
+    const sourceMax = source.scrollHeight - source.clientHeight;
+    const targetMax = target.scrollHeight - target.clientHeight;
+    const ratio = sourceMax > 0 ? source.scrollTop / sourceMax : 0;
+    target.scrollTop = ratio * Math.max(0, targetMax);
+    window.requestAnimationFrame(() => {
+      syncingScroll.current = false;
+    });
+  };
+
   const tabs: [Tab, string, ToolIcon][] = [
     ['json', 'JSON Formatter', Braces],
     ['jwt', 'JWT Decoder', ShieldCheck],
@@ -127,22 +142,22 @@ export default function DeveloperToolsPage() {
         </div>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[245px_minmax(0,1fr)]">
-        <aside className="h-fit border border-white/[0.08] bg-[#111109] p-2">
-          <div className="px-4 pb-3 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Workspace</div>
-          <nav className="space-y-1">
+      <div className="mt-8">
+        <aside className="border border-white/[0.08] bg-[#111109] p-2">
+          <div className="px-4 pb-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Workspace</div>
+          <nav className="flex flex-wrap gap-1">
             {tabs.map(([id, label, Icon]) => <ToolButton key={id} active={tab === id} icon={Icon} label={label} onClick={() => setTab(id)} />)}
           </nav>
         </aside>
 
-        <main className="min-w-0 space-y-5">
+        <main className="mt-8 min-w-0 space-y-5">
           {tab === 'json' && <Card><Title icon={Braces} text="JSON Formatter / Validator" subtitle="Validate and format JSON with readable indentation." /><textarea value={json} onChange={(event) => setJson(event.target.value)} className="mt-6 min-h-56 w-full resize-y border border-white/10 bg-black/20 p-4 font-mono text-sm text-white/80 outline-none focus:border-[var(--accent)]" spellCheck={false} /><div className={`mt-3 border-l-2 p-3 text-xs ${jsonResult.error ? 'border-red-400 bg-red-400/10 text-red-300' : 'border-emerald-400 bg-emerald-400/10 text-emerald-300'}`}>{jsonResult.error || 'Valid JSON'}</div>{!jsonResult.error && <Output value={jsonResult.value} onCopy={copy} />}</Card>}
 
           {tab === 'jwt' && <Card><Title icon={ShieldCheck} text="JWT Decoder" subtitle="Decode a token locally without verifying its signature." /><input value={jwt} onChange={(event) => setJwt(event.target.value)} placeholder="Paste your JWT token" className="mt-6 w-full border border-white/10 bg-black/20 p-4 font-mono text-sm text-white/80 outline-none focus:border-[var(--accent)]" spellCheck={false} />{jwt && <><div className="mt-5 grid gap-5 md:grid-cols-2"><Output label="Header" value={jwtResult.header} onCopy={copy} /><Output label="Payload" value={jwtResult.payload} onCopy={copy} /></div><p className="mt-4 border-l-2 border-amber-400/60 pl-3 text-xs text-amber-300/70">This only decodes the token. Signature verification is not performed.</p></>}</Card>}
 
           {tab === 'uuid' && <Card><Title icon={Hash} text="UUID Generator" subtitle="Generate a cryptographically random UUID v4." /><div className="flex min-h-72 flex-col items-center justify-center gap-7 border border-white/[0.06] bg-black/10 p-8"><p className="break-all text-center font-mono text-2xl tracking-wide text-white md:text-3xl">{uuid}</p><button type="button" onClick={generateUuid} className="inline-flex items-center gap-2 bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[#17130e] transition hover:brightness-110"><WandSparkles size={16} /> Generate & copy</button></div></Card>}
 
-          {tab === 'markdown' && <Card><Title icon={Code2} text="Markdown Studio" subtitle="A full GitHub-Flavored Markdown preview with tables, task lists, links, images, quotes, and code blocks." /><div className="mt-6 grid gap-4 xl:grid-cols-2"><div className="border border-white/[0.08] bg-[#0d0d0a]"><div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Editor</span><span className="text-[10px] text-white/25">{markdown.length} chars · {markdown.split('\n').length} lines</span></div><textarea value={markdown} onChange={(event) => setMarkdown(event.target.value)} className="min-h-[620px] w-full resize-y bg-transparent p-5 font-mono text-[13px] leading-6 text-white/80 outline-none" spellCheck={false} /></div><div className="border border-white/[0.08] bg-[#0d0d0a]"><div className="border-b border-white/[0.08] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Preview</div><article className="min-h-[620px] overflow-auto p-5 md:p-7"><MarkdownContent content={markdown} /></article></div></div></Card>}
+          {tab === 'markdown' && <Card><Title icon={Code2} text="Markdown Studio" subtitle="A full GitHub-Flavored Markdown preview with tables, task lists, links, images, quotes, and code blocks." /><div className="mt-6 grid gap-4 xl:grid-cols-2"><div className="overflow-hidden border border-white/[0.08] bg-[#0d0d0a]"><div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Editor</span><span className="text-[10px] text-white/25">{markdown.length} chars · {markdown.split('\n').length} lines</span></div><textarea ref={editorRef} onScroll={() => editorRef.current && previewRef.current && syncScroll(editorRef.current, previewRef.current)} value={markdown} onChange={(event) => setMarkdown(event.target.value)} className="block h-[620px] w-full resize-none overflow-y-auto bg-transparent p-5 font-mono text-[13px] leading-6 text-white/80 outline-none" spellCheck={false} /></div><div className="overflow-hidden border border-white/[0.08] bg-[#0d0d0a]"><div className="border-b border-white/[0.08] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Preview</div><article ref={previewRef} onScroll={() => editorRef.current && previewRef.current && syncScroll(previewRef.current, editorRef.current)} className="h-[620px] overflow-y-auto p-5 md:p-7"><MarkdownContent content={markdown} /></article></div></div></Card>}
 
           {tab === 'color' && <Card><Title icon={Palette} text="Color Picker" subtitle="Choose a color or use the system eye dropper when available." /><div className="mt-6 flex min-h-72 flex-wrap items-center gap-8 border border-white/[0.06] bg-black/10 p-8"><input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-28 w-28 cursor-pointer border-0 bg-transparent" /><div><p className="font-mono text-4xl text-white">{color}</p><button type="button" onClick={() => void pickColor()} className="mt-4 inline-flex items-center gap-2 border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/[0.06]"><Palette size={15} /> Pick from screen</button><p className="mt-3 text-xs text-white/35">The EyeDropper API is supported in compatible desktop environments.</p></div></div></Card>}
 
