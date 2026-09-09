@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Binary, Braces, Code2, Hash, Palette, QrCode, ShieldCheck } from 'lucide-react';
+import { Binary, Braces, Code2, Hash, QrCode, ShieldCheck } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
 import UuidGeneratorTool from '../components/UuidGeneratorTool';
 import MarkdownStudioTool from '../components/MarkdownStudioTool';
-import ColorPickerTool from '../components/ColorPickerTool';
 import QrGeneratorTool from '../components/QrGeneratorTool';
 import Base64Tool from '../components/Base64Tool';
 
-type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'color-picker' | 'qr-generator' | 'base64';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
@@ -19,7 +18,6 @@ const tabs: TabDefinition[] = [
   ['uuid-generator', 'UUID Generator', Hash],
   ['markdown-studio', 'Markdown Studio', Code2],
   ['base64', 'Base64 Encoder', Binary],
-  ['color-picker', 'Color Picker', Palette],
   ['qr-generator', 'QR Generator', QrCode],
 ];
 
@@ -71,7 +69,6 @@ export default function DeveloperToolsPage() {
           {tab === 'uuid-generator' && <UuidGeneratorTool />}
           {tab === 'markdown-studio' && <MarkdownStudioTool />}
           {tab === 'base64' && <Base64Tool />}
-          {tab === 'color-picker' && <ColorPickerTool />}
           {tab === 'qr-generator' && <QrGeneratorTool />}
         </main>
       </div>

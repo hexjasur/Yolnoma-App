@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Palette } from 'lucide-react';
-import { ToolCard, ToolTitle } from './ToolShell';
+import { ToolCard, ToolTitle } from '@/features/developer-tools/components/ToolShell';
 
 export default function ColorPickerTool() {
   const [color, setColor] = useState('#D97757');
