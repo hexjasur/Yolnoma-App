@@ -4,6 +4,7 @@ import { Search, Film, Bookmark, ChevronLeft, ChevronRight, AlertCircle, Refresh
 import { usePerformanceList } from '@/features/performance/hooks/usePerformanceQueries';
 import { useSavedVideos } from '@/features/videos/hooks/useSavedVideos';
 import { useVideoSearch } from '@/features/videos/hooks/useVideoQueries';
+import { useAuth } from '@/features/auth/AuthContext';
 import VideoCard from '@/features/videos/components/VideoCard';
 import { Button } from '@/shared/ui';
 import type { EPVideo, VideoOrder } from '@/features/videos/types/video';
@@ -32,7 +33,9 @@ export default function VideosPage() {
     ? (orderParamRaw as VideoOrder)
     : 'latest';
 
-  const topPerformersQuery = usePerformanceList(1, 10, '');
+  const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
+  const topPerformersQuery = usePerformanceList(1, 10, '', isOwner);
   const topPerformers = topPerformersQuery.data?.data ?? [];
 
   const [activeTab, setActiveTab] = useState<'search' | 'saved'>('search');

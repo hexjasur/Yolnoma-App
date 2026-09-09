@@ -30,6 +30,8 @@ export default function LoginPage() {
   const [showEnvPicker, setShowEnvPicker] = useState(false);
   const [showManualCode, setShowManualCode] = useState(false);
   const [manualCode, setManualCode] = useState('');
+  const processedCodes = React.useRef<Set<string>>(new Set());
+  const isExchangingRef = React.useRef<boolean>(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,6 +65,13 @@ export default function LoginPage() {
         cleanCode = decodeURIComponent(match[1]);
       }
     }
+
+    // Deduplicate: prevent duplicate concurrent or repeated exchanges of the same code
+    if (processedCodes.current.has(cleanCode) || isExchangingRef.current) {
+      return;
+    }
+    processedCodes.current.add(cleanCode);
+    isExchangingRef.current = true;
 
     setIsLoading(true);
     setError('');
@@ -122,6 +131,7 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
       setIsWaitingForBrowser(false);
+      isExchangingRef.current = false;
     }
   };
 

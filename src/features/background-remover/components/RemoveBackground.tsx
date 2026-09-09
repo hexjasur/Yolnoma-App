@@ -41,6 +41,10 @@ export default function RemoveBackground() {
     setError(null);
 
     try {
+      if (!apiKey) {
+        throw new Error('Remove.bg API Key is missing. Please check your .env configuration.');
+      }
+
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'X-Api-Key': apiKey },
@@ -48,7 +52,17 @@ export default function RemoveBackground() {
       });
 
       if (!res.ok) {
-        throw new Error(`Request failed: (${res.status})`);
+        let message = `Request failed (${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData?.errors && Array.isArray(errData.errors) && errData.errors[0]) {
+            const firstErr = errData.errors[0];
+            message = firstErr.title
+              ? `${firstErr.title}${firstErr.detail ? `: ${firstErr.detail}` : ''}`
+              : message;
+          }
+        } catch {}
+        throw new Error(message);
       }
 
       const data = await res.blob();

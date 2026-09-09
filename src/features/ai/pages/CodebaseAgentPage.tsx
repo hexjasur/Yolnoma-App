@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { readDir, readTextFile } from '@tauri-apps/plugin-fs';
-import { FolderOpen, Loader2, Send, FileText, Sparkles, KeyRound, RotateCcw } from 'lucide-react';
+import { readDir } from '@tauri-apps/plugin-fs';
+import { Check, FolderOpen, Loader2, FileText, Sparkles, KeyRound, RotateCcw, X } from 'lucide-react';
 import { Button } from '@/shared/ui';
 import { useAuth } from '@/features/auth/AuthContext';
-import { getApiKey } from '@/features/ai-chat/storage';
-import { fetchOpenRouterModels, getShortModelName } from '@/features/ai-chat/api/openRouterApi';
-import { DEFAULT_MODELS, type OpenRouterModel } from '@/features/ai-chat/types';
-import type { ProxyResponse, ToolCall } from '@/features/ai-chat/types';
+import { getApiKey, saveApiKey } from '../storage';
+import { fetchOpenRouterModels, getShortModelName } from '../api/openRouterApi';
+import { DEFAULT_MODELS, type OpenRouterModel } from '../types';
+import type { ProxyResponse, ToolCall } from '../types';
+import ApiKeyModal from '../components/ApiKeyModal';
+import ChatComposer from '../components/ChatComposer';
+import MarkdownContent from '../components/MarkdownContent';
+import { buildCodebaseAgentContext } from '../context/projectContext';
 
 // ---------- Config ----------
 
@@ -34,6 +38,7 @@ type AgentMessage = {
 };
 
 type HistoryTurn = { role: 'user' | 'assistant'; content: string };
+type ToolApproval = { paths: string[] };
 
 type LogEntry =
   | { type: 'reading'; path: string }
@@ -46,13 +51,13 @@ const READ_FILE_TOOL = {
   function: {
     name: 'read_file',
     description:
-      "Tanlangan loyiha papkasi ichidagi bitta faylni o'qiydi va uning matn mazmunini qaytaradi. Faqat nisbiy yo'l (masalan: src/auth/login.ts) ishlatiladi.",
+      'Reads one file inside the selected project and returns its text content. Only relative paths are allowed, such as src/auth/login.ts.',
     parameters: {
       type: 'object',
       properties: {
         path: {
           type: 'string',
-          description: "Loyiha ildizidan nisbiy fayl yo'li, masalan src/auth/login.ts",
+          description: 'A relative path from the project root, such as src/auth/login.ts',
         },
       },
       required: ['path'],
@@ -102,12 +107,14 @@ async function buildFolderTree(rootPath: string): Promise<string> {
 
 async function readProjectFile(rootPath: string, relativePath: string): Promise<string> {
   if (relativePath.includes('..') || relativePath.startsWith('/')) {
-    throw new Error("Ruxsat etilmagan yo'l");
+    throw new Error('Path is not allowed');
   }
-  const fullPath = `${rootPath}/${relativePath}`;
-  const content = await readTextFile(fullPath);
+  const content = await invoke<string>('read_codebase_file', {
+    rootPath,
+    relativePath,
+  });
   return content.length > MAX_FILE_CHARS
-    ? `${content.slice(0, MAX_FILE_CHARS)}\n\n...(fayl kesildi, ${content.length} belgidan ${MAX_FILE_CHARS} tasi ko'rsatildi)...`
+      ? `${content.slice(0, MAX_FILE_CHARS)}\n\n...(file truncated; showing ${MAX_FILE_CHARS} of ${content.length} characters)...`
     : content;
 }
 
@@ -133,22 +140,6 @@ async function requestAgentCompletion(apiKey: string, model: string, messages: A
   });
 }
 
-function buildAgentSystemPrompt(tree: string) {
-  return [
-    'Sen Yolnoma ilovasi ichidagi Codebase Agent — kod bazasini tahlil qiluvchi yordamchisan.',
-    "Foydalanuvchi senga loyiha papkasining fayl strukturasini beradi va savol/topshiriq beradi.",
-    "Javob berishdan oldin, savolga aloqador fayllarni `read_file` tool'i orqali o'qib chiq. Taxmin qilma — faqat haqiqiy kod asosida fikr bildir.",
-    "Bir vaqtning o'zida bir nechta faylni o'qishing mumkin, lekin faqat kerakli fayllarni tanla (hammasini o'qishga urinma).",
-    "Fayl ichidan kerakli narsani topolmasang, boshqa aloqador faylni o'qishga harakat qil.",
-    "Yetarli ma'lumot yig'gach, yakuniy javobni ber: aniq muammolarni fayl nomi bilan ko'rsatib, qisqa va amaliy tarzda.",
-    'Javobni foydalanuvchi savol yozgan tilda ber.',
-    "Suhbat davom etayotgan bo'lsa, oldingi xabarlarni hisobga ol — foydalanuvchi qisqartirib yoki ishora qilib savol berishi mumkin.",
-    '',
-    'Loyiha fayl strukturasi:',
-    tree,
-  ].join('\n');
-}
-
 // ---------- Component ----------
 
 export default function CodebaseAgentPage() {
@@ -156,7 +147,9 @@ export default function CodebaseAgentPage() {
 
   // API key
   const [apiKey, setApiKey] = useState('');
+  const [draftKey, setDraftKey] = useState('');
   const [apiKeyReady, setApiKeyReady] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
 
   // Models
   const [models, setModels] = useState<OpenRouterModel[]>(DEFAULT_MODELS);
@@ -178,6 +171,8 @@ export default function CodebaseAgentPage() {
   const [log, setLog] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pendingApproval, setPendingApproval] = useState<ToolApproval | null>(null);
+  const approvalResolver = useRef<((allowed: boolean) => void) | null>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const historyEndRef = useRef<HTMLDivElement>(null);
 
@@ -186,6 +181,7 @@ export default function CodebaseAgentPage() {
     setApiKeyReady(false);
     getApiKey(user?.id ?? '').then((key) => {
       setApiKey(key ?? '');
+      setDraftKey(key ?? '');
       setApiKeyReady(true);
     });
   }, [user?.id]);
@@ -244,7 +240,7 @@ export default function CodebaseAgentPage() {
     setLog([]);
     setError('');
     messagesRef.current = currentTree
-      ? [{ role: 'system', content: buildAgentSystemPrompt(currentTree) }]
+      ? [{ role: 'system', content: buildCodebaseAgentContext(currentTree) }]
       : [];
   };
 
@@ -260,7 +256,7 @@ export default function CodebaseAgentPage() {
       setTree(scanned);
       resetConversation(scanned);
     } catch (scanError) {
-      setError(scanError instanceof Error ? scanError.message : "Papkani o'qib bo'lmadi");
+      setError(scanError instanceof Error ? scanError.message : 'The project folder could not be read');
     } finally {
       setScanning(false);
     }
@@ -272,15 +268,15 @@ export default function CodebaseAgentPage() {
     if (!text || loading) return;
 
     if (!apiKeyReady) {
-      setError('API key hali yuklanmoqda, biroz kuting.');
+      setError('The API key is still loading. Please wait a moment.');
       return;
     }
     if (!apiKey) {
-      setError("OpenRouter API key topilmadi. AI Chat sahifasida key qo'shilganini tekshiring.");
+      setError('No OpenRouter API key found. Add one using the API key panel.');
       return;
     }
     if (!folderPath || !tree || !messagesRef.current.length) {
-      setError('Avval loyiha papkasini tanlang.');
+      setError('Select a project folder before sending a request.');
       return;
     }
 
@@ -306,7 +302,7 @@ export default function CodebaseAgentPage() {
         }
 
         const message = response.body.choices?.[0]?.message;
-        if (!message) throw new Error('Modeldan javob kelmadi');
+        if (!message) throw new Error('The model returned no response');
 
         messagesRef.current.push({
           role: 'assistant',
@@ -318,6 +314,30 @@ export default function CodebaseAgentPage() {
           setHistory((current) => [...current, { role: 'assistant', content: message.content ?? '' }]);
           setLoading(false);
           return;
+        }
+
+        const approved = await new Promise<boolean>((resolve) => {
+          setPendingApproval({
+            paths: message.tool_calls?.map((call) => {
+              try {
+                return JSON.parse(call.function.arguments).path ?? 'unknown file';
+              } catch {
+                return 'unknown file';
+              }
+            }) ?? [],
+          });
+          approvalResolver.current = resolve;
+        });
+
+        if (!approved) {
+          for (const call of message.tool_calls) {
+            messagesRef.current.push({
+              role: 'tool',
+              tool_call_id: call.id,
+              content: 'Permission denied by the user. Do not read this file.',
+            });
+          }
+          continue;
         }
 
         for (const call of message.tool_calls) {
@@ -334,24 +354,41 @@ export default function CodebaseAgentPage() {
             setLog((current) => [...current, { type: 'read-ok', path: relPath, chars: content.length }]);
             messagesRef.current.push({ role: 'tool', tool_call_id: call.id, content });
           } catch (fileError) {
-            const errMsg = fileError instanceof Error ? fileError.message : "Fayl o'qilmadi";
+            const errMsg = fileError instanceof Error ? fileError.message : 'The file could not be read';
             setLog((current) => [...current, { type: 'read-error', path: relPath, error: errMsg }]);
             messagesRef.current.push({ role: 'tool', tool_call_id: call.id, content: `ERROR: ${errMsg}` });
           }
         }
       }
 
-      throw new Error("Agent juda ko'p qadamdan o'tdi (limit tugadi).");
+      throw new Error('The agent reached its step limit.');
     } catch (agentError) {
-      setError(agentError instanceof Error ? agentError.message : "Noma'lum xatolik");
-      // Xato bo'lsa oxirgi user xabarini xotiradan olib tashlaymiz — keyingi urinish toza bo'lsin
+      setError(agentError instanceof Error ? agentError.message : 'An unknown error occurred.');
+      // Remove the last user message so the next attempt starts cleanly.
       const lastIdx = messagesRef.current.length - 1;
       if (messagesRef.current[lastIdx]?.role === 'user') {
         messagesRef.current = messagesRef.current.slice(0, lastIdx);
       }
+      setHistory((current) => current[current.length - 1]?.role === 'user' ? current.slice(0, -1) : current);
+      setPrompt(text);
+      requestAnimationFrame(() => promptRef.current?.focus());
     } finally {
       setLoading(false);
     }
+  };
+
+  const resolveApproval = (allowed: boolean) => {
+    setPendingApproval(null);
+    approvalResolver.current?.(allowed);
+    approvalResolver.current = null;
+  };
+
+  const saveAgentApiKey = async () => {
+    const cleanKey = draftKey.trim();
+    await saveApiKey(user?.id ?? '', cleanKey);
+    setApiKey(cleanKey);
+    setShowKeyModal(false);
+    setError('');
   };
 
   return (
@@ -372,11 +409,19 @@ export default function CodebaseAgentPage() {
           </div>
           <p className="mt-2 text-[11px] text-white/40">
             {!apiKeyReady
-              ? 'Tekshirilmoqda...'
+              ? 'Checking...'
               : apiKey
-                ? "Topildi (AI Chat'dagi bilan bir xil)"
-                : "Topilmadi — AI Chat sahifasida qo'shing"}
+                ? 'Connected (shared with AI Chat)'
+                : 'Not found — add an API key here'}
           </p>
+          <Button
+            size="sm"
+            variant={apiKey ? 'ghost' : 'primary'}
+            className="mt-3 w-full justify-center"
+            onClick={() => setShowKeyModal(true)}
+          >
+            <KeyRound size={14} /> {apiKey ? 'Change API key' : 'Add API key'}
+          </Button>
         </section>
 
         {/* Model select */}
@@ -399,7 +444,7 @@ export default function CodebaseAgentPage() {
           </select>
           {modelsError && (
             <p className="mt-2 text-[11px] text-amber-300/80">
-              {modelsError} — standart ro'yxat ishlatilmoqda
+              {modelsError} — using the default model list
             </p>
           )}
           <p className="mt-2 truncate text-[10px] text-white/25" title={selectedModel}>
@@ -410,10 +455,10 @@ export default function CodebaseAgentPage() {
         {/* Folder */}
         <section className="rounded-2xl border border-white/[0.08] bg-[#111109] p-4">
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-white">
-            <FolderOpen size={14} /> Loyiha papkasi
+            <FolderOpen size={14} /> Project folder
           </div>
           <Button size="sm" variant="primary" className="w-full justify-center" onClick={pickFolder}>
-            <FolderOpen size={15} /> Papka tanlash
+            <FolderOpen size={15} /> Choose folder
           </Button>
           {folderPath && (
             <p className="mt-3 truncate text-xs text-white/40" title={folderPath}>
@@ -422,12 +467,12 @@ export default function CodebaseAgentPage() {
           )}
           {scanning && (
             <p className="mt-2 flex items-center gap-2 text-xs text-white/40">
-              <Loader2 size={12} className="animate-spin" /> Struktura o'qilmoqda...
+              <Loader2 size={12} className="animate-spin" /> Scanning project structure...
             </p>
           )}
           {tree && !scanning && (
             <p className="mt-2 text-xs text-emerald-300/70">
-              {tree.split('\n').length} ta element topildi
+              {tree.split('\n').length} entries found
             </p>
           )}
         </section>
@@ -435,34 +480,34 @@ export default function CodebaseAgentPage() {
         {/* Activity log */}
         <section className="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/[0.08] bg-[#111109] p-4">
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-white">
-            <Sparkles size={14} /> Agent faoliyati
+            <Sparkles size={14} /> Agent activity
           </div>
           <div className="flex-1 space-y-1.5 overflow-y-auto pr-1 text-xs">
             {log.length === 0 && (
-              <p className="text-white/30">Prompt yuboring — jarayon shu yerda ko'rinadi.</p>
+              <p className="text-white/30">Send a prompt to see the agent activity here.</p>
             )}
             {log.map((entry, i) => {
               if (entry.type === 'thinking')
                 return (
                   <p key={i} className="flex items-center gap-1.5 text-white/40">
-                    <Loader2 size={11} className="animate-spin" /> o'ylayapti...
+                    <Loader2 size={11} className="animate-spin" /> thinking...
                   </p>
                 );
               if (entry.type === 'reading')
                 return (
                   <p key={i} className="flex items-center gap-1.5 text-amber-200/70">
-                    <FileText size={11} /> o'qiyapti: {entry.path}
+                    <FileText size={11} /> reading: {entry.path}
                   </p>
                 );
               if (entry.type === 'read-ok')
                 return (
                   <p key={i} className="flex items-center gap-1.5 text-emerald-300/70">
-                    <FileText size={11} /> o'qildi: {entry.path} ({entry.chars} belgi)
+                    <FileText size={11} /> read: {entry.path} ({entry.chars} chars)
                   </p>
                 );
               return (
                 <p key={i} className="flex items-center gap-1.5 text-red-300/70">
-                  <FileText size={11} /> xato: {entry.path} — {entry.error}
+                  <FileText size={11} /> error: {entry.path} — {entry.error}
                 </p>
               );
             })}
@@ -474,7 +519,7 @@ export default function CodebaseAgentPage() {
       <main className="flex h-[calc(100vh-150px)] min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111109]">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-3">
           <p className="text-xs text-white/40">
-            {history.length ? `${history.length} ta xabar` : 'Suhbat boshlanmagan'}
+            {history.length ? `${history.length} messages` : 'No conversation started'}
           </p>
           <Button
             variant="ghost"
@@ -482,14 +527,14 @@ export default function CodebaseAgentPage() {
             onClick={() => resetConversation(tree)}
             disabled={!history.length || loading}
           >
-            <RotateCcw size={14} /> Yangi suhbat
+            <RotateCcw size={14} /> New conversation
           </Button>
         </header>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           {!history.length && !loading && (
             <p className="text-sm text-white/30">
-              Loyiha papkasini tanlab, savol/topshiriq bering — masalan "auth'da qanday kamchiliklar bor?"
+              Choose a project folder and ask a question — for example, "What issues exist in auth?"
             </p>
           )}
           {history.map((turn, i) => (
@@ -501,12 +546,16 @@ export default function CodebaseAgentPage() {
                   : 'max-w-[95%] whitespace-pre-wrap text-sm leading-relaxed text-white/85'
               }
             >
-              {turn.content}
+              {turn.role === 'assistant' ? (
+                <MarkdownContent content={turn.content} />
+              ) : (
+                turn.content
+              )}
             </div>
           ))}
           {loading && (
             <p className="flex items-center gap-2 text-xs text-white/35">
-              <Loader2 size={13} className="animate-spin" /> tahlil qilinmoqda...
+              <Loader2 size={13} className="animate-spin" /> analyzing...
             </p>
           )}
           {error && (
@@ -517,20 +566,45 @@ export default function CodebaseAgentPage() {
           <div ref={historyEndRef} />
         </div>
 
-        <form onSubmit={runAgent} className="flex shrink-0 gap-2 border-t border-white/[0.07] p-4">
-          <textarea
-            ref={promptRef}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Masalan: auth'da qanday kamchiliklar bor?"
-            rows={2}
-            className="flex-1 resize-none rounded-xl border border-white/[0.08] bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none"
-          />
-          <Button type="submit" variant="primary" disabled={loading || !prompt.trim()}>
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          </Button>
-        </form>
+        {pendingApproval && (
+          <section className="mx-4 mb-3 shrink-0 rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-glow)] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white">The agent requests file access</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">
+                  To answer your question, Codebase Agent wants to read the following project file(s). Review the paths and allow access to continue.
+                </p>
+                <ul className="mt-2 max-h-20 overflow-y-auto space-y-1 text-xs font-mono text-[var(--accent)]">
+                  {pendingApproval.paths.map((path, index) => <li key={`${path}-${index}`}>{path}</li>)}
+                </ul>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button type="button" size="sm" variant="ghost" onClick={() => resolveApproval(false)}>
+                  <X size={14} /> Deny
+                </Button>
+                <Button type="button" size="sm" onClick={() => resolveApproval(true)}>
+                  <Check size={14} /> Allow
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+        <ChatComposer
+          prompt={prompt}
+          loading={loading}
+          promptInputRef={promptRef}
+          onPromptChange={setPrompt}
+          onSubmit={runAgent}
+        />
       </main>
+      {showKeyModal && (
+        <ApiKeyModal
+          draftKey={draftKey}
+          onDraftKeyChange={setDraftKey}
+          onSave={() => void saveAgentApiKey()}
+          onDismiss={() => setShowKeyModal(false)}
+        />
+      )}
     </div>
   );
 }

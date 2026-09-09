@@ -4,6 +4,7 @@
 export const IN_DEVELOPMENT_FEATURES: Record<string, boolean> = {
   marketplace: true,
   'ai-agent': true,
+  agent: true,
 };
 
 // Roles that are permitted to access and test in-development features
@@ -18,6 +19,7 @@ export function isFeatureInDevelopment(featureNameOrPath: string): boolean {
   if (IN_DEVELOPMENT_FEATURES[key]) return true;
   if (key.includes('marketplace')) return true;
   if (key.includes('ai-agent')) return true;
+  if (key === 'agent') return true;
   // if (key.includes('steam/sam') || key.includes('steam-sam')) return true;
   return false;
 }

@@ -28,12 +28,15 @@ import CrosshairOverlayWindow from '@/features/crosshair/pages/CrosshairOverlayW
 import ImageConverterPage from '@/features/image-converter/pages/ImageConverterPage';
 import PortScannerPage from '@/features/port-scanner/pages/PortScannerPage';
 import ArchiveExplorerPage from '@/features/archive-explorer/pages/ArchiveExplorerPage';
-import AiChatPage from '@/features/ai-chat/pages/AiChatPage';
-import AiAgentPage from '@/features/ai-agent/pages/AiAgentPage';
-import CodebaseAgentPage from '@/features/codebase-agent/pages/CodebaseAgentPage';
+import AiChatPage from '@/features/ai/pages/AiChatPage';
+import AiAgentPage from '@/features/ai/pages/AiAgentPage';
+import CodebaseAgentPage from '@/features/ai/pages/CodebaseAgentPage';
 import ViCountdown from '@/features/vi/pages/ViCountdown';
 import World3DPage from '@/features/world3d/pages/World3DPage';
 import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsPage';
+import CssToolsPage from '@/features/css-tools/pages/CssToolsPage';
+import GitPage from '@/features/git/pages/GitPage';
+import FeedbackPage from '@/features/feedback/pages/FeedbackPage';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -51,7 +54,14 @@ export default function AppRoutes() {
 
         {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
-          <Route path="/agent" element={<AiAgentPage />} />
+          <Route
+            path="/agent"
+            element={
+              <DevelopmentGuard featureName="agent">
+                <AiAgentPage />
+              </DevelopmentGuard>
+            }
+          />
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
 
@@ -99,6 +109,9 @@ export default function AppRoutes() {
             <Route path="/tools/ai-chat" element={<AiChatPage />} />
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
             <Route path="/tools/developer-tools" element={<DeveloperToolsPage />} />
+            <Route path="/tools/css-tools" element={<CssToolsPage />} />
+            <Route path="/tools/git" element={<GitPage />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/tools/world-3d" element={<World3DPage />} />
             <Route path="/tools/steam/review" element={<SteamReviewPage />} />
             <Route
