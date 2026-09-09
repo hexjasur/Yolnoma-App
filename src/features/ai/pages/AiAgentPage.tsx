@@ -31,6 +31,11 @@ type ProjectEntry = {
   depth: number;
 };
 
+function joinProjectPath(base: string, name: string) {
+  if (base.endsWith('/') || base.endsWith('\\')) return `${base}${name}`;
+  return `${base}${base.includes('\\') || /^[A-Za-z]:/.test(base) ? '\\' : '/'}${name}`;
+}
+
 function fileIcon(name: string) {
   if (/\.(tsx?|jsx?|vue|svelte|css|scss|html|json|rs|py|go|java)$/i.test(name)) {
     return <FileCode2 size={14} />;
@@ -42,12 +47,20 @@ async function scanProject(rootPath: string): Promise<ProjectEntry[]> {
   const entries: ProjectEntry[] = [];
   async function walk(currentPath: string, depth: number) {
     if (depth > MAX_DEPTH || entries.length >= MAX_FILES) return;
-    const children = await readDir(currentPath);
+    let children;
+    try {
+      children = await readDir(currentPath);
+    } catch (readError) {
+      if (depth === 0) {
+        throw new Error(`Cannot read selected project folder: ${String(readError)}`);
+      }
+      return;
+    }
     children.sort((a, b) => Number(Boolean(b.isDirectory)) - Number(Boolean(a.isDirectory)) || a.name.localeCompare(b.name));
     for (const child of children) {
       if (entries.length >= MAX_FILES || child.name.startsWith('.') && child.name !== '.env.example') continue;
       if (child.isDirectory && IGNORED_DIRECTORIES.has(child.name)) continue;
-      const path = `${currentPath}/${child.name}`;
+      const path = joinProjectPath(currentPath, child.name);
       entries.push({ name: child.name, path, kind: child.isDirectory ? 'directory' : 'file', depth });
       if (child.isDirectory) await walk(path, depth + 1);
     }
@@ -130,7 +143,7 @@ export default function AiAgentPage() {
     if (segments.length <= 1) return true;
     let current = rootPath;
     for (const segment of segments.slice(0, -1)) {
-      current = `${current}/${segment}`;
+      current = joinProjectPath(current, segment);
       if (!expanded.has(current)) return false;
     }
     return true;
