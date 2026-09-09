@@ -12,6 +12,7 @@ import {
   Radar,
   Sparkles,
   Wrench,
+  Palette,
   Trees,
 } from 'lucide-react';
 import ViIcon from '@/assets/VI.svg';
@@ -39,5 +40,6 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   { id: 'steam-sam', label: 'Steam / SAM', description: 'Manage Steam achievements', to: '/tools/steam/sam', icon: Gamepad },
   { id: 'steam-review', label: 'Steam / Review', description: 'Review Steam games', to: '/tools/steam/review', icon: Gamepad2 },
   { id: 'developer-tools', label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', to: '/tools/developer-tools', icon: Wrench },
+  { id: 'css-tools', label: 'CSS Tools', description: 'Gradients, scrollbars & minify', to: '/tools/css-tools', icon: Palette },
   { id: 'world-3d', label: 'Yolnoma World', description: 'Explore the living 3D desktop', to: '/tools/world-3d', icon: Trees },
 ];
