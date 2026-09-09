@@ -30,7 +30,15 @@ pub fn pick_screen_color(window: WebviewWindow) -> Result<String, String> {
         use windows_sys::Win32::Foundation::POINT;
         use windows_sys::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC};
         use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_ESCAPE};
-        use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, DestroyWindow, GetCursorPos, LoadCursorW, SetCursor, SetWindowPos,
+            SetWindowTextW, HWND_TOPMOST, IDC_CROSS, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+            WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP, WS_VISIBLE,
+        };
+
+        fn wide(value: &str) -> Vec<u16> {
+            value.encode_utf16().chain(std::iter::once(0)).collect()
+        }
 
         window.hide().map_err(|error| error.to_string())?;
         thread::sleep(Duration::from_millis(180));
@@ -40,6 +48,26 @@ pub fn pick_screen_color(window: WebviewWindow) -> Result<String, String> {
             let _ = window.show();
             return Err("Windows could not access the desktop screen.".to_string());
         }
+
+        let tooltip_class = wide("STATIC");
+        let tooltip_text = wide("Pick a pixel\nClick to select • Esc to cancel");
+        let tooltip = unsafe {
+            CreateWindowExW(
+                WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                tooltip_class.as_ptr(),
+                tooltip_text.as_ptr(),
+                WS_POPUP | WS_VISIBLE,
+                0,
+                0,
+                250,
+                64,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        };
+        let previous_cursor = unsafe { SetCursor(LoadCursorW(std::ptr::null_mut(), IDC_CROSS)) };
 
         while unsafe { (GetAsyncKeyState(0x01) as u16 & 0x8000) != 0 } {
             thread::sleep(Duration::from_millis(16));
@@ -53,6 +81,30 @@ pub fn pick_screen_color(window: WebviewWindow) -> Result<String, String> {
             let mut point = POINT { x: 0, y: 0 };
             if unsafe { GetCursorPos(&mut point) } == 0 {
                 break Err("Windows could not read the cursor position.".to_string());
+            }
+
+            if !tooltip.is_null() {
+                let pixel = unsafe { GetPixel(screen_dc, point.x, point.y) };
+                if pixel != u32::MAX {
+                    let red = pixel & 0xff;
+                    let green = (pixel >> 8) & 0xff;
+                    let blue = (pixel >> 16) & 0xff;
+                    let live_text = wide(&format!(
+                        "#{red:02X}{green:02X}{blue:02X}\nClick to select • Esc to cancel"
+                    ));
+                    unsafe {
+                        SetWindowTextW(tooltip, live_text.as_ptr());
+                        SetWindowPos(
+                            tooltip,
+                            HWND_TOPMOST,
+                            point.x + 18,
+                            point.y + 18,
+                            250,
+                            64,
+                            SWP_NOACTIVATE | SWP_SHOWWINDOW,
+                        );
+                    }
+                }
             }
 
             if unsafe { (GetAsyncKeyState(0x01) as u16 & 0x8000) != 0 } {
@@ -69,6 +121,10 @@ pub fn pick_screen_color(window: WebviewWindow) -> Result<String, String> {
             thread::sleep(Duration::from_millis(16));
         };
 
+        if !tooltip.is_null() {
+            unsafe { DestroyWindow(tooltip) };
+        }
+        unsafe { SetCursor(previous_cursor) };
         unsafe { ReleaseDC(std::ptr::null_mut(), screen_dc) };
         let _ = window.show();
         let _ = window.set_focus();
