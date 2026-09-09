@@ -35,28 +35,28 @@ pub fn pick_screen_color(window: WebviewWindow) -> Result<String, String> {
         window.hide().map_err(|error| error.to_string())?;
         thread::sleep(Duration::from_millis(180));
 
-        let screen_dc = GetDC(std::ptr::null_mut());
+        let screen_dc = unsafe { GetDC(std::ptr::null_mut()) };
         if screen_dc.is_null() {
             let _ = window.show();
             return Err("Windows could not access the desktop screen.".to_string());
         }
 
-        while (GetAsyncKeyState(0x01) as u16 & 0x8000) != 0 {
+        while unsafe { (GetAsyncKeyState(0x01) as u16 & 0x8000) != 0 } {
             thread::sleep(Duration::from_millis(16));
         }
 
         let result = loop {
-            if (GetAsyncKeyState(VK_ESCAPE as i32) as u16 & 0x8000) != 0 {
+            if unsafe { (GetAsyncKeyState(VK_ESCAPE as i32) as u16 & 0x8000) != 0 } {
                 break Err("Screen color picking cancelled.".to_string());
             }
 
             let mut point = POINT { x: 0, y: 0 };
-            if GetCursorPos(&mut point) == 0 {
+            if unsafe { GetCursorPos(&mut point) } == 0 {
                 break Err("Windows could not read the cursor position.".to_string());
             }
 
-            if (GetAsyncKeyState(0x01) as u16 & 0x8000) != 0 {
-                let pixel = GetPixel(screen_dc, point.x, point.y);
+            if unsafe { (GetAsyncKeyState(0x01) as u16 & 0x8000) != 0 } {
+                let pixel = unsafe { GetPixel(screen_dc, point.x, point.y) };
                 if pixel == u32::MAX {
                     break Err("Windows could not read the selected screen pixel.".to_string());
                 }
@@ -69,7 +69,7 @@ pub fn pick_screen_color(window: WebviewWindow) -> Result<String, String> {
             thread::sleep(Duration::from_millis(16));
         };
 
-        ReleaseDC(std::ptr::null_mut(), screen_dc);
+        unsafe { ReleaseDC(std::ptr::null_mut(), screen_dc) };
         let _ = window.show();
         let _ = window.set_focus();
         return result;
