@@ -28,9 +28,9 @@ import CrosshairOverlayWindow from '@/features/crosshair/pages/CrosshairOverlayW
 import ImageConverterPage from '@/features/image-converter/pages/ImageConverterPage';
 import PortScannerPage from '@/features/port-scanner/pages/PortScannerPage';
 import ArchiveExplorerPage from '@/features/archive-explorer/pages/ArchiveExplorerPage';
-import AiChatPage from '@/features/ai-chat/pages/AiChatPage';
-import AiAgentPage from '@/features/ai-agent/pages/AiAgentPage';
-import CodebaseAgentPage from '@/features/codebase-agent/pages/CodebaseAgentPage';
+import AiChatPage from '@/features/ai/pages/AiChatPage';
+import AiAgentPage from '@/features/ai/pages/AiAgentPage';
+import CodebaseAgentPage from '@/features/ai/pages/CodebaseAgentPage';
 import ViCountdown from '@/features/vi/pages/ViCountdown';
 import World3DPage from '@/features/world3d/pages/World3DPage';
 import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsPage';
