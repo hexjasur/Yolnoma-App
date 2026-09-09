@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   Star,
   Bot,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
@@ -70,6 +71,12 @@ const links: SidebarLink[] = [
     icon: ShoppingCart,
     name: 'marketplace',
     inDevelopment: true,
+  },
+  {
+    to: '/feedback',
+    label: 'Ideas & Bugs',
+    icon: MessageSquarePlus,
+    name: 'feedback',
   },
 ];
 
@@ -164,7 +171,7 @@ export default function Sidebar() {
     {
       label: 'Workspace',
       items: filteredLinks.filter((link) =>
-        ['performances', 'videos', 'users', 'profile', 'marketplace'].includes(
+        ['performances', 'videos', 'users', 'profile', 'marketplace', 'developer-tools', 'feedback'].includes(
           link.name,
         ),
       ),
@@ -172,7 +179,7 @@ export default function Sidebar() {
     {
       label: 'Tools',
       items: filteredLinks
-        .filter((link) => TOOL_CATALOG.some((tool) => tool.id === link.name))
+        .filter((link) => TOOL_CATALOG.some((tool) => tool.id === link.name) && link.name !== 'developer-tools')
         .sort((left, right) => left.label.localeCompare(right.label)),
     },
   ];
@@ -242,6 +249,7 @@ export default function Sidebar() {
                       title={isCollapsed ? label : undefined}
                       onClick={(e) => {
                         if (link.name === 'agent') {
+                          if (handleDevFeatureClick(e, link.name, user?.role)) return;
                           e.preventDefault();
                           void openAgentWindow();
                           return;
@@ -293,7 +301,7 @@ export default function Sidebar() {
                             {!isCollapsed &&
                               TOOL_CATALOG.some(
                                 (tool) => tool.id === link.name,
-                              ) && (
+                              ) && link.name !== 'developer-tools' && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -431,7 +439,7 @@ export default function Sidebar() {
       >
         {!isCollapsed && (
           <p className="text-[11px] text-[var(--text-faint)] px-2 font-mono">
-            {version ? `v${version} — @ 2026 JK Software` : 'Loading…'}
+            {version ? `v${version} — @ 2026 Yolnoma` : 'Loading…'}
           </p>
         )}
       </div>

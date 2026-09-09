@@ -1,31 +1,77 @@
-import { useMemo, useState } from 'react';
-import { Braces, Check, Code2, Copy, Hash, Palette, QrCode, ShieldCheck, WandSparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { Binary, Braces, Code2, Hash, QrCode, ShieldCheck } from 'lucide-react';
+import ToolNavigation from '../components/ToolNavigation';
+import JsonFormatterTool from '../components/JsonFormatterTool';
+import JwtDecoderTool from '../components/JwtDecoderTool';
+import UuidGeneratorTool from '../components/UuidGeneratorTool';
+import MarkdownStudioTool from '../components/MarkdownStudioTool';
+import QrGeneratorTool from '../components/QrGeneratorTool';
+import Base64Tool from '../components/Base64Tool';
 
-type Tab = 'json' | 'jwt' | 'uuid' | 'markdown' | 'color' | 'qr';
-const initialMarkdown = '# Live Markdown\n\nYozishni boshlang — preview darhol yangilanadi.\n\n- **Tezkor**\n- Lokal preview\n- Minimal interfeys';
-const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char] || char));
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64';
+type TabDefinition = [Tab, string, LucideIcon];
 
-function Card({ children }: { children: React.ReactNode }) { return <div className="rounded-2xl border border-white/[0.08] bg-[#111109] p-5">{children}</div>; }
-function ToolButton({ active, icon: Icon, label, onClick }: { active: boolean; icon: typeof Code2; label: string; onClick: () => void }) { return <button type="button" onClick={onClick} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${active ? 'bg-[var(--accent-glow)] text-[var(--accent)]' : 'text-white/55 hover:bg-white/[0.04] hover:text-white'}`}><Icon size={17} />{label}</button>; }
+const tabs: TabDefinition[] = [
+  ['json-formatter', 'JSON Formatter', Braces],
+  ['jwt-decoder', 'JWT Decoder', ShieldCheck],
+  ['uuid-generator', 'UUID Generator', Hash],
+  ['markdown-studio', 'Markdown Studio', Code2],
+  ['base64', 'Base64 Encoder', Binary],
+  ['qr-generator', 'QR Generator', QrCode],
+];
+
+const tabIds = new Set<Tab>(tabs.map(([id]) => id));
+
+function readTabFromUrl(): Tab {
+  const hash = window.location.hash;
+  const hashParts = hash.split('#');
+  const nestedHash = hashParts[hashParts.length - 1];
+  if (nestedHash && tabIds.has(nestedHash as Tab)) return nestedHash as Tab;
+  const query = hash.split('?')[1];
+  const value = query ? new URLSearchParams(query).get('tab') : null;
+  return value && tabIds.has(value as Tab) ? value as Tab : 'json-formatter';
+}
 
 export default function DeveloperToolsPage() {
-  const [tab, setTab] = useState<Tab>('json');
-  const [json, setJson] = useState('{"name":"Yolnoma","features":["weather","tools"]}');
-  const [jwt, setJwt] = useState('');
-  const [markdown, setMarkdown] = useState(initialMarkdown);
-  const [color, setColor] = useState('#D97757');
-  const [qrText, setQrText] = useState('https://github.com/hexjasur/Yolnoma-App');
-  const [uuid, setUuid] = useState(() => crypto.randomUUID());
-  const [copied, setCopied] = useState(false);
-  const jsonResult = useMemo(() => { try { return { value: JSON.stringify(JSON.parse(json), null, 2), error: '' }; } catch { return { value: '', error: 'JSON sintaksisi noto‘g‘ri.' }; } }, [json]);
-  const jwtResult = useMemo(() => { try { const parts = jwt.split('.'); if (parts.length !== 3) return { header: '', payload: '', error: 'JWT uch qismdan iborat bo‘lishi kerak.' }; const decode = (part: string) => JSON.stringify(JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))), null, 2); return { header: decode(parts[0]), payload: decode(parts[1]), error: '' }; } catch { return { header: '', payload: '', error: 'JWT decode qilib bo‘lmadi.' }; } }, [jwt]);
-  const markdownHtml = useMemo(() => escapeHtml(markdown).replace(/^### (.*)$/gm, '<h3>$1</h3>').replace(/^## (.*)$/gm, '<h2>$1</h2>').replace(/^# (.*)$/gm, '<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/^- (.*)$/gm, '<li>$1</li>').replace(/\n/g, '<br />'), [markdown]);
-  const copy = async (value: string) => { await navigator.clipboard.writeText(value); setCopied(true); window.setTimeout(() => setCopied(false), 1400); };
-  const pickColor = async () => { const eyeDropper = (window as Window & { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper; if (!eyeDropper) return; try { setColor((await new eyeDropper().open()).sRGBHex); } catch { /* user cancelled */ } };
-  const generateUuid = () => { const next = crypto.randomUUID(); setUuid(next); void copy(next); };
-  const tabs: [Tab, string, typeof Code2][] = [['json', 'JSON Formatter', Braces], ['jwt', 'JWT Decoder', ShieldCheck], ['uuid', 'UUID Generator', Hash], ['markdown', 'Markdown Live', Code2], ['color', 'Color Picker', Palette], ['qr', 'QR Generator', QrCode]];
+  const [tab, setTab] = useState<Tab>(readTabFromUrl);
 
-  return <div className="mx-auto max-w-6xl space-y-8 pb-16 text-[var(--text-primary)]"><header><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Developer Tools</p><h1 className="mt-2 font-serif text-4xl font-medium text-white">Small tools, zero friction</h1><p className="mt-2 max-w-2xl text-sm text-white/45">JSON’dan QR kodgacha — kundalik developer ishlarini ilovadan chiqmasdan bajaring.</p></header><div className="grid grid-cols-1 gap-6 lg:grid-cols-[230px_1fr]"><nav className="space-y-2 rounded-2xl border border-white/[0.08] bg-[#111109] p-3">{tabs.map(([id, label, Icon]) => <ToolButton key={id} active={tab === id} icon={Icon} label={label} onClick={() => setTab(id)} />)}</nav><main className="space-y-5">{tab === 'json' && <Card><Title icon={Braces} text="JSON Formatter / Validator" /><textarea value={json} onChange={(event) => setJson(event.target.value)} className="mt-5 min-h-44 w-full rounded-xl border border-white/10 bg-black/20 p-4 font-mono text-sm text-white/80 outline-none focus:border-[var(--accent)]" /><div className={`mt-3 rounded-xl p-3 text-xs ${jsonResult.error ? 'bg-red-400/10 text-red-300' : 'bg-emerald-400/10 text-emerald-300'}`}>{jsonResult.error || 'Valid JSON'}</div>{!jsonResult.error && <Output value={jsonResult.value} onCopy={copy} />}</Card>}{tab === 'jwt' && <Card><Title icon={ShieldCheck} text="JWT Decoder" /><input value={jwt} onChange={(event) => setJwt(event.target.value)} placeholder="Paste your JWT token" className="mt-5 w-full rounded-xl border border-white/10 bg-black/20 p-4 font-mono text-sm text-white/80 outline-none focus:border-[var(--accent)]" />{jwt && <><div className="mt-4 grid gap-4 md:grid-cols-2"><Output label="Header" value={jwtResult.header} onCopy={copy} /><Output label="Payload" value={jwtResult.payload} onCopy={copy} /></div><p className="mt-3 text-xs text-amber-300/70">Faqat decode qilinadi — signature verification emas. Token lokal ravishda qayta ishlanadi.</p></>}</Card>}{tab === 'uuid' && <Card><Title icon={Hash} text="UUID Generator" /><div className="mt-8 flex flex-col items-center gap-5"><p className="font-mono text-2xl tracking-wide text-white">{uuid}</p><button type="button" onClick={generateUuid} className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[#17130e]"><WandSparkles size={16} /> Generate & copy</button></div></Card>}{tab === 'markdown' && <Card><Title icon={Code2} text="Markdown Live Preview" /><div className="mt-5 grid gap-4 md:grid-cols-2"><textarea value={markdown} onChange={(event) => setMarkdown(event.target.value)} className="min-h-80 rounded-xl border border-white/10 bg-black/20 p-4 font-mono text-sm text-white/80 outline-none focus:border-[var(--accent)]" /><article className="prose prose-invert min-h-80 rounded-xl border border-white/[0.06] bg-white/[0.025] p-5 text-sm leading-7" dangerouslySetInnerHTML={{ __html: markdownHtml }} /></div></Card>}{tab === 'color' && <Card><Title icon={Palette} text="Color Picker" /><div className="mt-6 flex flex-wrap items-center gap-5"><input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-24 w-24 cursor-pointer rounded-2xl border-0 bg-transparent" /><div><p className="font-mono text-3xl text-white">{color}</p><button type="button" onClick={() => void pickColor()} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/[0.06]"><Palette size={15} /> Pick from screen</button><p className="mt-2 text-xs text-white/35">EyeDropper qo‘llansa, istalgan oynadan rang oling.</p></div></div></Card>}{tab === 'qr' && <Card><Title icon={QrCode} text="QR Code Generator" /><div className="mt-5 flex flex-col gap-5 md:flex-row md:items-start"><textarea value={qrText} onChange={(event) => setQrText(event.target.value)} className="min-h-28 flex-1 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white/80 outline-none focus:border-[var(--accent)]" placeholder="Text yoki URL..." />{qrText && <img className="h-44 w-44 rounded-xl bg-white p-2" alt="Generated QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`} />}</div><p className="mt-3 text-xs text-white/35">QR rasm generatsiyasi QRServer public endpoint orqali amalga oshiriladi.</p></Card>}<div className="flex min-h-5 items-center justify-end gap-2 text-xs text-emerald-300/80">{copied && <><Check size={14} /> Copied to clipboard</>}</div></main></div></div>;
+  useEffect(() => {
+    const onHashChange = () => setTab(readTabFromUrl());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    const routeHash = window.location.hash.split('?')[0].split('#')[0] || '#/tools/developer-tools';
+    window.location.hash = `${routeHash}?tab=${next}`;
+  };
+
+  return (
+    <div className="mx-auto min-h-full max-w-7xl pb-16 text-[var(--text-primary)]">
+      <header className="border-b border-white/[0.08] pb-8">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Developer Tools</p>
+        <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div>
+            <h1 className="font-serif text-4xl font-medium tracking-tight text-white md:text-5xl">A sharper workspace for everyday code</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Format data, inspect tokens, write Markdown, generate IDs, pick colors, and create QR codes without leaving Yolnoma.</p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-white/35"><span className="h-2 w-2 bg-emerald-400" /> Local-first tools</div>
+        </div>
+      </header>
+
+      <div className="mt-8">
+        <ToolNavigation items={tabs} active={tab} onChange={selectTab} />
+        <main className="mt-8 min-w-0">
+          {tab === 'json-formatter' && <JsonFormatterTool />}
+          {tab === 'jwt-decoder' && <JwtDecoderTool />}
+          {tab === 'uuid-generator' && <UuidGeneratorTool />}
+          {tab === 'markdown-studio' && <MarkdownStudioTool />}
+          {tab === 'base64' && <Base64Tool />}
+          {tab === 'qr-generator' && <QrGeneratorTool />}
+        </main>
+      </div>
+    </div>
+  );
 }
-function Title({ icon: Icon, text }: { icon: typeof Code2; text: string }) { return <div className="flex items-center gap-3"><Icon size={19} className="text-[var(--accent)]" /><h2 className="font-semibold text-white">{text}</h2></div>; }
-function Output({ label, value, onCopy }: { label?: string; value: string; onCopy: (value: string) => void }) { return <div className="mt-4"><div className="mb-2 flex items-center justify-between">{label && <span className="text-xs uppercase tracking-wider text-white/35">{label}</span>}<button type="button" onClick={() => void onCopy(value)} className="ml-auto text-white/40 hover:text-white"><Copy size={14} /></button></div><pre className="max-h-72 overflow-auto rounded-xl bg-black/20 p-4 text-xs leading-6 text-white/65">{value}</pre></div>; }

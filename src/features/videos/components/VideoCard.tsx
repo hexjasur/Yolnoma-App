@@ -72,7 +72,7 @@ function VideoCard({ video }: VideoCardProps) {
             {/* Views */}
             <div className="flex items-center gap-1">
               <Eye size={12} />
-              <span>{formattedViews} marta ko'rildi</span>
+              <span>Viewed {formattedViews} times</span>
             </div>
           </div>
         </div>

@@ -129,6 +129,20 @@ pub async fn scan_ports(
         return Err("Host cannot be empty".to_string());
     }
 
+    // ===================================================================================
+    // ===================================================================================
+    // ===================================================================================
+    // TODO: Allow scanning only of localhost — SSRF / network reconnaissance protection
+    let allowed_hosts: &[&str] = &["localhost", "127.0.0.1", "::1"];
+    if !allowed_hosts.contains(&host.as_str()) {
+        return Err(
+            "Port scanning is only allowed for localhost (127.0.0.1 / ::1)".to_string()
+        );
+    }
+    // ===================================================================================
+    // ===================================================================================
+    // ===================================================================================
+
     if ports.is_empty() {
         return Err("No ports specified for scanning".to_string());
     }
