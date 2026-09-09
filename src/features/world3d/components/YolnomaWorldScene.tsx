@@ -15,6 +15,7 @@ import {
   createWoodenTable,
   type Creature,
 } from './worldObjects';
+import { createCosmicBackground } from './cosmicBackground';
 
 export default function YolnomaWorld({
   onSelect,
@@ -69,26 +70,8 @@ export default function YolnomaWorld({
     moonLight.shadow.camera.bottom = -28;
     scene.add(moonLight);
 
-    const stars = new THREE.Points(
-      new THREE.BufferGeometry(),
-      new THREE.PointsMaterial({
-        color: '#b9dcff',
-        size: 0.08,
-        transparent: true,
-        opacity: 0.8,
-      }),
-    );
-    const starPositions = new Float32Array(600 * 3);
-    for (let i = 0; i < 600; i += 1) {
-      starPositions[i * 3] = (Math.random() - 0.5) * 100;
-      starPositions[i * 3 + 1] = Math.random() * 55 + 4;
-      starPositions[i * 3 + 2] = (Math.random() - 0.5) * 100;
-    }
-    stars.geometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(starPositions, 3),
-    );
-    scene.add(stars);
+    const cosmicBackground = createCosmicBackground();
+    scene.add(cosmicBackground.group);
 
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(28, 96),
@@ -322,6 +305,7 @@ export default function YolnomaWorld({
         ((dot as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity =
           0.45 + (Math.sin(elapsed * 2 + dot.userData.phase) + 1) * 0.25;
       });
+      cosmicBackground.update(camera);
 
       creaturesRef.current.forEach((creature) => {
         if (creature.type === 'sitter') {
@@ -385,7 +369,6 @@ export default function YolnomaWorld({
         }
       });
 
-      stars.rotation.y = elapsed * 0.002;
       renderer.render(scene, camera);
     };
     animate();
@@ -407,6 +390,7 @@ export default function YolnomaWorld({
         preventContextMenu,
       );
       controls.dispose();
+      cosmicBackground.dispose();
       renderer.dispose();
       mount.removeChild(renderer.domElement);
       scene.traverse((object) => {
