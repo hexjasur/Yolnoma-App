@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Binary, Braces, Code2, Hash, QrCode, ShieldCheck } from 'lucide-react';
+import { Binary, Braces, Code2, Hash, QrCode, ShieldCheck, Terminal } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
@@ -8,8 +8,9 @@ import UuidGeneratorTool from '../components/UuidGeneratorTool';
 import MarkdownStudioTool from '../components/MarkdownStudioTool';
 import QrGeneratorTool from '../components/QrGeneratorTool';
 import Base64Tool from '../components/Base64Tool';
+import CurlConverterTool from '../components/CurlConverterTool';
 
-type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
@@ -19,6 +20,7 @@ const tabs: TabDefinition[] = [
   ['markdown-studio', 'Markdown Studio', Code2],
   ['base64', 'Base64 Encoder', Binary],
   ['qr-generator', 'QR Generator', QrCode],
+  ['curl-converter', 'cURL → Code', Terminal],
 ];
 
 const tabIds = new Set<Tab>(tabs.map(([id]) => id));
@@ -70,6 +72,7 @@ export default function DeveloperToolsPage() {
           {tab === 'markdown-studio' && <MarkdownStudioTool />}
           {tab === 'base64' && <Base64Tool />}
           {tab === 'qr-generator' && <QrGeneratorTool />}
+          {tab === 'curl-converter' && <CurlConverterTool />}
         </main>
       </div>
     </div>
