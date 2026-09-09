@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Minimize2 } from 'lucide-react';
-import { ToolCard, ToolTitle } from './ToolShell';
+import { ToolCard, ToolTitle } from '@/features/developer-tools/components/ToolShell';
 
 type MinifyMode = 'html' | 'css' | 'js';
 

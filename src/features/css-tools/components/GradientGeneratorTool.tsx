@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Copy, Download, Plus, RotateCcw, WandSparkles } from 'lucide-react';
-import { ToolCard, ToolTitle } from './ToolShell';
+import { ToolCard, ToolTitle } from '@/features/developer-tools/components/ToolShell';
 import { toast } from '@/shared/ui/Toast';
 
 type GradientType = 'linear' | 'radial' | 'conic' | 'repeating-linear' | 'repeating-radial';

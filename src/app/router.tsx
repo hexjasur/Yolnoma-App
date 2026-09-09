@@ -34,6 +34,7 @@ import CodebaseAgentPage from '@/features/ai/pages/CodebaseAgentPage';
 import ViCountdown from '@/features/vi/pages/ViCountdown';
 import World3DPage from '@/features/world3d/pages/World3DPage';
 import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsPage';
+import CssToolsPage from '@/features/css-tools/pages/CssToolsPage';
 import FeedbackPage from '@/features/feedback/pages/FeedbackPage';
 
 export default function AppRoutes() {
@@ -107,6 +108,7 @@ export default function AppRoutes() {
             <Route path="/tools/ai-chat" element={<AiChatPage />} />
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
             <Route path="/tools/developer-tools" element={<DeveloperToolsPage />} />
+            <Route path="/tools/css-tools" element={<CssToolsPage />} />
             <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/tools/world-3d" element={<World3DPage />} />
             <Route path="/tools/steam/review" element={<SteamReviewPage />} />
