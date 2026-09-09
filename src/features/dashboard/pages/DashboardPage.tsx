@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type DragEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -8,6 +8,7 @@ import {
   Layers,
   Shield,
   Monitor,
+  GripVertical,
 } from 'lucide-react';
 import { usePerformances } from '@/features/performance/hooks/usePerformances';
 import { useSystemStats } from '@/features/system-monitor/hooks/useSystemStats';
@@ -21,7 +22,8 @@ import WeatherCard from '@/features/weather/components/WeatherCard';
 export default function HomePage() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
-  const { pinnedTools } = usePinnedTools();
+  const { pinnedTools, movePinnedTool } = usePinnedTools();
+  const [draggedToolId, setDraggedToolId] = useState<string | null>(null);
 
   // Real-time system monitoring toggle — persisted in config.json
   const monitoringEnabled = useAccountConfigStore((s) => s.config.systemMonitoring);
@@ -29,6 +31,20 @@ export default function HomePage() {
 
   const toggleMonitoring = () => {
     updateConfig({ systemMonitoring: !monitoringEnabled });
+  };
+
+  const handleToolDragStart = (event: DragEvent<HTMLDivElement>, toolId: string) => {
+    setDraggedToolId(toolId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', toolId);
+  };
+
+  const handleToolDrop = (event: DragEvent<HTMLDivElement>, targetToolId: string) => {
+    event.preventDefault();
+    const sourceToolId = event.dataTransfer.getData('text/plain') || draggedToolId;
+    if (!sourceToolId || sourceToolId === targetToolId) return;
+
+    movePinnedTool(pinnedTools.indexOf(sourceToolId), pinnedTools.indexOf(targetToolId));
   };
 
   // Native local system stats with 2s visibility-aware polling (only when enabled)
@@ -263,37 +279,46 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {TOOL_CATALOG.filter((tool) => pinnedTools.includes(tool.id)).map(
-              (tool) => {
+            {pinnedTools.map((toolId) => {
+                const tool = TOOL_CATALOG.find((candidate) => candidate.id === toolId);
+                if (!tool) return null;
                 const Icon = tool.icon;
                 return (
-                  <Link
+                  <div
                     key={tool.id}
-                    to={tool.to}
-                    onClick={(e) =>
-                      handleDevFeatureClick(e, tool.id, user?.role)
-                    }
-                    className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg"
+                    draggable
+                    onDragStart={(event) => handleToolDragStart(event, tool.id)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleToolDrop(event, tool.id)}
+                    onDragEnd={() => setDraggedToolId(null)}
+                    className={`group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg ${draggedToolId === tool.id ? 'cursor-grabbing opacity-50' : 'cursor-grab'}`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Icon size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
-                        {tool.label}
-                      </p>
-                      <p className="text-xs text-white/40 truncate">
-                        {tool.description}
-                      </p>
-                    </div>
-                    <ArrowRight
-                      size={15}
-                      className="ml-auto shrink-0 text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all"
+                    <Link
+                      to={tool.to}
+                      draggable={false}
+                      onClick={(event) => handleDevFeatureClick(event, tool.id, user?.role)}
+                      className="flex min-w-0 flex-1 items-center gap-3.5"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Icon size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
+                          {tool.label}
+                        </p>
+                        <p className="text-xs text-white/40 truncate">
+                          {tool.description}
+                        </p>
+                      </div>
+                    </Link>
+                    <GripVertical
+                      size={18}
+                      aria-label="Drag to reorder"
+                      className="ml-auto shrink-0 text-white/35 transition-colors group-hover:text-[var(--accent)]"
                     />
-                  </Link>
+                  </div>
                 );
-              },
-            )}
+              })}
           </div>
         )}
       </section>
