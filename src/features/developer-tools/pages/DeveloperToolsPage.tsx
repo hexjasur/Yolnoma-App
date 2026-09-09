@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Binary, Braces, Code2, Hash, Minimize2, Palette, QrCode, ShieldCheck } from 'lucide-react';
+import { Binary, Braces, Code2, Hash, Minimize2, Palette, QrCode, ShieldCheck, WandSparkles } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
@@ -10,8 +10,9 @@ import ColorPickerTool from '../components/ColorPickerTool';
 import QrGeneratorTool from '../components/QrGeneratorTool';
 import MinifyTool from '../components/MinifyTool';
 import Base64Tool from '../components/Base64Tool';
+import GradientGeneratorTool from '../components/GradientGeneratorTool';
 
-type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'color-picker' | 'qr-generator' | 'minify' | 'base64';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'color-picker' | 'qr-generator' | 'minify' | 'base64' | 'gradient-generator';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
@@ -21,6 +22,7 @@ const tabs: TabDefinition[] = [
   ['markdown-studio', 'Markdown Studio', Code2],
   ['minify', 'HTML / CSS / JS Minify', Minimize2],
   ['base64', 'Base64 Encoder', Binary],
+  ['gradient-generator', 'Gradient Generator', WandSparkles],
   ['color-picker', 'Color Picker', Palette],
   ['qr-generator', 'QR Generator', QrCode],
 ];
@@ -74,6 +76,7 @@ export default function DeveloperToolsPage() {
           {tab === 'markdown-studio' && <MarkdownStudioTool />}
           {tab === 'minify' && <MinifyTool />}
           {tab === 'base64' && <Base64Tool />}
+          {tab === 'gradient-generator' && <GradientGeneratorTool />}
           {tab === 'color-picker' && <ColorPickerTool />}
           {tab === 'qr-generator' && <QrGeneratorTool />}
         </main>
