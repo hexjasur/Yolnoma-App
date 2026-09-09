@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import StandaloneTabBar from './StandaloneTabBar';
@@ -6,6 +7,13 @@ import { useIsStandalone } from '@/shared/lib/window';
 
 export default function Layout() {
   const isStandalone = useIsStandalone();
+  const [paletteFocus, setPaletteFocus] = useState(false);
+
+  useEffect(() => {
+    const onFocus = (event: Event) => setPaletteFocus((event as CustomEvent<boolean>).detail === true);
+    window.addEventListener('yolnoma:palette-focus', onFocus);
+    return () => window.removeEventListener('yolnoma:palette-focus', onFocus);
+  }, []);
 
   if (isStandalone) {
     return (
@@ -35,7 +43,7 @@ export default function Layout() {
         style={{ background: '#D97757' }}
       />
 
-      <Sidebar />
+      {!paletteFocus && <Sidebar />}
 
       <main className="flex-1 flex flex-col overflow-hidden relative z-10">
         <Navbar />
