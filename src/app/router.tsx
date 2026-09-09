@@ -37,7 +37,6 @@ import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsP
 import CssToolsPage from '@/features/css-tools/pages/CssToolsPage';
 import GitPage from '@/features/git/pages/GitPage';
 import FeedbackPage from '@/features/feedback/pages/FeedbackPage';
-import CommandPalette from './components/CommandPalette';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -203,7 +202,6 @@ export default function AppRoutes() {
           </Route>
         </Route>
       </Routes>
-      <CommandPalette />
     </HashRouter>
   );
 }
