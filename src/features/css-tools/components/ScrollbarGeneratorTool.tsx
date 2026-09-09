@@ -42,6 +42,10 @@ export default function ScrollbarGeneratorTool() {
   background: var(--scrollbar-thumb);
   border: var(--scrollbar-border-width) solid var(--scrollbar-border-color);
   border-radius: var(--scrollbar-radius);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  filter: brightness(1.12);
 }`, [thumbColor, trackColor, width, radius, borderWidth, borderColor]);
 
   const copyCss = async () => {
@@ -72,10 +76,11 @@ export default function ScrollbarGeneratorTool() {
       </aside>
       <div className="min-w-0">
         <div className="mb-2 flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Live preview</span><span className="text-xs text-white/35">Drag the panel to test scrolling</span></div>
-        <div className="h-40 overflow-y-scroll border border-white/[0.08] bg-[#171d22] p-5 text-sm leading-7 text-white/55" style={{ scrollbarColor: `${thumbColor} ${trackColor}`, scrollbarWidth: width <= 8 ? 'thin' : 'auto', ['--scrollbar-width' as string]: `${width}px` }}>
+        <div className="scrollbar-preview h-40 overflow-y-scroll border border-white/[0.08] bg-[#171d22] p-5 text-sm leading-7 text-white/55" style={{ scrollbarColor: `${thumbColor} ${trackColor}`, scrollbarWidth: width <= 8 ? 'thin' : 'auto', ['--scrollbar-width' as string]: `${width}px`, ['--scrollbar-radius' as string]: `${radius}px`, ['--scrollbar-border-width' as string]: `${borderWidth}px`, ['--scrollbar-border-color' as string]: borderColor, ['--scrollbar-thumb' as string]: thumbColor, ['--scrollbar-track' as string]: trackColor }}>
           <div style={{ width: '130%' }}>A calm, balanced scrollbar keeps the interface feeling intentional. This preview contains enough content to test the thumb, track, radius, and contrast before you ship the CSS.</div>
           <div className="mt-4" style={{ width: '130%' }}>Scrollbar colors work across modern browsers with the standards-based properties and the WebKit selectors below.</div>
         </div>
+        <style>{`.scrollbar-preview::-webkit-scrollbar { width: var(--scrollbar-width); height: var(--scrollbar-width); } .scrollbar-preview::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: var(--scrollbar-radius); } .scrollbar-preview::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border: var(--scrollbar-border-width) solid var(--scrollbar-border-color); border-radius: var(--scrollbar-radius); } .scrollbar-preview::-webkit-scrollbar-thumb:hover { filter: brightness(1.12); }`}</style>
         <div className="mt-6 flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Generated CSS</span><div className="flex gap-4"><button type="button" onClick={() => void copyCss()} className="inline-flex items-center gap-1.5 text-xs text-white/45 hover:text-white"><Copy size={13} /> Copy</button><button type="button" onClick={downloadCss} className="inline-flex items-center gap-1.5 text-xs text-white/45 hover:text-white"><Download size={13} /> Download</button></div></div>
         <pre className="mt-2 max-h-[30rem] overflow-auto border border-white/[0.08] bg-[#0d0d0a] p-5 font-mono text-xs leading-6 text-emerald-100/75">{css}</pre>
       </div>
