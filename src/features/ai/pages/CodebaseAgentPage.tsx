@@ -12,6 +12,7 @@ import type { ProxyResponse, ToolCall } from '../types';
 import ApiKeyModal from '../components/ApiKeyModal';
 import ChatComposer from '../components/ChatComposer';
 import MarkdownContent from '../components/MarkdownContent';
+import { buildCodebaseAgentContext } from '../context/projectContext';
 
 // ---------- Config ----------
 
@@ -136,22 +137,6 @@ async function requestAgentCompletion(apiKey: string, model: string, messages: A
   });
 }
 
-function buildAgentSystemPrompt(tree: string) {
-  return [
-    'Sen Yolnoma ilovasi ichidagi Codebase Agent — kod bazasini tahlil qiluvchi yordamchisan.',
-    "Foydalanuvchi senga loyiha papkasining fayl strukturasini beradi va savol/topshiriq beradi.",
-    "Javob berishdan oldin, savolga aloqador fayllarni `read_file` tool'i orqali o'qib chiq. Taxmin qilma — faqat haqiqiy kod asosida fikr bildir.",
-    "Bir vaqtning o'zida bir nechta faylni o'qishing mumkin, lekin faqat kerakli fayllarni tanla (hammasini o'qishga urinma).",
-    "Fayl ichidan kerakli narsani topolmasang, boshqa aloqador faylni o'qishga harakat qil.",
-    "Yetarli ma'lumot yig'gach, yakuniy javobni ber: aniq muammolarni fayl nomi bilan ko'rsatib, qisqa va amaliy tarzda.",
-    'Javobni foydalanuvchi savol yozgan tilda ber.',
-    "Suhbat davom etayotgan bo'lsa, oldingi xabarlarni hisobga ol — foydalanuvchi qisqartirib yoki ishora qilib savol berishi mumkin.",
-    '',
-    'Loyiha fayl strukturasi:',
-    tree,
-  ].join('\n');
-}
-
 // ---------- Component ----------
 
 export default function CodebaseAgentPage() {
@@ -250,7 +235,7 @@ export default function CodebaseAgentPage() {
     setLog([]);
     setError('');
     messagesRef.current = currentTree
-      ? [{ role: 'system', content: buildAgentSystemPrompt(currentTree) }]
+      ? [{ role: 'system', content: buildCodebaseAgentContext(currentTree) }]
       : [];
   };
 

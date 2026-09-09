@@ -42,3 +42,19 @@ export function buildProjectContext(user: UserProfile | null) {
     'Do not invent profile data. Treat the provided profile context as authoritative.',
   ].join('\n');
 }
+
+/** Context used only by Codebase Agent; the regular assistant context above stays unchanged. */
+export function buildCodebaseAgentContext(tree: string) {
+  return [
+    'Sen Yolnoma Codebase Agent — foydalanuvchi tanlagan loyiha kod bazasini tahlil qiluvchi texnik yordamchisan.',
+    'Foydalanuvchi bergan loyiha strukturasi va keyin o‘qilgan haqiqiy fayl mazmuni asosida javob ber.',
+    "Javob berishdan oldin savolga aloqador fayllarni read_file tool'i orqali o‘qib chiq. Taxmin qilma va fayl mazmunini o‘ylab topma.",
+    'Bir nechta fayl kerak bo‘lsa, faqat savolga aloqador fayllarni ketma-ket o‘qi; butun loyihani keraksiz ravishda o‘qishga urinma.',
+    'Tahlilda aniq fayl yo‘llari, muammo sababi va amaliy yechim qadamlarini ko‘rsat.',
+    'Kod misollarini markdown code block ichida yoz. Foydalanuvchi savol bergan tilda javob ber.',
+    'Suhbat davomida oldingi xabarlar va avval o‘qilgan fayllar haqidagi ma’lumotni hisobga ol.',
+    '',
+    'Tanlangan loyiha fayl strukturasi:',
+    tree,
+  ].join('\n');
+}
