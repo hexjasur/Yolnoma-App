@@ -2,13 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir, readTextFile } from '@tauri-apps/plugin-fs';
-import { FolderOpen, Loader2, Send, FileText, Sparkles, KeyRound, RotateCcw } from 'lucide-react';
+import { FolderOpen, Loader2, FileText, Sparkles, KeyRound, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/ui';
 import { useAuth } from '@/features/auth/AuthContext';
-import { getApiKey } from '@/features/ai-chat/storage';
-import { fetchOpenRouterModels, getShortModelName } from '@/features/ai-chat/api/openRouterApi';
-import { DEFAULT_MODELS, type OpenRouterModel } from '@/features/ai-chat/types';
-import type { ProxyResponse, ToolCall } from '@/features/ai-chat/types';
+import { getApiKey, saveApiKey } from '../storage';
+import { fetchOpenRouterModels, getShortModelName } from '../api/openRouterApi';
+import { DEFAULT_MODELS, type OpenRouterModel } from '../types';
+import type { ProxyResponse, ToolCall } from '../types';
+import ApiKeyModal from '../components/ApiKeyModal';
+import ChatComposer from '../components/ChatComposer';
+import MarkdownContent from '../components/MarkdownContent';
 
 // ---------- Config ----------
 
@@ -156,7 +159,9 @@ export default function CodebaseAgentPage() {
 
   // API key
   const [apiKey, setApiKey] = useState('');
+  const [draftKey, setDraftKey] = useState('');
   const [apiKeyReady, setApiKeyReady] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
 
   // Models
   const [models, setModels] = useState<OpenRouterModel[]>(DEFAULT_MODELS);
@@ -186,6 +191,7 @@ export default function CodebaseAgentPage() {
     setApiKeyReady(false);
     getApiKey(user?.id ?? '').then((key) => {
       setApiKey(key ?? '');
+      setDraftKey(key ?? '');
       setApiKeyReady(true);
     });
   }, [user?.id]);
@@ -354,6 +360,14 @@ export default function CodebaseAgentPage() {
     }
   };
 
+  const saveAgentApiKey = async () => {
+    const cleanKey = draftKey.trim();
+    await saveApiKey(user?.id ?? '', cleanKey);
+    setApiKey(cleanKey);
+    setShowKeyModal(false);
+    setError('');
+  };
+
   return (
     <div className="mx-auto grid h-full min-h-0 w-full max-w-none gap-5 overflow-hidden pb-4 lg:grid-cols-[300px_minmax(0,1fr)]">
       {/* Sidebar */}
@@ -377,6 +391,14 @@ export default function CodebaseAgentPage() {
                 ? "Topildi (AI Chat'dagi bilan bir xil)"
                 : "Topilmadi — AI Chat sahifasida qo'shing"}
           </p>
+          <Button
+            size="sm"
+            variant={apiKey ? 'ghost' : 'primary'}
+            className="mt-3 w-full justify-center"
+            onClick={() => setShowKeyModal(true)}
+          >
+            <KeyRound size={14} /> {apiKey ? 'API keyni almashtirish' : 'API key kiritish'}
+          </Button>
         </section>
 
         {/* Model select */}
@@ -501,7 +523,11 @@ export default function CodebaseAgentPage() {
                   : 'max-w-[95%] whitespace-pre-wrap text-sm leading-relaxed text-white/85'
               }
             >
-              {turn.content}
+              {turn.role === 'assistant' ? (
+                <MarkdownContent content={turn.content} />
+              ) : (
+                turn.content
+              )}
             </div>
           ))}
           {loading && (
@@ -517,20 +543,22 @@ export default function CodebaseAgentPage() {
           <div ref={historyEndRef} />
         </div>
 
-        <form onSubmit={runAgent} className="flex shrink-0 gap-2 border-t border-white/[0.07] p-4">
-          <textarea
-            ref={promptRef}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Masalan: auth'da qanday kamchiliklar bor?"
-            rows={2}
-            className="flex-1 resize-none rounded-xl border border-white/[0.08] bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none"
-          />
-          <Button type="submit" variant="primary" disabled={loading || !prompt.trim()}>
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          </Button>
-        </form>
+        <ChatComposer
+          prompt={prompt}
+          loading={loading}
+          promptInputRef={promptRef}
+          onPromptChange={setPrompt}
+          onSubmit={runAgent}
+        />
       </main>
+      {showKeyModal && (
+        <ApiKeyModal
+          draftKey={draftKey}
+          onDraftKeyChange={setDraftKey}
+          onSave={() => void saveAgentApiKey()}
+          onDismiss={() => setShowKeyModal(false)}
+        />
+      )}
     </div>
   );
 }
