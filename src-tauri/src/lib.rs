@@ -156,6 +156,7 @@ pub fn run() {
             app_commands::pick_screen_color,
             app_commands::read_codebase_file,
             git_tools::get_git_changes,
+            git_tools::get_git_history,
             app_commands::get_idling_count,
             // ── Account Storage ──
             account_storage::set_current_user,
