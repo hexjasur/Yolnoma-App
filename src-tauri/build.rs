@@ -14,14 +14,14 @@ fn main() {
         if let Ok(content) = fs::read_to_string(Path::new(path)) {
             for line in content.lines() {
                 let trimmed = line.trim();
-                if trimmed.starts_with("STEAM_API_KEY=") {
-                    let val = trimmed["STEAM_API_KEY=".len()..].trim().trim_matches('"').trim_matches('\'');
+                if let Some(value) = trimmed.strip_prefix("STEAM_API_KEY=") {
+                    let val = value.trim().trim_matches('"').trim_matches('\'');
                     if !val.is_empty() {
                         api_key = Some(val.to_string());
                     }
                 }
-                if trimmed.starts_with("VITE_ABC_KEY=") {
-                    let val = trimmed["VITE_ABC_KEY=".len()..].trim().trim_matches('"').trim_matches('\'');
+                if let Some(value) = trimmed.strip_prefix("VITE_ABC_KEY=") {
+                    let val = value.trim().trim_matches('"').trim_matches('\'');
                     if !val.is_empty() {
                         frontend_key = Some(val.to_string());
                     }

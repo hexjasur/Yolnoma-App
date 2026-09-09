@@ -1,4 +1,4 @@
-use crate::steam_idler::IdlingState;
+use crate::domains::steam::IdlingState;
 use tauri::{AppHandle, State, WebviewWindow};
 
 #[tauri::command]

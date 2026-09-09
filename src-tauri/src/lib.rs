@@ -1,22 +1,12 @@
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 
-mod commands;
-#[path = "commands/videos.rs"]
-mod videos;
-mod account_storage;
-mod cleaner;
-mod crosshair;
-mod embedded_api_key;
-mod image_converter;
-mod steam_idler;
-mod system_monitor;
-mod port_scanner;
-mod archive;
 mod app_commands;
 mod app_state;
+mod commands;
 mod deep_link;
-mod git_tools;
+mod domains;
+mod embedded_api_key;
 
 // Kept public for feature modules that use the shared authentication state.
 pub use app_state::AuthState;
@@ -25,17 +15,17 @@ pub use app_state::AuthState;
 pub fn run() {
     tauri::Builder::default()
         .manage(app_state::AuthState::new())
-        .manage(account_storage::ApiKeyCache::new())
-        .manage(steam_idler::IdlingState::new())
-        .manage(system_monitor::SystemMonitorState::new())
-            .manage(videos::DownloadState::new())
+        .manage(domains::account::ApiKeyCache::new())
+        .manage(domains::steam::IdlingState::new())
+        .manage(domains::system::SystemMonitorState::new())
+        .manage(commands::video::DownloadState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_denylist(&["tabs-window", "agent-window"])
                 .build(),
-)
+        )
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.show();
@@ -76,15 +66,11 @@ pub fn run() {
             };
 
             // Tray menyu
-            let show = MenuItemBuilder::new("Show")
-                .id("show")
-                .build(app)?;
+            let show = MenuItemBuilder::new("Show").id("show").build(app)?;
             let world_show = MenuItemBuilder::new("3D Show")
                 .id("world-3d-show")
                 .build(app)?;
-            let quit = MenuItemBuilder::new("Exit")
-                .id("quit")
-                .build(app)?;
+            let quit = MenuItemBuilder::new("Exit").id("quit").build(app)?;
             let menu = MenuBuilder::new(app)
                 .item(&show)
                 .item(&world_show)
@@ -104,15 +90,16 @@ pub fn run() {
                         }
                     }
                     "world-3d-show" => {
-                        let _ = tauri::async_runtime::block_on(commands::open_in_new_window(
-                            app.clone(),
-                            "/tools/world-3d".to_string(),
-                            Some("Yolnoma World".to_string()),
-                        ));
+                        let _ =
+                            tauri::async_runtime::block_on(commands::windows::open_in_new_window(
+                                app.clone(),
+                                "/tools/world-3d".to_string(),
+                                Some("Yolnoma World".to_string()),
+                            ));
                     }
                     "quit" => {
                         // Barcha idling jarayonlarini to'xtatamiz, keyin chiqamiz
-                        let state = app.state::<steam_idler::IdlingState>();
+                        let state = app.state::<domains::steam::IdlingState>();
                         tauri::async_runtime::block_on(async {
                             app_commands::stop_idling_processes(&state).await;
                         });
@@ -155,73 +142,73 @@ pub fn run() {
             app_commands::hide_window,
             app_commands::pick_screen_color,
             app_commands::read_codebase_file,
-            git_tools::get_git_changes,
-            git_tools::get_git_history,
+            domains::git::get_git_changes,
+            domains::git::get_git_history,
             app_commands::get_idling_count,
             // ── Account Storage ──
-            account_storage::set_current_user,
-            account_storage::get_account_config,
-            account_storage::save_account_config,
-            account_storage::get_api_key,
-            account_storage::set_api_key,
-            account_storage::clear_api_key,
-            commands::proxy_request,
-            commands::proxy_ep,
-            commands::open_in_new_window,
-            commands::open_agent_window,
+            domains::account::set_current_user,
+            domains::account::get_account_config,
+            domains::account::save_account_config,
+            domains::account::get_api_key,
+            domains::account::set_api_key,
+            domains::account::clear_api_key,
+            commands::proxy::proxy_request,
+            commands::proxy::proxy_ep,
+            commands::windows::open_in_new_window,
+            commands::windows::open_agent_window,
             // ── YouTube Video Downloader ──
-            videos::download_youtube_video,
-            videos::cancel_youtube_download,
-            videos::open_youtube_download_folder,
-            videos::get_youtube_formats,
-            videos::preview_youtube_video,
-            videos::check_yt_dlp_installed,
-            videos::check_ffmpeg_installed,
-            videos::check_youtube_libraries,
-            videos::download_youtube_libraries,
-            videos::cancel_youtube_library_download,
+            commands::video::download_youtube_video,
+            commands::video::cancel_youtube_download,
+            commands::video::open_youtube_download_folder,
+            commands::video::get_youtube_formats,
+            commands::video::preview_youtube_video,
+            commands::video::check_yt_dlp_installed,
+            commands::video::check_ffmpeg_installed,
+            commands::video::check_youtube_libraries,
+            commands::video::download_youtube_libraries,
+            commands::video::cancel_youtube_library_download,
             // ── Plugins System ──
-            commands::list_local_plugins,
-            commands::read_plugin_source,
+            commands::plugins::list_local_plugins,
+            commands::plugins::read_plugin_source,
             // ── System Monitoring ──
-            system_monitor::get_system_stats,
+            domains::system::get_system_stats,
             // ── Cleaner ──
-            cleaner::run_cleaner,
+            domains::cleaner::run_cleaner,
             // ── Crosshair Overlay ──
-            crosshair::start_crosshair_overlay,
-            crosshair::stop_crosshair_overlay,
-            crosshair::update_crosshair_config,
-            crosshair::is_crosshair_active,
-            crosshair::save_crosshair_config,
-            crosshair::get_saved_crosshair_config,
+            domains::crosshair::start_crosshair_overlay,
+            domains::crosshair::stop_crosshair_overlay,
+            domains::crosshair::update_crosshair_config,
+            domains::crosshair::is_crosshair_active,
+            domains::crosshair::save_crosshair_config,
+            domains::crosshair::get_saved_crosshair_config,
             // ── Image Converter ──
-            image_converter::get_image_info,
-            image_converter::get_default_output_dir,
-            image_converter::open_output_folder,
-            image_converter::convert_image,
-            image_converter::convert_images_batch,
+            domains::image::get_image_info,
+            domains::image::get_default_output_dir,
+            domains::image::open_output_folder,
+            domains::image::convert_image,
+            domains::image::convert_images_batch,
             // ── Steam Idler & SAM ──
-            steam_idler::steam_is_running,
-            steam_idler::get_steam_accounts,
-            steam_idler::get_steam_games,
-            steam_idler::start_idling,
-            steam_idler::stop_idling,
-            steam_idler::stop_all_idling,
-            steam_idler::get_idle_state,
-            steam_idler::get_achievement_data,
-            steam_idler::set_achievement,
-            steam_idler::unlock_all_achievements,
-            steam_idler::lock_all_achievements,
-            steam_idler::update_stats,
-            steam_idler::reset_all_stats,
+            domains::steam::steam_is_running,
+            domains::steam::get_steam_accounts,
+            domains::steam::get_steam_games,
+            domains::steam::start_idling,
+            domains::steam::stop_idling,
+            domains::steam::stop_all_idling,
+            domains::steam::get_idle_state,
+            domains::steam::get_achievement_data,
+            domains::steam::set_achievement,
+            domains::steam::unlock_all_achievements,
+            domains::steam::lock_all_achievements,
+            domains::steam::update_stats,
+            domains::steam::reset_all_stats,
             // ── Port Scanner ──
-            port_scanner::scan_ports,
-            port_scanner::get_common_ports,
+            domains::network::scan_ports,
+            domains::network::get_common_ports,
             // ── Archive Explorer ──
-            archive::list_archive_entries,
-            archive::read_archive_entry_content,
-            archive::extract_single_entry,
-            archive::extract_archive,
+            domains::archive::list_archive_entries,
+            domains::archive::read_archive_entry_content,
+            domains::archive::extract_single_entry,
+            domains::archive::extract_archive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
