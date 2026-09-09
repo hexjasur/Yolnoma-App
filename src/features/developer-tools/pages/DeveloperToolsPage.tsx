@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import {
   Braces,
   Check,
@@ -63,6 +64,8 @@ export default function DeveloperToolsPage() {
   const [qrText, setQrText] = useState('https://github.com/hexjasur/Yolnoma-App');
   const [uuid, setUuid] = useState(() => crypto.randomUUID());
   const [copied, setCopied] = useState(false);
+  const [colorPicking, setColorPicking] = useState(false);
+  const [colorPickerError, setColorPickerError] = useState('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLElement>(null);
   const syncingScroll = useRef(false);
@@ -93,12 +96,29 @@ export default function DeveloperToolsPage() {
   };
 
   const pickColor = async () => {
+    setColorPickerError('');
+    if (/Windows/i.test(navigator.userAgent)) {
+      setColorPicking(true);
+      try {
+        setColor(await invoke<string>('pick_screen_color'));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.toLowerCase().includes('cancel')) setColorPickerError(message);
+      } finally {
+        setColorPicking(false);
+      }
+      return;
+    }
+
     const eyeDropper = (window as Window & { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper;
-    if (!eyeDropper) return;
+    if (!eyeDropper) {
+      setColorPickerError('Global screen picking is currently available on Windows only.');
+      return;
+    }
     try {
       setColor((await new eyeDropper().open()).sRGBHex);
     } catch {
-      // The picker was cancelled.
+      // The browser picker was cancelled.
     }
   };
 
@@ -159,7 +179,7 @@ export default function DeveloperToolsPage() {
 
           {tab === 'markdown' && <Card><Title icon={Code2} text="Markdown Studio" subtitle="A full GitHub-Flavored Markdown preview with tables, task lists, links, images, quotes, and code blocks." /><div className="mt-6 grid gap-4 xl:grid-cols-2"><div className="overflow-hidden border border-white/[0.08] bg-[#0d0d0a]"><div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Editor</span><span className="text-[10px] text-white/25">{markdown.length} chars · {markdown.split('\n').length} lines</span></div><textarea ref={editorRef} onScroll={() => editorRef.current && previewRef.current && syncScroll(editorRef.current, previewRef.current)} value={markdown} onChange={(event) => setMarkdown(event.target.value)} className="block h-[620px] w-full resize-none overflow-y-auto bg-transparent p-5 font-mono text-[13px] leading-6 text-white/80 outline-none" spellCheck={false} /></div><div className="overflow-hidden border border-white/[0.08] bg-[#0d0d0a]"><div className="border-b border-white/[0.08] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Preview</div><article ref={previewRef} onScroll={() => editorRef.current && previewRef.current && syncScroll(previewRef.current, editorRef.current)} className="h-[620px] overflow-y-auto p-5 md:p-7"><MarkdownContent content={markdown} /></article></div></div></Card>}
 
-          {tab === 'color' && <Card><Title icon={Palette} text="Color Picker" subtitle="Choose a color or use the system eye dropper when available." /><div className="mt-6 flex min-h-72 flex-wrap items-center gap-8 border border-white/[0.06] bg-black/10 p-8"><input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-28 w-28 cursor-pointer border-0 bg-transparent" /><div><p className="font-mono text-4xl text-white">{color}</p><button type="button" onClick={() => void pickColor()} className="mt-4 inline-flex items-center gap-2 border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/[0.06]"><Palette size={15} /> Pick from screen</button><p className="mt-3 text-xs text-white/35">The EyeDropper API is supported in compatible desktop environments.</p></div></div></Card>}
+          {tab === 'color' && <Card><Title icon={Palette} text="Color Picker" subtitle="Pick a color from any Windows window, Chrome tab, or the desktop." /><div className="mt-6 flex min-h-72 flex-wrap items-center gap-8 border border-white/[0.06] bg-black/10 p-8"><input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-28 w-28 cursor-pointer border-0 bg-transparent" /><div><p className="font-mono text-4xl text-white">{color}</p><button type="button" disabled={colorPicking} onClick={() => void pickColor()} className="mt-4 inline-flex items-center gap-2 border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/[0.06] disabled:cursor-wait disabled:opacity-50"><Palette size={15} /> {colorPicking ? 'Select a pixel...' : 'Pick from screen'}</button><p className="mt-3 text-xs text-white/35">Windows mode hides Yolnoma temporarily. Click any visible pixel, or press Esc to cancel.</p>{colorPickerError && <p className="mt-3 max-w-md border-l-2 border-red-400/70 pl-3 text-xs text-red-300">{colorPickerError}</p>}</div></div></Card>}
 
           {tab === 'qr' && <Card><Title icon={QrCode} text="QR Code Generator" subtitle="Generate a QR code from text or a URL." /><div className="mt-6 flex flex-col gap-6 border border-white/[0.06] bg-black/10 p-6 md:flex-row md:items-start"><textarea value={qrText} onChange={(event) => setQrText(event.target.value)} className="min-h-32 flex-1 resize-y border border-white/10 bg-black/20 p-4 text-sm text-white/80 outline-none focus:border-[var(--accent)]" placeholder="Text or URL..." />{qrText && <img className="h-48 w-48 border-8 border-white bg-white object-contain" alt="Generated QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`} />}</div><p className="mt-4 text-xs text-white/35">QR image generation uses the QRServer public endpoint.</p></Card>}
 
