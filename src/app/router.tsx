@@ -34,6 +34,7 @@ import CodebaseAgentPage from '@/features/ai/pages/CodebaseAgentPage';
 import ViCountdown from '@/features/vi/pages/ViCountdown';
 import World3DPage from '@/features/world3d/pages/World3DPage';
 import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsPage';
+import FeedbackPage from '@/features/feedback/pages/FeedbackPage';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -51,7 +52,14 @@ export default function AppRoutes() {
 
         {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
-          <Route path="/agent" element={<AiAgentPage />} />
+          <Route
+            path="/agent"
+            element={
+              <DevelopmentGuard featureName="agent">
+                <AiAgentPage />
+              </DevelopmentGuard>
+            }
+          />
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
 
@@ -99,6 +107,7 @@ export default function AppRoutes() {
             <Route path="/tools/ai-chat" element={<AiChatPage />} />
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
             <Route path="/tools/developer-tools" element={<DeveloperToolsPage />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/tools/world-3d" element={<World3DPage />} />
             <Route path="/tools/steam/review" element={<SteamReviewPage />} />
             <Route
