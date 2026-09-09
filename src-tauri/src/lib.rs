@@ -142,6 +142,7 @@ pub fn run() {
             app_commands::hide_window,
             app_commands::pick_screen_color,
             app_commands::read_codebase_file,
+            app_commands::write_codebase_file,
             domains::git::get_git_changes,
             domains::git::get_git_history,
             app_commands::get_idling_count,
