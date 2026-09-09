@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Braces, Code2, Hash, Palette, QrCode, ShieldCheck } from 'lucide-react';
+import { Binary, Braces, Code2, Hash, Minimize2, Palette, QrCode, ShieldCheck } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
@@ -8,21 +8,49 @@ import UuidGeneratorTool from '../components/UuidGeneratorTool';
 import MarkdownStudioTool from '../components/MarkdownStudioTool';
 import ColorPickerTool from '../components/ColorPickerTool';
 import QrGeneratorTool from '../components/QrGeneratorTool';
+import MinifyTool from '../components/MinifyTool';
+import Base64Tool from '../components/Base64Tool';
 
-type Tab = 'json' | 'jwt' | 'uuid' | 'markdown' | 'color' | 'qr';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'color-picker' | 'qr-generator' | 'minify' | 'base64';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
-  ['json', 'JSON Formatter', Braces],
-  ['jwt', 'JWT Decoder', ShieldCheck],
-  ['uuid', 'UUID Generator', Hash],
-  ['markdown', 'Markdown Studio', Code2],
-  ['color', 'Color Picker', Palette],
-  ['qr', 'QR Generator', QrCode],
+  ['json-formatter', 'JSON Formatter', Braces],
+  ['jwt-decoder', 'JWT Decoder', ShieldCheck],
+  ['uuid-generator', 'UUID Generator', Hash],
+  ['markdown-studio', 'Markdown Studio', Code2],
+  ['minify', 'HTML / CSS / JS Minify', Minimize2],
+  ['base64', 'Base64 Encoder', Binary],
+  ['color-picker', 'Color Picker', Palette],
+  ['qr-generator', 'QR Generator', QrCode],
 ];
 
+const tabIds = new Set<Tab>(tabs.map(([id]) => id));
+
+function readTabFromUrl(): Tab {
+  const hash = window.location.hash;
+  const hashParts = hash.split('#');
+  const nestedHash = hashParts[hashParts.length - 1];
+  if (nestedHash && tabIds.has(nestedHash as Tab)) return nestedHash as Tab;
+  const query = hash.split('?')[1];
+  const value = query ? new URLSearchParams(query).get('tab') : null;
+  return value && tabIds.has(value as Tab) ? value as Tab : 'json-formatter';
+}
+
 export default function DeveloperToolsPage() {
-  const [tab, setTab] = useState<Tab>('json');
+  const [tab, setTab] = useState<Tab>(readTabFromUrl);
+
+  useEffect(() => {
+    const onHashChange = () => setTab(readTabFromUrl());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    const routeHash = window.location.hash.split('?')[0].split('#')[0] || '#/tools/developer-tools';
+    window.location.hash = `${routeHash}?tab=${next}`;
+  };
 
   return (
     <div className="mx-auto min-h-full max-w-7xl pb-16 text-[var(--text-primary)]">
@@ -38,14 +66,16 @@ export default function DeveloperToolsPage() {
       </header>
 
       <div className="mt-8">
-        <ToolNavigation items={tabs} active={tab} onChange={setTab} />
+        <ToolNavigation items={tabs} active={tab} onChange={selectTab} />
         <main className="mt-8 min-w-0">
-          {tab === 'json' && <JsonFormatterTool />}
-          {tab === 'jwt' && <JwtDecoderTool />}
-          {tab === 'uuid' && <UuidGeneratorTool />}
-          {tab === 'markdown' && <MarkdownStudioTool />}
-          {tab === 'color' && <ColorPickerTool />}
-          {tab === 'qr' && <QrGeneratorTool />}
+          {tab === 'json-formatter' && <JsonFormatterTool />}
+          {tab === 'jwt-decoder' && <JwtDecoderTool />}
+          {tab === 'uuid-generator' && <UuidGeneratorTool />}
+          {tab === 'markdown-studio' && <MarkdownStudioTool />}
+          {tab === 'minify' && <MinifyTool />}
+          {tab === 'base64' && <Base64Tool />}
+          {tab === 'color-picker' && <ColorPickerTool />}
+          {tab === 'qr-generator' && <QrGeneratorTool />}
         </main>
       </div>
     </div>
