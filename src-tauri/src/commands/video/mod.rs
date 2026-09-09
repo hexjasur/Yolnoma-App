@@ -69,7 +69,11 @@ fn bundled_binary_any(app: Option<&AppHandle>, names: &[&str]) -> Option<PathBuf
             app.and_then(|handle| handle.path().resource_dir().ok())
                 .map(|dir| dir.join(name)),
             // 3. Dev environment fallback
-            Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join(name)),
+            Some(
+                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("resources")
+                    .join(name),
+            ),
         ];
 
         if let Some(path) = candidates.into_iter().flatten().find(|path| path.is_file()) {
@@ -108,7 +112,8 @@ pub fn check_youtube_libraries(app: AppHandle) -> Result<VideoLibrariesStatus, S
     let codec_path = resources_dir.join("yolnoma_codec.dat");
 
     let yolnoma_dl = dl_path.is_file() && dl_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
-    let yolnoma_codec = codec_path.is_file() && codec_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
+    let yolnoma_codec =
+        codec_path.is_file() && codec_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
     let all_installed = yolnoma_dl && yolnoma_codec;
 
     Ok(VideoLibrariesStatus {
@@ -319,9 +324,7 @@ async fn download_youtube_libraries_inner(
             }
         };
 
-        let file_total_bytes = response
-            .content_length()
-            .unwrap_or(target.estimated_size);
+        let file_total_bytes = response.content_length().unwrap_or(target.estimated_size);
         if response.content_length().is_some() {
             total_estimated_bytes = total_estimated_bytes
                 .saturating_sub(target.estimated_size)
@@ -465,10 +468,7 @@ async fn download_youtube_libraries_inner(
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(
-                &final_path,
-                std::fs::Permissions::from_mode(0o755),
-            );
+            let _ = std::fs::set_permissions(&final_path, std::fs::Permissions::from_mode(0o755));
         }
 
         cumulative_completed_bytes += file_downloaded;
@@ -522,7 +522,10 @@ pub async fn download_youtube_video(
     let task_id = payload.task_id;
     let cancel_flag = Arc::new(AtomicBool::new(false));
     {
-        let mut active = state.active.lock().map_err(|_| "Download state unavailable".to_string())?;
+        let mut active = state
+            .active
+            .lock()
+            .map_err(|_| "Download state unavailable".to_string())?;
         if active.len() >= 3 {
             return Err("Maximum 3 downloads can run at the same time".to_string());
         }
@@ -547,7 +550,7 @@ async fn download_youtube_video_inner(
     let url = payload.url;
     let quality = payload.quality.unwrap_or_else(|| "best".to_string());
     let task_id = payload.task_id;
-    
+
     let download_path = window
         .app_handle()
         .path()
@@ -555,17 +558,17 @@ async fn download_youtube_video_inner(
         .map_err(|e| format!("Download folder was not found: {}", e))?
         .join("YolnomaDownloads")
         .join("Videos");
-    
+
     fs::create_dir_all(&download_path)
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let output_template = download_path
         .join("%(id)s-%(title)s.%(ext)s")
         .to_str()
         .ok_or_else(|| "Invalid download path".to_string())?
         .to_string();
-    
+
     let max_height = match quality.as_str() {
         "2160p" => 2160,
         "1080p" => 1080,
@@ -579,7 +582,7 @@ async fn download_youtube_video_inner(
     } else {
         format!("best[height<={max_height}]/best")
     };
-    
+
     let mut command = TokioCommand::from(yt_dlp_command(Some(&app_handle)));
     command
         .arg("-f")
@@ -613,14 +616,21 @@ async fn download_youtube_video_inner(
         .spawn()
         .map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                "Required media engine library is missing. Please download libraries to continue.".to_string()
+                "Required media engine library is missing. Please download libraries to continue."
+                    .to_string()
             } else {
                 format!("Failed to start video downloader:\n{}", e)
             }
         })?;
-    
-    let stdout = child.stdout.take().ok_or_else(|| "yt-dlp output unavailable".to_string())?;
-    let stderr = child.stderr.take().ok_or_else(|| "yt-dlp error output unavailable".to_string())?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "yt-dlp output unavailable".to_string())?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "yt-dlp error output unavailable".to_string())?;
     let mut reader = BufReader::new(stdout).lines();
     let stderr_task = tokio::spawn(async move {
         let mut reader = BufReader::new(stderr);
@@ -646,24 +656,39 @@ async fn download_youtube_video_inner(
         if let Some(rest) = line.strip_prefix("download:") {
             let parts: Vec<&str> = rest.split('|').collect();
             if parts.len() >= 5 {
-                let percent = parts[0].trim().trim_end_matches('%').parse::<f32>().unwrap_or(0.0);
+                let percent = parts[0]
+                    .trim()
+                    .trim_end_matches('%')
+                    .parse::<f32>()
+                    .unwrap_or(0.0);
                 last_percent = last_percent.max(percent).min(99.9);
                 let speed = parts[1].trim().to_string();
                 let eta = parts[2].trim().to_string();
                 let downloaded = parts[3].trim().parse::<u64>().unwrap_or(0);
                 let total = parts[4].trim().parse::<u64>().unwrap_or(0);
 
-                let _ = app_for_emit.emit("video-download-progress", DownloadProgress {
-                    task_id,
-                    percent: last_percent,
-                    speed: if speed.is_empty() { "—".to_string() } else { speed },
-                    eta: if eta.is_empty() { "—".to_string() } else { eta },
-                    filename: "downloading".to_string(),
-                    downloaded_bytes: downloaded,
-                    total_bytes: total,
-                });
+                let _ = app_for_emit.emit(
+                    "video-download-progress",
+                    DownloadProgress {
+                        task_id,
+                        percent: last_percent,
+                        speed: if speed.is_empty() {
+                            "—".to_string()
+                        } else {
+                            speed
+                        },
+                        eta: if eta.is_empty() {
+                            "—".to_string()
+                        } else {
+                            eta
+                        },
+                        filename: "downloading".to_string(),
+                        downloaded_bytes: downloaded,
+                        total_bytes: total,
+                    },
+                );
             }
-        } 
+        }
         // 2. Standard yt-dlp progress line fallback: [download]  45.2% of ~10.50MiB at 2.50MiB/s ETA 00:05
         else if line.contains("[download]") && line.contains('%') {
             let tokens: Vec<&str> = line.split_whitespace().collect();
@@ -674,24 +699,27 @@ async fn download_youtube_video_inner(
                         let mut speed = "—".to_string();
                         let mut eta = "—".to_string();
 
-                        for j in i+1..tokens.len() {
+                        for j in i + 1..tokens.len() {
                             if tokens[j] == "at" && j + 1 < tokens.len() {
-                                speed = tokens[j+1].to_string();
+                                speed = tokens[j + 1].to_string();
                             }
                             if tokens[j] == "ETA" && j + 1 < tokens.len() {
-                                eta = tokens[j+1].to_string();
+                                eta = tokens[j + 1].to_string();
                             }
                         }
 
-                        let _ = app_for_emit.emit("video-download-progress", DownloadProgress {
-                            task_id,
-                            percent: last_percent,
-                            speed,
-                            eta,
-                            filename: "downloading".to_string(),
-                            downloaded_bytes: 0,
-                            total_bytes: 0,
-                        });
+                        let _ = app_for_emit.emit(
+                            "video-download-progress",
+                            DownloadProgress {
+                                task_id,
+                                percent: last_percent,
+                                speed,
+                                eta,
+                                filename: "downloading".to_string(),
+                                downloaded_bytes: 0,
+                                total_bytes: 0,
+                            },
+                        );
                     }
                     break;
                 }
@@ -709,15 +737,18 @@ async fn download_youtube_video_inner(
     if !status.success() {
         return Err(format!("Download failed: {}", stderr_text));
     }
-    
+
     let entries = std::fs::read_dir(&download_path).map_err(|e| e.to_string())?;
     let latest = entries
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().ok().map(|t| t.is_file()).unwrap_or(false))
         .max_by_key(|e| e.metadata().ok().and_then(|m| m.modified().ok()));
-    
+
     match latest {
-        Some(entry) => Ok(format!("✅ {} downloaded", entry.file_name().to_str().unwrap_or("video"))),
+        Some(entry) => Ok(format!(
+            "✅ {} downloaded",
+            entry.file_name().to_str().unwrap_or("video")
+        )),
         None => Err("Downloaded file was not found".to_string()),
     }
 }
@@ -727,7 +758,10 @@ pub fn cancel_youtube_download(
     task_id: u64,
     state: tauri::State<'_, DownloadState>,
 ) -> Result<(), String> {
-    let active = state.active.lock().map_err(|_| "Download state unavailable".to_string())?;
+    let active = state
+        .active
+        .lock()
+        .map_err(|_| "Download state unavailable".to_string())?;
     match active.get(&task_id) {
         Some(flag) => {
             flag.store(true, Ordering::Relaxed);
@@ -747,25 +781,26 @@ pub fn get_youtube_formats(url: String, app: AppHandle) -> Result<Vec<String>, S
         .output()
         .map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                "Required media engine library is missing. Please download libraries to continue.".to_string()
+                "Required media engine library is missing. Please download libraries to continue."
+                    .to_string()
             } else {
                 format!("yt-dlp error: {}", e)
             }
         })?;
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let formats: Vec<String> = stdout
         .lines()
         .filter(|l| {
-            l.contains('x') && 
-            (l.contains("video") || l.contains("audio")) &&
-            !l.contains("---") &&
-            !l.trim().is_empty()
+            l.contains('x')
+                && (l.contains("video") || l.contains("audio"))
+                && !l.contains("---")
+                && !l.trim().is_empty()
         })
         .take(20)
         .map(|l| l.to_string())
         .collect();
-    
+
     Ok(formats)
 }
 
@@ -821,7 +856,8 @@ pub fn preview_youtube_video(url: String, app: AppHandle) -> Result<VideoPreview
         .output()
         .map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                "Required media engine library is missing. Please download libraries to continue.".to_string()
+                "Required media engine library is missing. Please download libraries to continue."
+                    .to_string()
             } else {
                 format!("Could not load video metadata: {}", e)
             }
@@ -840,8 +876,12 @@ pub fn preview_youtube_video(url: String, app: AppHandle) -> Result<VideoPreview
         .map_err(|e| format!("Could not read video metadata: {}", e))?;
 
     Ok(VideoPreview {
-        title: metadata["title"].as_str().unwrap_or("Unknown title").to_string(),
-        uploader: metadata["uploader"].as_str()
+        title: metadata["title"]
+            .as_str()
+            .unwrap_or("Unknown title")
+            .to_string(),
+        uploader: metadata["uploader"]
+            .as_str()
             .or_else(|| metadata["channel"].as_str())
             .unwrap_or("Unknown channel")
             .to_string(),

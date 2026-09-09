@@ -112,7 +112,11 @@ async fn scan_single_port(host: &str, port: u16, timeout_duration: Duration) -> 
 
     PortScanResult {
         port,
-        status: if any_timeout { "timeout".to_string() } else { "closed".to_string() },
+        status: if any_timeout {
+            "timeout".to_string()
+        } else {
+            "closed".to_string()
+        },
         service,
         latency_ms: None,
     }
@@ -135,9 +139,7 @@ pub async fn scan_ports(
     // TODO: Allow scanning only of localhost — SSRF / network reconnaissance protection
     let allowed_hosts: &[&str] = &["localhost", "127.0.0.1", "::1"];
     if !allowed_hosts.contains(&host.as_str()) {
-        return Err(
-            "Port scanning is only allowed for localhost (127.0.0.1 / ::1)".to_string()
-        );
+        return Err("Port scanning is only allowed for localhost (127.0.0.1 / ::1)".to_string());
     }
     // ===================================================================================
     // ===================================================================================
@@ -155,9 +157,7 @@ pub async fn scan_ports(
         let mut set = tokio::task::JoinSet::new();
         for &port in chunk {
             let h = host.clone();
-            set.spawn(async move {
-                scan_single_port(&h, port, timeout_duration).await
-            });
+            set.spawn(async move { scan_single_port(&h, port, timeout_duration).await });
         }
 
         while let Some(res) = set.join_next().await {
@@ -174,8 +174,8 @@ pub async fn scan_ports(
 #[tauri::command]
 pub async fn get_common_ports() -> Result<Vec<u16>, String> {
     Ok(vec![
-        21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 465, 587, 993, 995, 1433,
-        1521, 2049, 2181, 2375, 2376, 3000, 3306, 3389, 5000, 5432, 5672, 5900, 6379,
-        8000, 8080, 8443, 8888, 9000, 9200, 11211, 27017,
+        21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 465, 587, 993, 995, 1433, 1521, 2049,
+        2181, 2375, 2376, 3000, 3306, 3389, 5000, 5432, 5672, 5900, 6379, 8000, 8080, 8443, 8888,
+        9000, 9200, 11211, 27017,
     ])
 }

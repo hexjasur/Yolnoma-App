@@ -76,7 +76,10 @@ fn locate_steam_utility() -> Result<std::path::PathBuf, String> {
     let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
     let candidates = [
-        current_dir.join("resources").join("steam-utility").join("SteamUtility.exe"),
+        current_dir
+            .join("resources")
+            .join("steam-utility")
+            .join("SteamUtility.exe"),
         current_dir.join("resources").join("SteamUtility.exe"),
         manifest_dir
             .join("..")
@@ -113,12 +116,11 @@ pub fn steam_is_running() -> bool {
 #[tauri::command]
 pub fn get_steam_accounts() -> Result<Vec<SteamUser>, String> {
     // Steam o'rnatilgan papkasini steamlocate orqali topamiz
-    let steam_dir = steamlocate::SteamDir::locate()
-        .map_err(|e| format!("Steam not found: {e}"))?;
+    let steam_dir = steamlocate::SteamDir::locate().map_err(|e| format!("Steam not found: {e}"))?;
     let vdf_path = steam_dir.path().join("config").join("loginusers.vdf");
 
-    let content = std::fs::read_to_string(&vdf_path)
-        .map_err(|e| format!("loginusers.vdf o'qilmadi: {e}"))?;
+    let content =
+        std::fs::read_to_string(&vdf_path).map_err(|e| format!("loginusers.vdf o'qilmadi: {e}"))?;
 
     parse_login_users(&content)
 }
@@ -126,34 +128,34 @@ pub fn get_steam_accounts() -> Result<Vec<SteamUser>, String> {
 fn parse_login_users(content: &str) -> Result<Vec<SteamUser>, String> {
     use regex::Regex;
 
-    let re = Regex::new(
-        r#""(\d{17})"\s*\{[^}]*"(?i:PersonaName)"\s*"([^"]*)""#,
-    ).map_err(|e| e.to_string())?;
+    let re = Regex::new(r#""(\d{17})"\s*\{[^}]*"(?i:PersonaName)"\s*"([^"]*)""#)
+        .map_err(|e| e.to_string())?;
 
-    let re_recent = Regex::new(
-        r#""(?i:MostRecent|AutoLogin)"\s*"(\d+)""#
-    ).map_err(|e| e.to_string())?;
+    let re_recent =
+        Regex::new(r#""(?i:MostRecent|AutoLogin)"\s*"(\d+)""#).map_err(|e| e.to_string())?;
 
     let mut users = Vec::new();
     // Bloklar bo'yicha ajratish
-    let block_re = Regex::new(r#""(\d{17})"\s*\{([^}]+)\}"#)
-        .map_err(|e| e.to_string())?;
+    let block_re = Regex::new(r#""(\d{17})"\s*\{([^}]+)\}"#).map_err(|e| e.to_string())?;
 
     for cap in block_re.captures_iter(content) {
         let steam_id = cap[1].to_string();
         let block = &cap[2];
 
-        let persona_name = re.captures(block)
+        let persona_name = re
+            .captures(block)
             .map(|c| c[2].to_string())
             .unwrap_or_else(|| {
                 // fallback: blok ichidan alohida topamiz
                 let pn_re = Regex::new(r#""(?i:PersonaName)"\s*"([^"]*)""#).unwrap();
-                pn_re.captures(block)
+                pn_re
+                    .captures(block)
                     .map(|c| c[1].to_string())
                     .unwrap_or_default()
             });
 
-        let most_recent = re_recent.captures_iter(block)
+        let most_recent = re_recent
+            .captures_iter(block)
             .any(|c| c[1].parse::<u32>().unwrap_or(0) != 0);
 
         users.push(SteamUser {
@@ -186,21 +188,27 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         .build()
         .map_err(|e| format!("HTTP client xatosi: {e}"))?;
 
-    let resp = client.get(&url).send().await
+    let resp = client
+        .get(&url)
+        .send()
+        .await
         .map_err(|e| format!("Network xatosi: {e}"))?;
 
     if !resp.status().is_success() {
         return Err(format!("Steam API error: HTTP {}", resp.status()));
     }
 
-    let json: serde_json::Value = resp.json().await
+    let json: serde_json::Value = resp
+        .json()
+        .await
         .map_err(|e| format!("JSON parse error: {e}"))?;
 
     // game_count yo'q = profil yopiq
     if json.pointer("/response/game_count").is_none() {
         return Err(
             "Steam profile is private. Steam → Profile → Privacy Settings → \
-             Game data: Make visible to everyone.".to_string()
+             Game data: Make visible to everyone."
+                .to_string(),
         );
     }
 
@@ -214,10 +222,15 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         .filter_map(|g| {
             let app_id = g.get("appid")?.as_u64()? as u32;
             let name = g.get("name")?.as_str()?.to_string();
-            let playtime = g.get("playtime_forever")
+            let playtime = g
+                .get("playtime_forever")
                 .and_then(|p| p.as_u64())
                 .unwrap_or(0);
-            Some(SteamGame { app_id, name, playtime_forever: playtime })
+            Some(SteamGame {
+                app_id,
+                name,
+                playtime_forever: playtime,
+            })
         })
         .collect();
 
@@ -235,7 +248,8 @@ pub async fn start_idling(
     // 32 ta chegarasi
     let targets: Vec<SteamGame> = {
         let mut seen = HashSet::new();
-        targets.into_iter()
+        targets
+            .into_iter()
             .filter(|t| seen.insert(t.app_id))
             .take(MAX_CONCURRENT_GAMES)
             .collect()
@@ -245,7 +259,8 @@ pub async fn start_idling(
     let mut processes = state.processes.lock().await;
 
     // Stop unnecessary processes.
-    let to_remove: Vec<u32> = processes.keys()
+    let to_remove: Vec<u32> = processes
+        .keys()
         .filter(|id| !desired.contains(*id))
         .copied()
         .collect();
@@ -278,15 +293,13 @@ pub async fn start_idling(
     Ok(IdleResult { running, failed })
 }
 
-async fn spawn_idle(
-    exe: &std::path::Path,
-    game: &SteamGame,
-) -> Result<Child, String> {
+async fn spawn_idle(exe: &std::path::Path, game: &SteamGame) -> Result<Child, String> {
     use tokio::process::Command;
 
     #[cfg(windows)]
     #[allow(unused_imports)]
     use std::os::windows::process::CommandExt;
+    #[cfg(windows)]
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
     let mut cmd = Command::new(exe);
@@ -300,7 +313,8 @@ async fn spawn_idle(
     #[cfg(windows)]
     cmd.creation_flags(CREATE_NO_WINDOW);
 
-    let mut child = cmd.spawn()
+    let mut child = cmd
+        .spawn()
         .map_err(|e| format!("Jarayon ishga tushmadi: {e}"))?;
 
     // Startup output ni kutamiz (muvaffaqiyat yoki muvaffaqiyatsizlik)
@@ -329,10 +343,7 @@ async fn spawn_idle(
 
 // ── Bitta o'yinni to'xtatish ──────────────────────────────────────────
 #[tauri::command]
-pub async fn stop_idling(
-    app_id: u32,
-    state: State<'_, IdlingState>,
-) -> Result<(), String> {
+pub async fn stop_idling(app_id: u32, state: State<'_, IdlingState>) -> Result<(), String> {
     let mut processes = state.processes.lock().await;
     if let Some(mut h) = processes.remove(&app_id) {
         h.child.kill().await.map_err(|e| e.to_string())?;
@@ -398,6 +409,7 @@ async fn run_steam_utility(args: &[&str]) -> Result<serde_json::Value, String> {
 
     let exe = locate_steam_utility()?;
 
+    #[cfg(windows)]
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
     let mut cmd = Command::new(&exe);
@@ -429,8 +441,8 @@ async fn run_steam_utility(args: &[&str]) -> Result<serde_json::Value, String> {
 
     let _ = child.wait().await;
 
-    let json: serde_json::Value =
-        serde_json::from_str(&line).map_err(|e| format!("JSON parse error: {e} — output: {line}"))?;
+    let json: serde_json::Value = serde_json::from_str(&line)
+        .map_err(|e| format!("JSON parse error: {e} — output: {line}"))?;
 
     if json.get("ok").and_then(|v| v.as_bool()) == Some(false) {
         let err = json
@@ -455,7 +467,11 @@ pub async fn get_achievement_data(app_id: u32) -> Result<serde_json::Value, Stri
 #[tauri::command]
 pub async fn set_achievement(app_id: u32, ach_id: String, unlock: bool) -> Result<(), String> {
     let id = app_id.to_string();
-    let cmd = if unlock { "unlock_achievement" } else { "lock_achievement" };
+    let cmd = if unlock {
+        "unlock_achievement"
+    } else {
+        "lock_achievement"
+    };
     run_steam_utility(&[cmd, &id, &ach_id]).await?;
     Ok(())
 }

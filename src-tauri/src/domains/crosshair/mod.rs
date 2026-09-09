@@ -34,7 +34,9 @@ pub async fn save_crosshair_config(
 
 /// Load saved crosshair config from disk
 #[tauri::command]
-pub async fn get_saved_crosshair_config(app: AppHandle) -> Result<Option<serde_json::Value>, String> {
+pub async fn get_saved_crosshair_config(
+    app: AppHandle,
+) -> Result<Option<serde_json::Value>, String> {
     if let Some(path) = get_config_path(&app) {
         if path.exists() {
             if let Ok(content) = std::fs::read_to_string(&path) {
@@ -82,9 +84,6 @@ fn enforce_win32_topmost(win: &tauri::WebviewWindow) {
         }
     }
 }
-
-#[cfg(not(windows))]
-fn enforce_win32_topmost(_win: &tauri::WebviewWindow) {}
 
 /// Start a lightweight background thread to keep the overlay strictly on top
 fn start_topmost_keepalive(app: AppHandle) {
