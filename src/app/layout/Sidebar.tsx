@@ -301,7 +301,7 @@ export default function Sidebar() {
                             {!isCollapsed &&
                               TOOL_CATALOG.some(
                                 (tool) => tool.id === link.name,
-                              ) && (
+                              ) && link.name !== 'developer-tools' && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
