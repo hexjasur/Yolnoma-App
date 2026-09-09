@@ -1,153 +1,28 @@
-import { useMemo, useRef, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import {
-  Braces,
-  Check,
-  Code2,
-  Copy,
-  Hash,
-  Palette,
-  QrCode,
-  ShieldCheck,
-  WandSparkles,
-} from 'lucide-react';
-import MarkdownContent from '@/features/ai/components/MarkdownContent';
+import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { Braces, Code2, Hash, Palette, QrCode, ShieldCheck } from 'lucide-react';
+import ToolNavigation from '../components/ToolNavigation';
+import JsonFormatterTool from '../components/JsonFormatterTool';
+import JwtDecoderTool from '../components/JwtDecoderTool';
+import UuidGeneratorTool from '../components/UuidGeneratorTool';
+import MarkdownStudioTool from '../components/MarkdownStudioTool';
+import ColorPickerTool from '../components/ColorPickerTool';
+import QrGeneratorTool from '../components/QrGeneratorTool';
 
 type Tab = 'json' | 'jwt' | 'uuid' | 'markdown' | 'color' | 'qr';
-type ToolIcon = typeof Code2;
+type TabDefinition = [Tab, string, LucideIcon];
 
-const initialMarkdown = `# Markdown workspace
-
-Write documentation with a live preview. This renderer supports **strong text**, *emphasis*, ~~strikethrough~~, links, images, tables, task lists, blockquotes, and fenced code blocks.
-
-## Example table
-
-| Feature | Status | Notes |
-| --- | :---: | --- |
-| GitHub Flavored Markdown | ✅ | Tables and task lists included |
-| Code blocks | ✅ | Copy-ready with language labels |
-| Responsive layout | ✅ | Wide tables scroll on small screens |
-
-> Tip: use the editor on the left and keep the preview open while you write.
-
-- [x] Add a heading
-- [ ] Add a code example
-
-\`\`\`ts
-const greeting = 'Hello, Markdown';
-console.log(greeting);
-\`\`\``;
-
-function Card({ children }: { children: React.ReactNode }) {
-  return <section className="border border-white/[0.08] bg-[#111109] p-6 shadow-xl md:p-7">{children}</section>;
-}
-
-function ToolButton({ active, icon: Icon, label, onClick }: { active: boolean; icon: ToolIcon; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex min-w-[150px] flex-1 items-center gap-3 border-l-2 px-4 py-3 text-left text-sm transition ${active ? 'border-[var(--accent)] bg-[var(--accent-glow)] text-white' : 'border-transparent text-white/50 hover:bg-white/[0.04] hover:text-white'}`}
-    >
-      <Icon size={17} className={active ? 'text-[var(--accent)]' : 'text-white/35'} />
-      {label}
-    </button>
-  );
-}
+const tabs: TabDefinition[] = [
+  ['json', 'JSON Formatter', Braces],
+  ['jwt', 'JWT Decoder', ShieldCheck],
+  ['uuid', 'UUID Generator', Hash],
+  ['markdown', 'Markdown Studio', Code2],
+  ['color', 'Color Picker', Palette],
+  ['qr', 'QR Generator', QrCode],
+];
 
 export default function DeveloperToolsPage() {
   const [tab, setTab] = useState<Tab>('json');
-  const [json, setJson] = useState('{"name":"Yolnoma","features":["weather","tools"]}');
-  const [jwt, setJwt] = useState('');
-  const [markdown, setMarkdown] = useState(initialMarkdown);
-  const [color, setColor] = useState('#D97757');
-  const [qrText, setQrText] = useState('https://yolnoma.uz');
-  const [uuid, setUuid] = useState(() => crypto.randomUUID());
-  const [copied, setCopied] = useState(false);
-  const [colorPicking, setColorPicking] = useState(false);
-  const [colorPickerError, setColorPickerError] = useState('');
-  const editorRef = useRef<HTMLTextAreaElement>(null);
-  const previewRef = useRef<HTMLElement>(null);
-  const syncingScroll = useRef(false);
-
-  const jsonResult = useMemo(() => {
-    try {
-      return { value: JSON.stringify(JSON.parse(json), null, 2), error: '' };
-    } catch {
-      return { value: '', error: 'Invalid JSON syntax.' };
-    }
-  }, [json]);
-
-  const jwtResult = useMemo(() => {
-    try {
-      const parts = jwt.split('.');
-      if (parts.length !== 3) return { header: '', payload: '', error: 'A JWT must contain three segments.' };
-      const decode = (part: string) => JSON.stringify(JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))), null, 2);
-      return { header: decode(parts[0]), payload: decode(parts[1]), error: '' };
-    } catch {
-      return { header: '', payload: '', error: 'The JWT could not be decoded.' };
-    }
-  }, [jwt]);
-
-  const copy = async (value: string) => {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
-  };
-
-  const pickColor = async () => {
-    setColorPickerError('');
-    if (/Windows/i.test(navigator.userAgent)) {
-      setColorPicking(true);
-      try {
-        setColor(await invoke<string>('pick_screen_color'));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (!message.toLowerCase().includes('cancel')) setColorPickerError(message);
-      } finally {
-        setColorPicking(false);
-      }
-      return;
-    }
-
-    const eyeDropper = (window as Window & { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper;
-    if (!eyeDropper) {
-      setColorPickerError('Global screen picking is currently available on Windows only.');
-      return;
-    }
-    try {
-      setColor((await new eyeDropper().open()).sRGBHex);
-    } catch {
-      // The browser picker was cancelled.
-    }
-  };
-
-  const generateUuid = () => {
-    const next = crypto.randomUUID();
-    setUuid(next);
-    void copy(next);
-  };
-
-  const syncScroll = (source: HTMLTextAreaElement | HTMLElement, target: HTMLTextAreaElement | HTMLElement) => {
-    if (syncingScroll.current) return;
-    syncingScroll.current = true;
-    const sourceMax = source.scrollHeight - source.clientHeight;
-    const targetMax = target.scrollHeight - target.clientHeight;
-    const ratio = sourceMax > 0 ? source.scrollTop / sourceMax : 0;
-    target.scrollTop = ratio * Math.max(0, targetMax);
-    window.requestAnimationFrame(() => {
-      syncingScroll.current = false;
-    });
-  };
-
-  const tabs: [Tab, string, ToolIcon][] = [
-    ['json', 'JSON Formatter', Braces],
-    ['jwt', 'JWT Decoder', ShieldCheck],
-    ['uuid', 'UUID Generator', Hash],
-    ['markdown', 'Markdown Studio', Code2],
-    ['color', 'Color Picker', Palette],
-    ['qr', 'QR Generator', QrCode],
-  ];
 
   return (
     <div className="mx-auto min-h-full max-w-7xl pb-16 text-[var(--text-primary)]">
@@ -163,37 +38,16 @@ export default function DeveloperToolsPage() {
       </header>
 
       <div className="mt-8">
-        <aside className="border border-white/[0.08] bg-[#111109] p-2">
-          <div className="px-4 pb-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Workspace</div>
-          <nav className="flex flex-wrap gap-1">
-            {tabs.map(([id, label, Icon]) => <ToolButton key={id} active={tab === id} icon={Icon} label={label} onClick={() => setTab(id)} />)}
-          </nav>
-        </aside>
-
-        <main className="mt-8 min-w-0 space-y-5">
-          {tab === 'json' && <Card><Title icon={Braces} text="JSON Formatter / Validator" subtitle="Validate and format JSON with readable indentation." /><textarea value={json} onChange={(event) => setJson(event.target.value)} className="mt-6 min-h-56 w-full resize-y border border-white/10 bg-black/20 p-4 font-mono text-sm text-white/80 outline-none focus:border-[var(--accent)]" spellCheck={false} /><div className={`mt-3 border-l-2 p-3 text-xs ${jsonResult.error ? 'border-red-400 bg-red-400/10 text-red-300' : 'border-emerald-400 bg-emerald-400/10 text-emerald-300'}`}>{jsonResult.error || 'Valid JSON'}</div>{!jsonResult.error && <Output value={jsonResult.value} onCopy={copy} />}</Card>}
-
-          {tab === 'jwt' && <Card><Title icon={ShieldCheck} text="JWT Decoder" subtitle="Decode a token locally without verifying its signature." /><input value={jwt} onChange={(event) => setJwt(event.target.value)} placeholder="Paste your JWT token" className="mt-6 w-full border border-white/10 bg-black/20 p-4 font-mono text-sm text-white/80 outline-none focus:border-[var(--accent)]" spellCheck={false} />{jwt && <><div className="mt-5 grid gap-5 md:grid-cols-2"><Output label="Header" value={jwtResult.header} onCopy={copy} /><Output label="Payload" value={jwtResult.payload} onCopy={copy} /></div><p className="mt-4 border-l-2 border-amber-400/60 pl-3 text-xs text-amber-300/70">This only decodes the token. Signature verification is not performed.</p></>}</Card>}
-
-          {tab === 'uuid' && <Card><Title icon={Hash} text="UUID Generator" subtitle="Generate a cryptographically random UUID v4." /><div className="flex min-h-72 flex-col items-center justify-center gap-7 border border-white/[0.06] bg-black/10 p-8"><p className="break-all text-center font-mono text-2xl tracking-wide text-white md:text-3xl">{uuid}</p><button type="button" onClick={generateUuid} className="inline-flex items-center gap-2 bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[#17130e] transition hover:brightness-110"><WandSparkles size={16} /> Generate & copy</button></div></Card>}
-
-          {tab === 'markdown' && <Card><Title icon={Code2} text="Markdown Studio" subtitle="A full GitHub-Flavored Markdown preview with tables, task lists, links, images, quotes, and code blocks." /><div className="mt-6 grid gap-4 xl:grid-cols-2"><div className="overflow-hidden border border-white/[0.08] bg-[#0d0d0a]"><div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Editor</span><span className="text-[10px] text-white/25">{markdown.length} chars · {markdown.split('\n').length} lines</span></div><textarea ref={editorRef} onScroll={() => editorRef.current && previewRef.current && syncScroll(editorRef.current, previewRef.current)} value={markdown} onChange={(event) => setMarkdown(event.target.value)} className="block h-[620px] w-full resize-none overflow-y-auto bg-transparent p-5 font-mono text-[13px] leading-6 text-white/80 outline-none" spellCheck={false} /></div><div className="overflow-hidden border border-white/[0.08] bg-[#0d0d0a]"><div className="border-b border-white/[0.08] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Preview</div><article ref={previewRef} onScroll={() => editorRef.current && previewRef.current && syncScroll(previewRef.current, editorRef.current)} className="h-[620px] overflow-y-auto p-5 md:p-7"><MarkdownContent content={markdown} /></article></div></div></Card>}
-
-          {tab === 'color' && <Card><Title icon={Palette} text="Color Picker" subtitle="Pick a color from any Windows window, Chrome tab, or the desktop." /><div className="mt-6 flex min-h-72 flex-wrap items-center gap-8 border border-white/[0.06] bg-black/10 p-8"><input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-28 w-28 cursor-pointer border-0 bg-transparent" /><div><p className="font-mono text-4xl text-white">{color}</p><button type="button" disabled={colorPicking} onClick={() => void pickColor()} className="mt-4 inline-flex items-center gap-2 border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/[0.06] disabled:cursor-wait disabled:opacity-50"><Palette size={15} /> {colorPicking ? 'Select a pixel...' : 'Pick from screen'}</button><p className="mt-3 text-xs text-white/35">Windows mode hides Yolnoma temporarily. Click any visible pixel, or press Esc to cancel.</p>{colorPickerError && <p className="mt-3 max-w-md border-l-2 border-red-400/70 pl-3 text-xs text-red-300">{colorPickerError}</p>}</div></div></Card>}
-
-          {tab === 'qr' && <Card><Title icon={QrCode} text="QR Code Generator" subtitle="Generate a QR code from text or a URL." /><div className="mt-6 flex flex-col gap-6 border border-white/[0.06] bg-black/10 p-6 md:flex-row md:items-start"><textarea value={qrText} onChange={(event) => setQrText(event.target.value)} className="min-h-32 flex-1 resize-y border border-white/10 bg-black/20 p-4 text-sm text-white/80 outline-none focus:border-[var(--accent)]" placeholder="Text or URL..." />{qrText && <img className="h-48 w-48 border-8 border-white bg-white object-contain" alt="Generated QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`} />}</div><p className="mt-4 text-xs text-white/35">QR image generation uses the QRServer public endpoint.</p></Card>}
-
-          <div className="flex min-h-5 items-center justify-end gap-2 text-xs text-emerald-300/80">{copied && <><Check size={14} /> Copied to clipboard</>}</div>
+        <ToolNavigation items={tabs} active={tab} onChange={setTab} />
+        <main className="mt-8 min-w-0">
+          {tab === 'json' && <JsonFormatterTool />}
+          {tab === 'jwt' && <JwtDecoderTool />}
+          {tab === 'uuid' && <UuidGeneratorTool />}
+          {tab === 'markdown' && <MarkdownStudioTool />}
+          {tab === 'color' && <ColorPickerTool />}
+          {tab === 'qr' && <QrGeneratorTool />}
         </main>
       </div>
     </div>
   );
-}
-
-function Title({ icon: Icon, text, subtitle }: { icon: ToolIcon; text: string; subtitle: string }) {
-  return <div className="border-b border-white/[0.08] pb-5"><div className="flex items-center gap-3"><Icon size={20} className="text-[var(--accent)]" /><h2 className="text-lg font-semibold text-white">{text}</h2></div><p className="mt-2 text-sm text-white/40">{subtitle}</p></div>;
-}
-
-function Output({ label, value, onCopy }: { label?: string; value: string; onCopy: (value: string) => void }) {
-  return <div className="mt-5"><div className="mb-2 flex items-center justify-between">{label && <span className="text-xs font-semibold uppercase tracking-wider text-white/35">{label}</span>}<button type="button" onClick={() => void onCopy(value)} className="ml-auto inline-flex items-center gap-1.5 text-white/40 hover:text-white"><Copy size={14} /> Copy</button></div><pre className="max-h-80 overflow-auto border border-white/[0.06] bg-black/20 p-4 text-xs leading-6 text-white/65">{value || 'No output'}</pre></div>;
 }
