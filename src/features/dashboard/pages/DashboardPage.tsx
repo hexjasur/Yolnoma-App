@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type DragEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -8,6 +8,7 @@ import {
   Layers,
   Shield,
   Monitor,
+  GripVertical,
 } from 'lucide-react';
 import { usePerformances } from '@/features/performance/hooks/usePerformances';
 import { useSystemStats } from '@/features/system-monitor/hooks/useSystemStats';
@@ -21,7 +22,8 @@ import WeatherCard from '@/features/weather/components/WeatherCard';
 export default function HomePage() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
-  const { pinnedTools } = usePinnedTools();
+  const { pinnedTools, movePinnedTool } = usePinnedTools();
+  const [draggedToolId, setDraggedToolId] = useState<string | null>(null);
 
   // Real-time system monitoring toggle — persisted in config.json
   const monitoringEnabled = useAccountConfigStore((s) => s.config.systemMonitoring);
@@ -29,6 +31,28 @@ export default function HomePage() {
 
   const toggleMonitoring = () => {
     updateConfig({ systemMonitoring: !monitoringEnabled });
+  };
+
+  const handleToolDragStart = (
+    event: DragEvent<HTMLAnchorElement>,
+    toolId: string,
+  ) => {
+    setDraggedToolId(toolId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', toolId);
+  };
+
+  const handleToolDrop = (
+    event: DragEvent<HTMLAnchorElement>,
+    targetToolId: string,
+  ) => {
+    event.preventDefault();
+    const sourceToolId = event.dataTransfer.getData('text/plain') || draggedToolId;
+    if (!sourceToolId || sourceToolId === targetToolId) return;
+
+    const sourceIndex = pinnedTools.indexOf(sourceToolId);
+    const targetIndex = pinnedTools.indexOf(targetToolId);
+    movePinnedTool(sourceIndex, targetIndex);
   };
 
   // Native local system stats with 2s visibility-aware polling (only when enabled)
@@ -270,10 +294,15 @@ export default function HomePage() {
                   <Link
                     key={tool.id}
                     to={tool.to}
+                    draggable
+                    onDragStart={(event) => handleToolDragStart(event, tool.id)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleToolDrop(event, tool.id)}
+                    onDragEnd={() => setDraggedToolId(null)}
                     onClick={(e) =>
                       handleDevFeatureClick(e, tool.id, user?.role)
                     }
-                    className="group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg"
+                    className={`group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg ${draggedToolId === tool.id ? 'cursor-grabbing opacity-50' : 'cursor-grab'}`}
                   >
                     <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Icon size={20} />
@@ -286,6 +315,11 @@ export default function HomePage() {
                         {tool.description}
                       </p>
                     </div>
+                    <GripVertical
+                      size={16}
+                      aria-hidden="true"
+                      className="shrink-0 text-white/25 transition-colors group-hover:text-[var(--accent)]"
+                    />
                     <ArrowRight
                       size={15}
                       className="ml-auto shrink-0 text-white/30 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all"
