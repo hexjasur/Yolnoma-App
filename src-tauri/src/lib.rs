@@ -62,17 +62,19 @@ pub fn run() {
             use tauri::{
                 menu::{MenuBuilder, MenuItemBuilder},
                 tray::{TrayIconBuilder, TrayIconEvent},
-                Manager,
+                Emitter, Manager,
             };
 
             // Tray menyu
             let show = MenuItemBuilder::new("Show").id("show").build(app)?;
+            let search = MenuItemBuilder::new("Search").id("search").build(app)?;
             let world_show = MenuItemBuilder::new("3D Show")
                 .id("world-3d-show")
                 .build(app)?;
             let quit = MenuItemBuilder::new("Exit").id("quit").build(app)?;
             let menu = MenuBuilder::new(app)
                 .item(&show)
+                .item(&search)
                 .item(&world_show)
                 .item(&quit)
                 .build()?;
@@ -87,6 +89,13 @@ pub fn run() {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
                             let _ = w.set_focus();
+                        }
+                    }
+                    "search" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                            let _ = app.emit("yolnoma:palette-open", ());
                         }
                     }
                     "world-3d-show" => {
