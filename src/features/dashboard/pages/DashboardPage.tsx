@@ -56,7 +56,7 @@ export default function HomePage() {
   } = useSystemStats(monitoringEnabled);
 
   // Performances only fetched for owner
-  const { items, loading: perfLoading } = usePerformances();
+  const { items, loading: perfLoading } = usePerformances(isOwner);
 
   const recent = useMemo(() => {
     if (!isOwner) return [];

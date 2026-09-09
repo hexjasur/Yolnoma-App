@@ -1,8 +1,39 @@
+/// URL tekshiruvi:
+/// - Faqat http/https schemasi
+/// - Cloud metadata endpointlar taqiqlangan
+/// - Localhost (port 3000/1420), api.yolnoma.uz va barcha tashqi API lari to'liq ruxsat etiladi
+fn validate_proxy_url(url: &str) -> Result<(), String> {
+    let parsed = url.parse::<reqwest::Url>()
+        .map_err(|_| format!("Invalid URL format: {}", url))?;
+
+    let scheme = parsed.scheme();
+    if scheme != "https" && scheme != "http" {
+        return Err(format!("Only HTTP/HTTPS URLs are allowed, got: {}", scheme));
+    }
+
+    let host = parsed.host_str().unwrap_or("").to_lowercase();
+
+    // We block only malicious cloud metadata IPs (AWS/GCP/Azure IMDS).
+    let blocked: &[&str] = &[
+        "169.254.169.254",
+        "metadata.google.internal",
+        "metadata.google",
+    ];
+    if blocked.contains(&host.as_str()) {
+        return Err(format!("Requests to '{}' are not allowed", host));
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn proxy_ep(url: String) -> Result<serde_json::Value, String> {
+    validate_proxy_url(&url)?;
+
     let client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
+        // danger_accept_invalid_certs REMOVED — SSL certificate will be verified.
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| format!("Client build error: {}", e))?;
 
@@ -13,7 +44,6 @@ pub async fn proxy_ep(url: String) -> Result<serde_json::Value, String> {
             "Referer",
             crate::embedded_api_key::referer().map_err(|e| format!("Referer configuration error: {}", e))?,
         )
-        .timeout(std::time::Duration::from_secs(15))
         .send()
         .await
         .map_err(|e| format!("Network error ({}): {}", url, e))?;
@@ -44,17 +74,24 @@ pub async fn proxy_request(
     headers: std::collections::HashMap<String, String>,
     body: Option<serde_json::Value>,
 ) -> Result<ProxyResponse, String> {
+    // SSRF protection — URL validation
+    validate_proxy_url(&url)?;
+
     let client = reqwest::Client::new();
     let mut req = match method.to_uppercase().as_str() {
-        "POST" => client.post(&url),
-        "PUT" => client.put(&url),
-        "PATCH" => client.patch(&url),
+        "POST"   => client.post(&url),
+        "PUT"    => client.put(&url),
+        "PATCH"  => client.patch(&url),
         "DELETE" => client.delete(&url),
-        _ => client.get(&url),
+        _        => client.get(&url),
     };
 
+    // Filtering dangerous headers
+    let blocked_headers = ["host", "x-forwarded-for", "x-real-ip", "forwarded"];
     for (k, v) in headers {
-        req = req.header(k, v);
+        if !blocked_headers.contains(&k.to_lowercase().as_str()) {
+            req = req.header(k, v);
+        }
     }
 
     if let Some(b) = body {
@@ -126,7 +163,7 @@ pub async fn list_local_plugins(app: tauri::AppHandle) -> Result<Vec<DiscoveredP
         if path.is_dir() {
             let dir_name = entry.file_name().to_string_lossy().to_string();
             let plugin_js = path.join("plugin.js");
-            let index_js = path.join("index.js");
+            let index_js  = path.join("index.js");
 
             let target_file = if plugin_js.exists() {
                 Some(("plugin.js".to_string(), plugin_js))
@@ -149,16 +186,46 @@ pub async fn list_local_plugins(app: tauri::AppHandle) -> Result<Vec<DiscoveredP
     Ok(results)
 }
 
+/// Reading plugin source code — only files in the 'plugins' folder
+/// Path traversal protection: canonicalize() + starts_with() check
 #[tauri::command]
 pub async fn read_plugin_source(file_path: String) -> Result<String, String> {
     use std::path::Path;
 
     let path = Path::new(&file_path);
+
+    // Check if the file exists
     if !path.exists() {
         return Err(format!("Plugin file does not exist: {}", file_path));
     }
 
-    std::fs::read_to_string(path).map_err(|e| format!("Failed to read plugin source: {}", e))
+    // Canonical path — resolves `..` and symlinks.
+    let canonical = path.canonicalize()
+        .map_err(|e| format!("Cannot resolve path: {}", e))?;
+
+    // Plugins papkasidan tashqariga chiqishni taqiqlash
+    let plugins_root = {
+        let local_app_data = std::env::var("LOCALAPPDATA")
+            .map_err(|_| "Cannot determine LOCALAPPDATA".to_string())?;
+        Path::new(&local_app_data)
+            .join("Yolnoma")
+            .join("plugins")
+            .canonicalize()
+            .unwrap_or_else(|_| Path::new(&local_app_data).join("Yolnoma").join("plugins"))
+    };
+
+    if !canonical.starts_with(&plugins_root) {
+        return Err("Access denied: path is outside the plugins directory".to_string());
+    }
+
+    // Read only .js and .json files
+    let ext = canonical.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if ext != "js" && ext != "json" && ext != "ts" {
+        return Err(format!("Only .js/.ts/.json plugin files can be read, got: .{}", ext));
+    }
+
+    std::fs::read_to_string(&canonical)
+        .map_err(|e| format!("Failed to read plugin source: {}", e))
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -279,5 +346,3 @@ pub async fn open_agent_window(app: tauri::AppHandle) -> Result<(), String> {
 
     Ok(())
 }
-
-

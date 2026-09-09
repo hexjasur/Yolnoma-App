@@ -74,7 +74,28 @@ fn yolnoma_root() -> Result<PathBuf, String> {
     Ok(PathBuf::from(local).join("Yolnoma"))
 }
 
+/// Protecting the user_id against path traversal and injection attacks.
+/// It must match the Supabase UUID format.: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+fn validate_user_id(user_id: &str) -> Result<(), String> {
+    if user_id.is_empty() {
+        return Err("user_id cannot be empty".to_string());
+    }
+    // Only UUID format is allowed. (alfanum + tire)
+    if user_id.len() > 64 {
+        return Err("user_id is too long".to_string());
+    }
+    if !user_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        return Err("user_id contains invalid characters".to_string());
+    }
+    // Explicitly prohibit path traversal characters.
+    if user_id.contains("..") || user_id.contains('/') || user_id.contains('\\') {
+        return Err("user_id contains path traversal characters".to_string());
+    }
+    Ok(())
+}
+
 fn account_dir(user_id: &str) -> Result<PathBuf, String> {
+    validate_user_id(user_id)?;
     Ok(yolnoma_root()?.join("accounts").join(user_id))
 }
 
