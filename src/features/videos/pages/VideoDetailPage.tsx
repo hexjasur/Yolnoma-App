@@ -156,13 +156,13 @@ export default function VideoDetailPage() {
 
         <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.06] p-6 text-center">
           <p className="font-semibold text-red-300 mb-2">
-            Video yuklashda xato yuz berdi
+            An error occurred while uploading the video.
           </p>
           <p className="text-sm text-red-300/70 mb-5">
             {error || 'Video topilmadi.'}
           </p>
           <Button variant="ghost" onClick={loadVideo}>
-            Qayta urinish
+            Retry
           </Button>
         </div>
       </div>
@@ -279,14 +279,14 @@ export default function VideoDetailPage() {
           {/* Views */}
           <div className="flex items-center gap-1.5">
             <Eye size={14} className="text-[var(--accent)]" />
-            <span>{formattedViews} marta ko'rildi</span>
+            <span>Viewed {formattedViews} times</span>
           </div>
 
           {/* Duration */}
           <div className="flex items-center gap-1.5">
             <Clock size={14} className="text-[var(--accent)]" />
             <span>
-              Davomiyligi:{' '}
+              Duration:{' '}
               <strong className="text-[var(--text-primary)]">
                 {video.length_min || '0:00'}
               </strong>
@@ -297,7 +297,7 @@ export default function VideoDetailPage() {
           {video.added && (
             <div className="flex items-center gap-1.5">
               <Calendar size={14} className="text-[var(--accent)]" />
-              <span>Qo'shilgan: {video.added}</span>
+              <span>Added: {video.added}</span>
             </div>
           )}
         </div>
@@ -307,7 +307,7 @@ export default function VideoDetailPage() {
           <div className="space-y-2 pt-1">
             <div className="flex items-center gap-1.5 text-xs text-[var(--text-faint)] uppercase tracking-wider font-semibold">
               <Tag size={12} />
-              <span>Teglar va kalit so'zlar:</span>
+              <span>Tags and keywords:</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => (
