@@ -52,9 +52,33 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
 }
 
 function MarkdownText({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const consumedTableLines = new Set<number>();
+
   return (
     <div className="space-y-2">
-      {text.split('\n').map((line, index) => {
+      {lines.map((line, index) => {
+        if (consumedTableLines.has(index)) return null;
+        const dividerIndex = lines[index + 1]?.trim() ? index + 1 : index + 2;
+        if (isTableHeader(line) && isTableDivider(lines[dividerIndex])) {
+          const rows: string[][] = [splitTableCells(line)];
+          let rowIndex = dividerIndex + 1;
+          while (rowIndex < lines.length) {
+            if (!lines[rowIndex].trim() && isTableRow(lines[rowIndex + 1])) {
+              consumedTableLines.add(rowIndex);
+              rowIndex += 1;
+              continue;
+            }
+            if (!isTableRow(lines[rowIndex])) break;
+            rows.push(splitTableCells(lines[rowIndex]));
+            consumedTableLines.add(rowIndex);
+            rowIndex += 1;
+          }
+          consumedTableLines.add(dividerIndex);
+          if (dividerIndex !== index + 1) consumedTableLines.add(index + 1);
+          return <MarkdownTable key={index} rows={rows} />;
+        }
+
         const heading = line.match(/^(#{1,6})\s+(.+)$/);
         const numbered = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
         const bulleted = line.match(/^\s*[-*]\s+(.*)$/);
@@ -100,6 +124,60 @@ function MarkdownText({ text }: { text: string }) {
           );
         return <p key={index}>{renderInlineMarkdown(line)}</p>;
       })}
+    </div>
+  );
+}
+
+function isTableRow(line: string | undefined) {
+  return Boolean(line?.includes('|') && line.trim().replace(/\|/g, '').trim());
+}
+
+function isTableHeader(line: string | undefined) {
+  return isTableRow(line) && splitTableCells(line ?? '').length >= 2;
+}
+
+function isTableDivider(line: string | undefined) {
+  if (!isTableRow(line)) return false;
+  return splitTableCells(line ?? '').every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function splitTableCells(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+}
+
+function MarkdownTable({ rows }: { rows: string[][] }) {
+  const [header = [], ...body] = rows;
+  const columnCount = Math.max(header.length, ...body.map((row) => row.length));
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-white/[0.10] bg-black/10">
+      <table className="min-w-full border-collapse text-left text-xs">
+        <thead className="bg-white/[0.05]">
+          <tr>
+            {Array.from({ length: columnCount }, (_, index) => (
+              <th key={index} className="border-b border-white/[0.10] px-3 py-2.5 font-semibold text-white">
+                {renderInlineMarkdown(header[index] ?? '')}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {body.map((row, rowIndex) => (
+            <tr key={rowIndex} className="even:bg-white/[0.025]">
+              {Array.from({ length: columnCount }, (_, index) => (
+                <td key={index} className="border-b border-white/[0.06] px-3 py-2.5 align-top leading-relaxed text-white/75">
+                  {renderInlineMarkdown(row[index] ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

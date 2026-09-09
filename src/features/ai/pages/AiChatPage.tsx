@@ -260,6 +260,9 @@ export default function AiChatPage() {
         `All selected models reached their limit. Last checked at ${checkedAt}.`,
       );
     } catch (requestError) {
+      setMessages(messages);
+      setPrompt(text);
+      requestAnimationFrame(() => promptInputRef.current?.focus());
       setError(
         requestError instanceof Error
           ? requestError.message

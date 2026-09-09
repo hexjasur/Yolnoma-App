@@ -367,6 +367,9 @@ export default function CodebaseAgentPage() {
       if (messagesRef.current[lastIdx]?.role === 'user') {
         messagesRef.current = messagesRef.current.slice(0, lastIdx);
       }
+      setHistory((current) => current[current.length - 1]?.role === 'user' ? current.slice(0, -1) : current);
+      setPrompt(text);
+      requestAnimationFrame(() => promptRef.current?.focus());
     } finally {
       setLoading(false);
     }
