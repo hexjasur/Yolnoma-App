@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Binary, Braces, Code2, Hash, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
+import { Binary, Braces, Code2, FileText, Hash, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
@@ -10,8 +10,9 @@ import QrGeneratorTool from '../components/QrGeneratorTool';
 import Base64Tool from '../components/Base64Tool';
 import CurlConverterTool from '../components/CurlConverterTool';
 import RegexVisualizerTool from '../components/RegexVisualizerTool';
+import LoremIpsumTool from '../components/LoremIpsumTool';
 
-type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter' | 'regex-visualizer';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter' | 'regex-visualizer' | 'lorem-ipsum';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
@@ -23,6 +24,7 @@ const tabs: TabDefinition[] = [
   ['qr-generator', 'QR Generator', QrCode],
   ['curl-converter', 'cURL → Code', Terminal],
   ['regex-visualizer', 'Regex Visualizer', Regex],
+  ['lorem-ipsum', 'Lorem Ipsum', FileText],
 ];
 
 const tabIds = new Set<Tab>(tabs.map(([id]) => id));
@@ -76,6 +78,7 @@ export default function DeveloperToolsPage() {
           {tab === 'qr-generator' && <QrGeneratorTool />}
           {tab === 'curl-converter' && <CurlConverterTool />}
           {tab === 'regex-visualizer' && <RegexVisualizerTool />}
+          {tab === 'lorem-ipsum' && <LoremIpsumTool />}
         </main>
       </div>
     </div>
