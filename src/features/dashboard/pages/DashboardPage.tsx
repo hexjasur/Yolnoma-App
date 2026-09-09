@@ -15,6 +15,7 @@ import { useSystemStats } from '@/features/system-monitor/hooks/useSystemStats';
 import { useAuth } from '@/features/auth/AuthContext';
 import { handleDevFeatureClick } from '@/config/features';
 import { TOOL_CATALOG } from '@/config/toolCatalog';
+import { ToolIcon } from '@/config/ToolIcon';
 import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
 import { useAccountConfigStore } from '@/shared/stores/accountConfigStore';
 import WeatherCard from '@/features/weather/components/WeatherCard';
@@ -282,7 +283,6 @@ export default function HomePage() {
             {pinnedTools.map((toolId) => {
                 const tool = TOOL_CATALOG.find((candidate) => candidate.id === toolId);
                 if (!tool) return null;
-                const Icon = tool.icon;
                 return (
                   <div
                     key={tool.id}
@@ -300,7 +300,7 @@ export default function HomePage() {
                       className="flex min-w-0 flex-1 items-center gap-3.5"
                     >
                       <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <Icon size={20} />
+                        <ToolIcon icon={tool.icon} className="h-5 w-5 object-contain" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
