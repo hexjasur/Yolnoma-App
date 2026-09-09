@@ -152,6 +152,7 @@ pub fn run() {
             app_commands::ping,
             app_commands::exit_app,
             app_commands::hide_window,
+            app_commands::read_codebase_file,
             app_commands::get_idling_count,
             // ── Account Storage ──
             account_storage::set_current_user,

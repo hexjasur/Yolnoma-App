@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { readDir, readTextFile } from '@tauri-apps/plugin-fs';
+import { readDir } from '@tauri-apps/plugin-fs';
 import { Check, FolderOpen, Loader2, FileText, Sparkles, KeyRound, RotateCcw, X } from 'lucide-react';
 import { Button } from '@/shared/ui';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -109,8 +109,10 @@ async function readProjectFile(rootPath: string, relativePath: string): Promise<
   if (relativePath.includes('..') || relativePath.startsWith('/')) {
     throw new Error('Path is not allowed');
   }
-  const fullPath = `${rootPath}/${relativePath}`;
-  const content = await readTextFile(fullPath);
+  const content = await invoke<string>('read_codebase_file', {
+    rootPath,
+    relativePath,
+  });
   return content.length > MAX_FILE_CHARS
       ? `${content.slice(0, MAX_FILE_CHARS)}\n\n...(file truncated; showing ${MAX_FILE_CHARS} of ${content.length} characters)...`
     : content;
@@ -565,14 +567,14 @@ export default function CodebaseAgentPage() {
         </div>
 
         {pendingApproval && (
-          <section className="mx-4 mb-3 shrink-0 rounded-2xl border border-amber-300/25 bg-amber-300/[0.08] p-4">
+          <section className="mx-4 mb-3 shrink-0 rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-glow)] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-amber-100">The agent requests file access</p>
-                <p className="mt-1 text-xs leading-relaxed text-amber-100/65">
+                <p className="text-sm font-semibold text-white">The agent requests file access</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">
                   To answer your question, Codebase Agent wants to read the following project file(s). Review the paths and allow access to continue.
                 </p>
-                <ul className="mt-2 max-h-20 overflow-y-auto space-y-1 text-xs font-mono text-amber-100/80">
+                <ul className="mt-2 max-h-20 overflow-y-auto space-y-1 text-xs font-mono text-[var(--accent)]">
                   {pendingApproval.paths.map((path, index) => <li key={`${path}-${index}`}>{path}</li>)}
                 </ul>
               </div>
