@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
+  Braces,
   Bot,
   BrushCleaning,
   Coins,
@@ -41,6 +42,7 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   { id: 'steam-sam', label: 'Steam / SAM', description: 'Manage Steam achievements', to: '/tools/steam/sam', icon: Gamepad },
   { id: 'steam-review', label: 'Steam / Review', description: 'Review Steam games', to: '/tools/steam/review', icon: Gamepad2 },
   { id: 'developer-tools', label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', to: '/tools/developer-tools', icon: Wrench },
+  { id: 'json-viewer', label: 'JSON Viewer', description: 'Transform JSON into cards', to: '/tools/json', icon: Braces },
   { id: 'css-tools', label: 'CSS Tools', description: 'Gradients, scrollbars & minify', to: '/tools/css-tools', icon: Palette },
   { id: 'git', label: 'Git', description: 'Generate best-practice commits', to: '/tools/git', icon: GitBranch },
   { id: 'world-3d', label: 'Yolnoma World', description: 'Explore the living 3D desktop', to: '/tools/world-3d', icon: Trees },

@@ -37,6 +37,7 @@ import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsP
 import CssToolsPage from '@/features/css-tools/pages/CssToolsPage';
 import GitPage from '@/features/git/pages/GitPage';
 import FeedbackPage from '@/features/feedback/pages/FeedbackPage';
+import JsonViewerPage from '@/features/json-viewer/pages/JsonViewerPage';
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -110,6 +111,7 @@ export default function AppRoutes() {
             <Route path="/tools/steam/sam" element={<SteamSamPage />} />
             <Route path="/tools/developer-tools" element={<DeveloperToolsPage />} />
             <Route path="/tools/css-tools" element={<CssToolsPage />} />
+            <Route path="/tools/json" element={<JsonViewerPage />} />
             <Route path="/tools/git" element={<GitPage />} />
             <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/tools/world-3d" element={<World3DPage />} />
