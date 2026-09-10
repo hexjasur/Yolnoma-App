@@ -22,6 +22,7 @@
     "@tauri-apps/plugin-window-state": "^2",
     "@types/three": "^0.185.4",
     "@yolnoma/plugin-sdk": "^0.1.11",
+    "bcryptjs": "^3.0.3",
     "lightgallery": "^2.9.0",
     "lucide-react": "^1.30.0",
     "react": "^19.1.0",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^26.2.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

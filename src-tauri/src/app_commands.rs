@@ -1,4 +1,4 @@
-use crate::steam_idler::IdlingState;
+use crate::domains::steam::IdlingState;
 use tauri::{AppHandle, State, WebviewWindow};
 
 #[tauri::command]
@@ -168,6 +168,44 @@ pub fn read_codebase_file(root_path: String, relative_path: String) -> Result<St
     let bytes = std::fs::read(&canonical_file)
         .map_err(|error| format!("Could not read {relative_path}: {error}"))?;
     Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// Write a project file after validating that the destination remains inside the selected root.
+#[tauri::command]
+pub fn write_codebase_file(
+    root_path: String,
+    relative_path: String,
+    content: String,
+) -> Result<(), String> {
+    use std::path::{Component, Path, PathBuf};
+
+    let relative = Path::new(&relative_path);
+    if relative.is_absolute()
+        || relative
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err("The requested path must stay inside the selected project folder.".to_string());
+    }
+
+    let root = PathBuf::from(root_path)
+        .canonicalize()
+        .map_err(|error| format!("Could not access the selected project folder: {error}"))?;
+    let destination = root.join(relative);
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "The requested file has no valid parent folder.".to_string())?;
+    std::fs::create_dir_all(parent)
+        .map_err(|error| format!("Could not prepare the destination folder: {error}"))?;
+    let canonical_parent = parent
+        .canonicalize()
+        .map_err(|error| format!("Could not access the destination folder: {error}"))?;
+    if !canonical_parent.starts_with(&root) {
+        return Err("The requested path is outside the selected project folder.".to_string());
+    }
+
+    std::fs::write(&destination, content)
+        .map_err(|error| format!("Could not write {relative_path}: {error}"))
 }
 
 /// Return the number of currently active idling processes for the tray UI.

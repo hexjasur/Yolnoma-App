@@ -1,8 +1,8 @@
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ArchiveEntry {
@@ -37,11 +37,7 @@ pub struct ArchiveFileData {
 }
 
 fn get_file_kind_and_mime(name: &str) -> (&'static str, &'static str) {
-    let ext = name
-        .split('.')
-        .last()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = name.split('.').last().unwrap_or("").to_lowercase();
 
     match ext.as_str() {
         "txt" => ("text", "text/plain;charset=utf-8"),
@@ -114,7 +110,8 @@ fn read_zip_archive(
 ) -> Result<ArchiveSummary, String> {
     let file = File::open(path).map_err(|e| format!("Could not open file: {}", e))?;
     let reader = BufReader::new(file);
-    let mut zip = zip::ZipArchive::new(reader).map_err(|e| format!("Invalid ZIP archive: {}", e))?;
+    let mut zip =
+        zip::ZipArchive::new(reader).map_err(|e| format!("Invalid ZIP archive: {}", e))?;
 
     let mut entries = Vec::new();
     let mut total_files = 0;
@@ -184,30 +181,42 @@ fn read_7z_archive(
     let mut total_folders = 0;
     let mut uncompressed_size = 0;
 
-    sevenz_rust::decompress_file_with_extract_fn(path, &PathBuf::from(""), |entry, _reader, _dest| {
-        let is_dir = entry.is_directory();
-        let full_path = entry.name().trim_end_matches('/').trim_end_matches('\\').replace('\\', "/");
-        let name = full_path.split('/').last().unwrap_or(&full_path).to_string();
-        let size = entry.size();
+    sevenz_rust::decompress_file_with_extract_fn(
+        path,
+        &PathBuf::from(""),
+        |entry, _reader, _dest| {
+            let is_dir = entry.is_directory();
+            let full_path = entry
+                .name()
+                .trim_end_matches('/')
+                .trim_end_matches('\\')
+                .replace('\\', "/");
+            let name = full_path
+                .split('/')
+                .last()
+                .unwrap_or(&full_path)
+                .to_string();
+            let size = entry.size();
 
-        if is_dir {
-            total_folders += 1;
-        } else {
-            total_files += 1;
-            uncompressed_size += size;
-        }
+            if is_dir {
+                total_folders += 1;
+            } else {
+                total_files += 1;
+                uncompressed_size += size;
+            }
 
-        entries.push(ArchiveEntry {
-            path: full_path,
-            name,
-            is_dir,
-            size,
-            compressed_size: size,
-            modified: None,
-        });
+            entries.push(ArchiveEntry {
+                path: full_path,
+                name,
+                is_dir,
+                size,
+                compressed_size: size,
+                modified: None,
+            });
 
-        Ok(false) // Don't actually extract to disk, just inspect headers
-    })
+            Ok(false) // Don't actually extract to disk, just inspect headers
+        },
+    )
     .map_err(|e| format!("Could not read 7z archive: {}", e))?;
 
     Ok(ArchiveSummary {
@@ -237,7 +246,11 @@ pub async fn read_archive_entry_content(
         .unwrap_or("")
         .to_lowercase();
 
-    let name = entry_path.split('/').last().unwrap_or(&entry_path).to_string();
+    let name = entry_path
+        .split('/')
+        .last()
+        .unwrap_or(&entry_path)
+        .to_string();
     let (kind, mime_type) = get_file_kind_and_mime(&name);
 
     let mut bytes = Vec::new();
@@ -254,23 +267,35 @@ pub async fn read_archive_entry_content(
         let mut zip_file = zip.by_index(index).map_err(|e| e.to_string())?;
 
         if zip_file.size() > 30 * 1024 * 1024 {
-            return Err("File exceeds 30MB preview limit. Please extract the file instead.".to_string());
+            return Err(
+                "File exceeds 30MB preview limit. Please extract the file instead.".to_string(),
+            );
         }
 
-        zip_file.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+        zip_file
+            .read_to_end(&mut bytes)
+            .map_err(|e| e.to_string())?;
     } else if ext == "7z" {
         let mut found = false;
-        sevenz_rust::decompress_file_with_extract_fn(&src, &PathBuf::from(""), |entry, reader, _dest| {
-            let normalized = entry.name().trim_end_matches('/').trim_end_matches('\\').replace('\\', "/");
-            if normalized == entry_path {
-                found = true;
-                if entry.size() > 30 * 1024 * 1024 {
-                    return Err(sevenz_rust::Error::other("File exceeds 30MB limit"));
+        sevenz_rust::decompress_file_with_extract_fn(
+            &src,
+            &PathBuf::from(""),
+            |entry, reader, _dest| {
+                let normalized = entry
+                    .name()
+                    .trim_end_matches('/')
+                    .trim_end_matches('\\')
+                    .replace('\\', "/");
+                if normalized == entry_path {
+                    found = true;
+                    if entry.size() > 30 * 1024 * 1024 {
+                        return Err(sevenz_rust::Error::other("File exceeds 30MB limit"));
+                    }
+                    reader.read_to_end(&mut bytes)?;
                 }
-                reader.read_to_end(&mut bytes)?;
-            }
-            Ok(false)
-        })
+                Ok(false)
+            },
+        )
         .map_err(|e| format!("Could not read from 7z archive: {}", e))?;
 
         if !found {
@@ -343,7 +368,11 @@ pub async fn extract_single_entry(
     } else if ext == "7z" {
         let mut found = false;
         sevenz_rust::decompress_file_with_extract_fn(&src, &dest, |entry, reader, dest_path| {
-            let normalized = entry.name().trim_end_matches('/').trim_end_matches('\\').replace('\\', "/");
+            let normalized = entry
+                .name()
+                .trim_end_matches('/')
+                .trim_end_matches('\\')
+                .replace('\\', "/");
             if normalized == entry_path {
                 found = true;
                 let target = dest_path.join(file_name);
@@ -372,7 +401,8 @@ pub async fn extract_archive(archive_path: String, dest_dir: String) -> Result<S
         return Err("Archive file not found".to_string());
     }
 
-    std::fs::create_dir_all(&dest).map_err(|e| format!("Could not create destination directory: {}", e))?;
+    std::fs::create_dir_all(&dest)
+        .map_err(|e| format!("Could not create destination directory: {}", e))?;
 
     let ext = src
         .extension()
@@ -384,11 +414,13 @@ pub async fn extract_archive(archive_path: String, dest_dir: String) -> Result<S
         "zip" => {
             let file = File::open(&src).map_err(|e| e.to_string())?;
             let mut zip = zip::ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
-            zip.extract(&dest).map_err(|e| format!("Extraction failed: {}", e))?;
+            zip.extract(&dest)
+                .map_err(|e| format!("Extraction failed: {}", e))?;
             Ok(format!("Successfully extracted to {}", dest.display()))
         }
         "7z" => {
-            sevenz_rust::decompress_file(&src, &dest).map_err(|e| format!("7z extraction failed: {}", e))?;
+            sevenz_rust::decompress_file(&src, &dest)
+                .map_err(|e| format!("7z extraction failed: {}", e))?;
             Ok(format!("Successfully extracted to {}", dest.display()))
         }
         _ => Err("Unsupported archive format".to_string()),
