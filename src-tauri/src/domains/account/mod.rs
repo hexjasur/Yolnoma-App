@@ -84,7 +84,10 @@ fn validate_user_id(user_id: &str) -> Result<(), String> {
     if user_id.len() > 64 {
         return Err("user_id is too long".to_string());
     }
-    if !user_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+    if !user_id
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    {
         return Err("user_id contains invalid characters".to_string());
     }
     // Explicitly prohibit path traversal characters.
@@ -121,20 +124,19 @@ fn dpapi_protect(data: &[u8]) -> Result<Vec<u8>, String> {
     let ok = unsafe {
         CryptProtectData(
             &mut input,
-            std::ptr::null(),      // description (optional)
-            std::ptr::null_mut(),  // optional entropy
-            std::ptr::null_mut(),  // reserved
-            std::ptr::null_mut(),  // prompt struct
-            0,                     // flags
+            std::ptr::null(),     // description (optional)
+            std::ptr::null_mut(), // optional entropy
+            std::ptr::null_mut(), // reserved
+            std::ptr::null_mut(), // prompt struct
+            0,                    // flags
             &mut output,
         )
     };
 
     if ok == 0 {
-        return Err(format!(
-            "CryptProtectData failed (error {})",
-            unsafe { windows_sys::Win32::Foundation::GetLastError() }
-        ));
+        return Err(format!("CryptProtectData failed (error {})", unsafe {
+            windows_sys::Win32::Foundation::GetLastError()
+        }));
     }
 
     let protected =
@@ -168,10 +170,9 @@ fn dpapi_unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
     };
 
     if ok == 0 {
-        return Err(format!(
-            "CryptUnprotectData failed (error {})",
-            unsafe { windows_sys::Win32::Foundation::GetLastError() }
-        ));
+        return Err(format!("CryptUnprotectData failed (error {})", unsafe {
+            windows_sys::Win32::Foundation::GetLastError()
+        }));
     }
 
     let plain =
@@ -184,14 +185,13 @@ fn dpapi_unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
 
 fn get_or_create_master() -> Result<Vec<u8>, String> {
     let root = yolnoma_root()?;
-    std::fs::create_dir_all(&root)
-        .map_err(|e| format!("Failed to create Yolnoma dir: {}", e))?;
+    std::fs::create_dir_all(&root).map_err(|e| format!("Failed to create Yolnoma dir: {}", e))?;
 
     let master_path = root.join("master.key");
 
     if master_path.exists() {
-        let protected = std::fs::read(&master_path)
-            .map_err(|e| format!("Failed to read master.key: {}", e))?;
+        let protected =
+            std::fs::read(&master_path).map_err(|e| format!("Failed to read master.key: {}", e))?;
         dpapi_unprotect(&protected)
     } else {
         // Generate a fresh random 32-byte master secret
@@ -236,7 +236,11 @@ pub fn set_current_user(
         .user_id
         .lock()
         .map_err(|e| format!("Mutex error: {}", e))?;
-    *guard = if user_id.is_empty() { None } else { Some(user_id) };
+    *guard = if user_id.is_empty() {
+        None
+    } else {
+        Some(user_id)
+    };
     Ok(())
 }
 
@@ -250,8 +254,8 @@ pub fn get_account_config(user_id: String) -> Result<AccountConfig, String> {
     if !path.exists() {
         return Ok(AccountConfig::default());
     }
-    let content = std::fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read config.json: {}", e))?;
+    let content =
+        std::fs::read_to_string(&path).map_err(|e| format!("Failed to read config.json: {}", e))?;
     serde_json::from_str::<AccountConfig>(&content)
         .map_err(|e| format!("Failed to parse config.json: {}", e))
 }
@@ -263,8 +267,7 @@ pub fn save_account_config(user_id: String, config: AccountConfig) -> Result<(),
         return Err("user_id cannot be empty".to_string());
     }
     let dir = account_dir(&user_id)?;
-    std::fs::create_dir_all(&dir)
-        .map_err(|e| format!("Failed to create account dir: {}", e))?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create account dir: {}", e))?;
 
     let content = serde_json::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
@@ -286,7 +289,10 @@ pub fn get_api_key(
 
     // ── 1. Memory cache hit ──
     {
-        let guard = cache.cache.lock().map_err(|e| format!("Cache lock error: {}", e))?;
+        let guard = cache
+            .cache
+            .lock()
+            .map_err(|e| format!("Cache lock error: {}", e))?;
         if let Some(key) = guard.get(&user_id) {
             return Ok(Some(key.clone()));
         }
@@ -298,8 +304,8 @@ pub fn get_api_key(
         return Ok(None);
     }
 
-    let data = std::fs::read(&secrets_path)
-        .map_err(|e| format!("Failed to read secrets.dat: {}", e))?;
+    let data =
+        std::fs::read(&secrets_path).map_err(|e| format!("Failed to read secrets.dat: {}", e))?;
 
     // Layout: [nonce 12b][user_id sha256 32b][ciphertext …]
     if data.len() < 12 + 32 + 1 {
@@ -313,9 +319,7 @@ pub fn get_api_key(
     // ── 3. Verify userId binding ──
     let expected_hash = sha256_bytes(user_id.as_bytes());
     if stored_hash != expected_hash {
-        return Err(
-            "secrets.dat is not bound to this account — decryption refused".to_string(),
-        );
+        return Err("secrets.dat is not bound to this account — decryption refused".to_string());
     }
 
     // ── 4. Derive key & decrypt ──
@@ -335,7 +339,10 @@ pub fn get_api_key(
 
     // ── 5. Populate cache ──
     {
-        let mut guard = cache.cache.lock().map_err(|e| format!("Cache lock error: {}", e))?;
+        let mut guard = cache
+            .cache
+            .lock()
+            .map_err(|e| format!("Cache lock error: {}", e))?;
         guard.insert(user_id, api_key.clone());
     }
 
@@ -354,8 +361,7 @@ pub fn set_api_key(
     }
 
     let dir = account_dir(&user_id)?;
-    std::fs::create_dir_all(&dir)
-        .map_err(|e| format!("Failed to create account dir: {}", e))?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create account dir: {}", e))?;
 
     let master = get_or_create_master()?;
     let derived = derive_key(&master, &user_id);
@@ -384,7 +390,10 @@ pub fn set_api_key(
 
     // Update cache
     {
-        let mut guard = cache.cache.lock().map_err(|e| format!("Cache lock error: {}", e))?;
+        let mut guard = cache
+            .cache
+            .lock()
+            .map_err(|e| format!("Cache lock error: {}", e))?;
         guard.insert(user_id, api_key);
     }
 
@@ -393,13 +402,13 @@ pub fn set_api_key(
 
 /// Remove the API key for the given account from disk and memory cache.
 #[tauri::command]
-pub fn clear_api_key(
-    user_id: String,
-    cache: tauri::State<'_, ApiKeyCache>,
-) -> Result<(), String> {
+pub fn clear_api_key(user_id: String, cache: tauri::State<'_, ApiKeyCache>) -> Result<(), String> {
     // Evict from cache
     {
-        let mut guard = cache.cache.lock().map_err(|e| format!("Cache lock error: {}", e))?;
+        let mut guard = cache
+            .cache
+            .lock()
+            .map_err(|e| format!("Cache lock error: {}", e))?;
         guard.remove(&user_id);
     }
 
@@ -485,8 +494,8 @@ mod tests {
         let derived_wrong = derive_key(master, wrong_user_id);
         let key_wrong = Key::<Aes256Gcm>::from_slice(&derived_wrong);
         let cipher_wrong = Aes256Gcm::new(key_wrong);
-        let decrypt_result = cipher_wrong
-            .decrypt(Nonce::from_slice(extracted_nonce), extracted_ciphertext);
+        let decrypt_result =
+            cipher_wrong.decrypt(Nonce::from_slice(extracted_nonce), extracted_ciphertext);
         assert!(decrypt_result.is_err());
     }
 }

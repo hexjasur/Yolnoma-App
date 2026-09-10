@@ -1,7 +1,7 @@
 use serde::Serialize;
-use std::process::Command;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+use std::process::Command;
 
 const CLEAR_WINDOWS_TEMP: &str = r#"
 # Remove temporary files from the current user and Windows Temp folders.
@@ -114,6 +114,7 @@ if ($failures.Count -gt 0) {
 }
 "#;
 
+#[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 #[derive(Serialize)]
@@ -192,17 +193,19 @@ fn execute_cleaner(selected: Vec<String>) -> Result<String, String> {
         script.push('\n');
     }
 
-    let output = Command::new("powershell.exe")
-        .args([
-            "-NoLogo",
-            "-NoProfile",
-            "-NonInteractive",
-            "-WindowStyle",
-            "Hidden",
-            "-Command",
-            &script,
-        ])
-        .creation_flags(CREATE_NO_WINDOW)
+    let mut command = Command::new("powershell.exe");
+    command.args([
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-WindowStyle",
+        "Hidden",
+        "-Command",
+        &script,
+    ]);
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
+    let output = command
         .output()
         .map_err(|_| "PowerShell could not be started on this device.".to_string())?;
 

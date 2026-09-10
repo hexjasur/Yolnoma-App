@@ -45,19 +45,19 @@ export default function ConfirmModal({
     switch (variant) {
       case 'danger':
         return (
-          <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
             <AlertCircle size={20} />
           </div>
         );
       case 'warning':
         return (
-          <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
             <AlertTriangle size={20} />
           </div>
         );
       default:
         return (
-          <div className="w-10 h-10 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] shrink-0">
             <Info size={20} />
           </div>
         );
@@ -94,7 +94,7 @@ export default function ConfirmModal({
             type="button"
             onClick={handleConfirm}
             disabled={isLoading}
-            className={`px-4 py-2 rounded-xl text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${getConfirmButtonClass()}`}
+            className={`px-4 py-2 rounded-md text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${getConfirmButtonClass()}`}
           >
             {isLoading && <Loader2 size={13} className="animate-spin" />}
             {confirmText}

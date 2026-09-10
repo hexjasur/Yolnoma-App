@@ -163,9 +163,7 @@ pub fn open_output_folder(path: Option<String>) -> Result<(), String> {
 pub async fn get_image_info(input_path: String) -> Result<ImageInfo, String> {
     let path = Path::new(&input_path);
 
-    let file_size = std::fs::metadata(&input_path)
-        .map(|m| m.len())
-        .unwrap_or(0);
+    let file_size = std::fs::metadata(&input_path).map(|m| m.len()).unwrap_or(0);
 
     let file_name = path
         .file_name()
@@ -244,9 +242,14 @@ pub async fn convert_image(
         Ok(()) => {
             let file_size = std::fs::metadata(&output_path).map(|m| m.len()).ok();
             let output_img = image::open(&output_path).ok();
-            let thumbnail = output_img.as_ref().and_then(|o| generate_thumbnail_base64(o, 300));
+            let thumbnail = output_img
+                .as_ref()
+                .and_then(|o| generate_thumbnail_base64(o, 300));
             let width = output_img.as_ref().map(|o| o.width()).or(Some(img.width()));
-            let height = output_img.as_ref().map(|o| o.height()).or(Some(img.height()));
+            let height = output_img
+                .as_ref()
+                .map(|o| o.height())
+                .or(Some(img.height()));
 
             Ok(ConvertResult {
                 input_path,
@@ -338,14 +341,16 @@ pub async fn convert_images_batch(
 
                 match do_convert(&img, &output_path, fmt, task.quality) {
                     Ok(()) => {
-                        let file_size =
-                            std::fs::metadata(&output_path).map(|m| m.len()).ok();
+                        let file_size = std::fs::metadata(&output_path).map(|m| m.len()).ok();
                         let output_img = image::open(&output_path).ok();
                         let thumbnail = output_img
                             .as_ref()
                             .and_then(|o| generate_thumbnail_base64(o, 300));
                         let width = output_img.as_ref().map(|o| o.width()).or(Some(img.width()));
-                        let height = output_img.as_ref().map(|o| o.height()).or(Some(img.height()));
+                        let height = output_img
+                            .as_ref()
+                            .map(|o| o.height())
+                            .or(Some(img.height()));
 
                         ConvertResult {
                             input_path: task.input_path,

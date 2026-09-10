@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Binary, Braces, Code2, Hash, QrCode, ShieldCheck } from 'lucide-react';
+import { ArrowLeftRight, Binary, Braces, Code2, FileText, Globe2, Hash, LockKeyhole, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
@@ -8,8 +8,14 @@ import UuidGeneratorTool from '../components/UuidGeneratorTool';
 import MarkdownStudioTool from '../components/MarkdownStudioTool';
 import QrGeneratorTool from '../components/QrGeneratorTool';
 import Base64Tool from '../components/Base64Tool';
+import CurlConverterTool from '../components/CurlConverterTool';
+import RegexVisualizerTool from '../components/RegexVisualizerTool';
+import LoremIpsumTool from '../components/LoremIpsumTool';
+import IpLookupTool from '../components/IpLookupTool';
+import BcryptTool from '../components/BcryptTool';
+import DiffCheckerTool from '../components/DiffCheckerTool';
 
-type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64';
+type Tab = 'json-formatter' | 'jwt-decoder' | 'uuid-generator' | 'markdown-studio' | 'qr-generator' | 'base64' | 'curl-converter' | 'regex-visualizer' | 'lorem-ipsum' | 'ip-lookup' | 'bcrypt' | 'diff-checker';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
@@ -19,6 +25,12 @@ const tabs: TabDefinition[] = [
   ['markdown-studio', 'Markdown Studio', Code2],
   ['base64', 'Base64 Encoder', Binary],
   ['qr-generator', 'QR Generator', QrCode],
+  ['curl-converter', 'cURL → Code', Terminal],
+  ['regex-visualizer', 'Regex Visualizer', Regex],
+  ['lorem-ipsum', 'Lorem Ipsum', FileText],
+  ['ip-lookup', 'IP Lookup', Globe2],
+  ['bcrypt', 'Bcrypt Tool', LockKeyhole],
+  ['diff-checker', 'Diff Checker', ArrowLeftRight],
 ];
 
 const tabIds = new Set<Tab>(tabs.map(([id]) => id));
@@ -70,6 +82,12 @@ export default function DeveloperToolsPage() {
           {tab === 'markdown-studio' && <MarkdownStudioTool />}
           {tab === 'base64' && <Base64Tool />}
           {tab === 'qr-generator' && <QrGeneratorTool />}
+          {tab === 'curl-converter' && <CurlConverterTool />}
+          {tab === 'regex-visualizer' && <RegexVisualizerTool />}
+          {tab === 'lorem-ipsum' && <LoremIpsumTool />}
+          {tab === 'ip-lookup' && <IpLookupTool />}
+          {tab === 'bcrypt' && <BcryptTool />}
+          {tab === 'diff-checker' && <DiffCheckerTool />}
         </main>
       </div>
     </div>

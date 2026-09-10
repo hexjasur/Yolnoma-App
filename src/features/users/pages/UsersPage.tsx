@@ -272,7 +272,7 @@ export default function UsersPage() {
             ))}
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="text-center py-20 text-white/40 border border-dashed border-white/10 rounded-2xl bg-[#14110E]">
+          <div className="text-center py-20 text-white/40 border border-dashed border-white/10 rounded-lg bg-[#14110E]">
             <Users className="mx-auto mb-3 text-white/20" size={36} />
             <p className="text-sm font-medium text-white/80 mb-1">
               {searchQuery ? 'No users matching your search' : 'No users registered yet'}
@@ -282,7 +282,7 @@ export default function UsersPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#14110E] shadow-xl">
+          <div className="overflow-hidden rounded-lg border border-white/[0.08] bg-[#14110E] shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -361,7 +361,7 @@ export default function UsersPage() {
                               <button
                                 type="button"
                                 onClick={() => openEditModal(u)}
-                                className="p-2 rounded-lg text-white/60 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 transition-all cursor-pointer"
+                                className="p-2 rounded-md text-white/60 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 transition-all cursor-pointer"
                                 title="Edit User"
                                 aria-label="Edit User"
                               >
@@ -374,7 +374,7 @@ export default function UsersPage() {
                               <button
                                 type="button"
                                 onClick={() => setUserToBlock(u)}
-                                className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                                className={`p-2 rounded-md border transition-all cursor-pointer ${
                                   isSpam
                                     ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
                                     : 'bg-white/[0.04] text-white/60 border-white/10 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10'
@@ -391,7 +391,7 @@ export default function UsersPage() {
                               <button
                                 type="button"
                                 onClick={() => setUserToDelete(u)}
-                                className="p-2 rounded-lg text-white/50 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 transition-all cursor-pointer"
+                                className="p-2 rounded-md text-white/50 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 transition-all cursor-pointer"
                                 title="Delete User"
                                 aria-label="Delete User"
                               >
@@ -437,7 +437,7 @@ export default function UsersPage() {
         >
           <div className="space-y-4 pt-2">
             {editError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                      <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
                 <AlertCircle size={14} />
                 {editError}
               </div>
@@ -453,7 +453,7 @@ export default function UsersPage() {
                 value={editDisplayName}
                 onChange={(e) => setEditDisplayName(e.target.value)}
                 placeholder="e.g. Jane Doe"
-                className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[var(--accent)]"
+                className="w-full bg-white/[0.04] border border-white/10 rounded-md px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[var(--accent)]"
               />
             </div>
 
@@ -467,7 +467,7 @@ export default function UsersPage() {
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
                 placeholder="user@example.com"
-                className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[var(--accent)]"
+                className="w-full bg-white/[0.04] border border-white/10 rounded-md px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[var(--accent)]"
               />
             </div>
 
@@ -480,7 +480,7 @@ export default function UsersPage() {
                 value={editRole}
                 disabled={!isOwner || currentUser?.id === editingUser.id}
                 onChange={(e) => setEditRole(e.target.value as UserRole)}
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white/[0.04] text-white border border-white/10 focus:border-[var(--accent)] outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full px-3.5 py-2.5 rounded-md text-sm bg-white/[0.04] text-white border border-white/10 focus:border-[var(--accent)] outline-none disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <option value="owner" className="bg-[#181410] text-white">Owner</option>
                 <option value="admin" className="bg-[#181410] text-white">Admin</option>
@@ -490,7 +490,7 @@ export default function UsersPage() {
             </div>
 
             {/* Private profile toggle */}
-            <div className="flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center justify-between py-2.5 px-3.5 rounded-md bg-white/[0.02] border border-white/[0.06]">
               <div>
                 <p className="text-xs font-medium text-white/80">Private Profile</p>
                 <p className="text-[11px] text-white/40">Profile is hidden from public view</p>
@@ -512,7 +512,7 @@ export default function UsersPage() {
 
             {/* Spam / Blocked toggle (Owner only) */}
             {isOwner && currentUser?.id !== editingUser.id && (
-              <div className="flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="flex items-center justify-between py-2.5 px-3.5 rounded-md bg-white/[0.02] border border-white/[0.06]">
                 <div>
                   <p className="text-xs font-medium text-white/80">Block / Mark as Spam</p>
                   <p className="text-[11px] text-white/40">Restricts user actions and flags account</p>
