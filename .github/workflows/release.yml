@@ -39,12 +39,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate frontend build secrets
+        shell: pwsh
+        env:
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          VITE_ABC_KEY: ${{ secrets.VITE_ABC_KEY }}
+          VITE_REMOVE_BG_API_KEY: ${{ secrets.VITE_REMOVE_BG_API_KEY }}
+          VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
+        run: |
+          $required = @(
+            "STEAM_API_KEY",
+            "VITE_ABC_KEY",
+            "VITE_REMOVE_BG_API_KEY",
+            "VITE_IMGBB_API_KEY"
+          )
+
+          $missing = @($required | Where-Object { [string]::IsNullOrWhiteSpace((Get-Item "env:$_").Value) })
+          if ($missing.Count -gt 0) {
+            throw "Missing GitHub Actions secrets: $($missing -join ', '). Add them in Settings > Secrets and variables > Actions."
+          }
+
       - name: Build and Release
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          VITE_ABC_KEY: ${{ secrets.VITE_ABC_KEY }}
+          VITE_REMOVE_BG_API_KEY: ${{ secrets.VITE_REMOVE_BG_API_KEY }}
+          VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
         with:
           tagName: v__VERSION__
           releaseName: "Yolnoma v__VERSION__"
