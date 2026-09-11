@@ -31,6 +31,11 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
       - name: Cache Rust build artifacts
         uses: swatinem/rust-cache@v2
         with:
@@ -38,6 +43,32 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build SteamUtility runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $resourceDir = Join-Path $env:GITHUB_WORKSPACE 'src-tauri/resources/steam-utility'
+
+          if (Test-Path $resourceDir) {
+            Remove-Item $resourceDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
+
+          dotnet publish 'libs/SteamUtility/SteamUtility.csproj' `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $resourceDir `
+            -p:PublishSingleFile=false
+
+          $utility = Join-Path $resourceDir 'SteamUtility.exe'
+          if (-not (Test-Path $utility)) {
+            throw "SteamUtility publish did not produce $utility"
+          }
+
+          Write-Host "SteamUtility bundled: $utility"
+          Get-ChildItem $resourceDir | Select-Object Name, Length
 
       - name: Validate frontend build secrets
         shell: pwsh
