@@ -112,6 +112,16 @@ jobs:
           generateReleaseNotes: true
           uploadUpdaterJson: false
 
+      - name: Verify SteamUtility is in Tauri bundle resources
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bundled = 'src-tauri/target/release/resources/steam-utility/SteamUtility.exe'
+          if (-not (Test-Path $bundled)) {
+            throw "Tauri bundle resource is missing: $bundled"
+          }
+          Write-Host "Verified bundled SteamUtility: $bundled"
+
       # ------------------------------------------------------------------------
       # Validate: actual built NSIS installer artifact version matches the Git tag
       # Prevents the infinite-updater-loop failure (e.g. tag v0.9.102 on 0.9.101 artifact)
