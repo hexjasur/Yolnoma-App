@@ -5,7 +5,7 @@ import { readDir, readFile } from '@tauri-apps/plugin-fs';
 import { Check, FileText, FolderOpen, Loader2, Sparkles, WandSparkles } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getApiKey } from '@/features/ai/storage';
-import { fetchOpenRouterModels, getShortModelName } from '@/features/ai/api/openRouterApi';
+import { fetchOpenRouterModels, getShortModelName, isLimitError } from '@/features/ai/api/openRouterApi';
 import { DEFAULT_MODELS, type OpenRouterModel } from '@/features/ai/types';
 import MarkdownContent from '@/features/ai/components/MarkdownContent';
 import { toast } from '@/shared/ui/Toast';
@@ -20,6 +20,7 @@ const IMAGE_FILE = /\.(png|jpe?g|gif|svg|webp|avif|ico)$/i;
 const MAX_FILES = 900;
 const MAX_FILE_CHARS = 12_000;
 const MAX_CONTEXT_CHARS = 65_000;
+const MAX_TREE_ENTRIES = 420;
 
 function joinPath(base: string, name: string) {
   return `${base.replace(/[\\/]$/, '')}${base.includes('\\') || /^[A-Za-z]:/.test(base) ? '\\' : '/'}${name}`;
@@ -51,10 +52,16 @@ async function scanFolder(rootPath: string) {
   const files: FileEntry[] = [];
   async function walk(current: string, depth: number) {
     if (depth > 7 || files.length >= MAX_FILES) return;
-    const entries = await readDir(current);
+    let entries;
+    try {
+      entries = await readDir(current);
+    } catch (error) {
+      if (depth === 0) throw new Error(`Selected folder could not be opened: ${String(error)}`);
+      return;
+    }
     entries.sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
-      if (files.length >= MAX_FILES || (entry.name.startsWith('.') && entry.name !== '.env.example')) continue;
+      if (files.length >= MAX_TREE_ENTRIES || (entry.name.startsWith('.') && entry.name !== '.env.example')) continue;
       if (entry.isDirectory && IGNORED_DIRS.has(entry.name)) continue;
       const path = joinPath(current, entry.name);
       files.push({ path, kind: entry.isDirectory ? 'directory' : 'file' });
@@ -65,7 +72,7 @@ async function scanFolder(rootPath: string) {
   return files;
 }
 
-async function requestReadme(apiKey: string, model: string, context: string) {
+async function requestReadme(apiKey: string, model: string, context: string, customPrompt: string) {
   const system = `You are Yolnoma README Architect, a senior open-source documentation engineer. You inspect a real project context and produce a polished, useful README.md — not a generic template. Never invent features, scripts, dependencies, commands, license, or metrics. If evidence is missing, write a concise TODO or omit the claim. Use the project's actual name and stack. Prefer clear headings, tables where useful, copy-pasteable commands, badges only when their URLs are supported by evidence, and a practical quick-start. Include: project identity, logo/visual identity when known, one-sentence value proposition, features grounded in evidence, tech stack, architecture or folder map, prerequisites, installation, configuration/env variables (never expose secret values), scripts, usage, screenshots placeholder only if no screenshot exists, contribution guidance, roadmap only when supported, and license status. Return ONLY the complete Markdown document, beginning with a top-level title.`;
   return invoke<ProxyResponse>('proxy_request', {
     method: 'POST',
@@ -76,7 +83,7 @@ async function requestReadme(apiKey: string, model: string, context: string) {
       'HTTP-Referer': 'https://yolnoma.app',
       'X-Title': 'Yolnoma AI README Generator',
     },
-    body: { model, max_tokens: 5000, temperature: 0.25, messages: [{ role: 'system', content: system }, { role: 'user', content: context }] },
+    body: { model, max_tokens: 5000, temperature: 0.25, messages: [{ role: 'system', content: system }, { role: 'user', content: `${context}\n\nCUSTOM USER INSTRUCTIONS:\n${customPrompt || 'No additional instructions. Use your best documentation judgment.'}` }] },
   });
 }
 
@@ -93,6 +100,8 @@ export default function ReadmeGeneratorTool() {
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [activeModel, setActiveModel] = useState('');
 
   const projectName = useMemo(() => rootPath.split(/[\\/]/).filter(Boolean).pop() || 'your project', [rootPath]);
   const imageFiles = useMemo(() => entries.filter((entry) => entry.kind === 'file' && IMAGE_FILE.test(entry.path)).map((entry) => relativePath(rootPath, entry.path)), [entries, rootPath]);
@@ -106,7 +115,7 @@ export default function ReadmeGeneratorTool() {
       const found = await scanFolder(selected);
       const textEntries = found.filter((entry) => entry.kind === 'file' && TEXT_FILE.test(entry.path));
       const priority = textEntries.filter((entry) => /(^|\/)(package\.json|readme|vite\.config|tsconfig|cargo\.toml|pyproject\.toml|requirements|dockerfile|\.env\.example|src\/|app\/|pages\/)/i.test(relativePath(selected, entry.path)));
-      const selectedFiles = [...priority, ...textEntries.filter((entry) => !priority.includes(entry))].slice(0, 80);
+      const selectedFiles = [...priority, ...textEntries.filter((entry) => !priority.includes(entry))].slice(0, 36);
       let total = 0;
       const snapshots: string[] = [];
       for (const entry of selectedFiles) {
@@ -140,8 +149,22 @@ export default function ReadmeGeneratorTool() {
     if (!apiKey) { setError('OpenRouter API key topilmadi. AI Chat yoki Agent sozlamalaridan key kiriting.'); return; }
     setGenerating(true); setError('');
     try {
-      const response = await requestReadme(apiKey, model, `${context}\n\nTASK: Create a high-quality README for this project. Use the evidence above deeply. Mention the likely logo path and its role when a logo asset exists. Make the document feel specific to this project, useful to a new contributor, and honest about unknowns.`);
-      if (response.status < 200 || response.status >= 300) throw new Error(response.body.error?.message || `OpenRouter HTTP ${response.status}`);
+      const candidates = [model, ...models.map((item) => item.id).filter((id) => id !== model)];
+      let response: ProxyResponse | null = null;
+      let lastError = '';
+      for (const candidate of candidates) {
+        const attempt = await requestReadme(apiKey, candidate, `${context}\n\nTASK: Create a high-quality README for this project. Use the evidence above deeply. Mention the likely logo path and its role when a logo asset exists. Make the document feel specific to this project, useful to a new contributor, and honest about unknowns.`, customPrompt);
+        if (attempt.status >= 200 && attempt.status < 300 && attempt.body.choices?.[0]?.message?.content) {
+          response = attempt;
+          setActiveModel(candidate);
+          break;
+        }
+        lastError = attempt.body.error?.message || `HTTP ${attempt.status}`;
+        const canFallback = isLimitError(attempt.status, lastError) || attempt.status >= 500 || attempt.status === 400;
+        if (!canFallback) throw new Error(lastError);
+        if (candidate !== candidates[candidates.length - 1]) toast.info(`${getShortModelName({ id: candidate })} ishlamadi, keyingi model sinab ko‘rilmoqda…`);
+      }
+      if (!response) throw new Error(`AI model ishlamadi: ${lastError}`);
       const content = response.body.choices?.[0]?.message?.content?.trim();
       if (!content) throw new Error('AI README qaytarmadi.');
       setReadme(content.replace(/^```markdown\s*/i, '').replace(/```\s*$/i, '').trim());
@@ -166,12 +189,12 @@ export default function ReadmeGeneratorTool() {
       <aside className="border border-white/[0.08] bg-black/10 p-4">
         <div className="flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Project context</span><Sparkles size={14} className="text-[var(--accent)]" /></div>
         <button type="button" onClick={() => void pickFolder()} disabled={loadingFolder} className="mt-4 flex w-full items-center justify-center gap-2 border border-[var(--accent-border)] bg-[var(--accent-glow)] px-3 py-2.5 text-xs font-semibold text-white hover:bg-[var(--accent-dim)] disabled:opacity-50"><FolderOpen size={15} /> {loadingFolder ? 'Scanning…' : rootPath ? 'Choose another folder' : 'Choose project folder'}</button>
-        {rootPath && <div className="mt-4 space-y-3"><div className="border border-white/[0.08] bg-white/[0.025] p-3"><p className="truncate text-xs font-semibold text-white">{projectName}</p><p className="mt-1 break-all text-[10px] leading-4 text-white/35">{rootPath}</p></div><div className="grid grid-cols-2 gap-2 text-center"><div className="border border-white/[0.07] p-2"><p className="text-lg font-semibold text-white">{fileCount}</p><p className="text-[10px] text-white/35">files</p></div><div className="border border-white/[0.07] p-2"><p className="text-lg font-semibold text-white">{imageFiles.length}</p><p className="text-[10px] text-white/35">assets</p></div></div><label className="block text-[10px] text-white/35">OpenRouter model<select value={model} onChange={(event) => setModel(event.target.value)} className="mt-1 w-full border border-white/10 bg-[#181410] px-2 py-2 text-[11px] text-white outline-none">{models.map((item) => <option key={item.id} value={item.id}>{getShortModelName(item)}</option>)}</select></label><p className="text-[10px] leading-4 text-white/30">Context includes the file tree, package/config files, source snapshots, and image/logo asset names. Secrets are never requested.</p></div>}
+        {rootPath && <div className="mt-4 space-y-3"><div className="border border-white/[0.08] bg-white/[0.025] p-3"><p className="truncate text-xs font-semibold text-white">{projectName}</p><p className="mt-1 break-all text-[10px] leading-4 text-white/35">{rootPath}</p></div><div className="grid grid-cols-2 gap-2 text-center"><div className="border border-white/[0.07] p-2"><p className="text-lg font-semibold text-white">{fileCount}</p><p className="text-[10px] text-white/35">files found</p></div><div className="border border-white/[0.07] p-2"><p className="text-lg font-semibold text-white">{imageFiles.length}</p><p className="text-[10px] text-white/35">assets</p></div></div><label className="block text-[10px] text-white/35">OpenRouter model<select value={model} onChange={(event) => setModel(event.target.value)} className="mt-1 w-full border border-white/10 bg-[#181410] px-2 py-2 text-[11px] text-white outline-none">{models.map((item) => <option key={item.id} value={item.id}>{getShortModelName(item)}</option>)}</select></label>{activeModel && <p className="text-[10px] text-emerald-300/60">Used model: {getShortModelName({ id: activeModel })}</p>}<p className="text-[10px] leading-4 text-white/30">AI faqat README uchun muhim bo‘lgan 36 tagacha text/config faylni o‘qiydi; barcha fayllar yuborilmaydi. Secret qiymatlar so‘ralmaydi.</p></div>}
         {error && <p className="mt-3 border-l-2 border-red-400/70 pl-3 text-xs leading-5 text-red-300">{error}</p>}
       </aside>
       <section className="min-w-0 border border-white/[0.08] bg-[#0d0d0a]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] px-4 py-3"><div><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Generated README</span><p className="mt-1 text-xs text-white/30">AI first reads your project context; always review before applying.</p></div><div className="flex gap-2"><button type="button" onClick={() => void generate()} disabled={generating || loadingFolder || !rootPath} className="inline-flex items-center gap-1.5 bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[#1b120e] disabled:opacity-40">{generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {generating ? 'Generating…' : 'Generate README'}</button>{readme && <button type="button" onClick={() => void applyReadme()} disabled={applying} className="inline-flex items-center gap-1.5 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">{applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Apply to project</button>}</div></div>
-        <div className="min-h-[520px] p-5">{readme ? <article className="markdown-content"><MarkdownContent content={readme} /></article> : <div className="flex min-h-[470px] flex-col items-center justify-center text-center"><FileText size={32} className="text-[var(--accent)]/50" /><h3 className="mt-4 text-base font-semibold text-white/75">A specific README, not a generic template</h3><p className="mt-2 max-w-md text-xs leading-5 text-white/35">Choose a project folder and Yolnoma will inspect its structure, configs, source files, scripts, and visual assets before writing the documentation.</p></div>}</div>
+        <div className="border-b border-white/[0.08] p-4"><label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Custom instructions <span className="font-normal normal-case tracking-normal text-white/25">(optional)</span><textarea value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} rows={3} placeholder="Masalan: README o‘zbek tilida bo‘lsin, deployment va environment setup’ni batafsil yoz…" className="mt-2 w-full resize-y border border-white/10 bg-white/[0.025] px-3 py-2.5 text-xs leading-5 text-white outline-none placeholder:text-white/25 focus:border-[var(--accent-border)]" /></label></div><div className="min-h-[450px] p-5">{readme ? <article className="markdown-content"><MarkdownContent content={readme} /></article> : <div className="flex min-h-[400px] flex-col items-center justify-center text-center"><FileText size={32} className="text-[var(--accent)]/50" /><h3 className="mt-4 text-base font-semibold text-white/75">A specific README, not a generic template</h3><p className="mt-2 max-w-md text-xs leading-5 text-white/35">Choose a project folder, add optional instructions, and Yolnoma will inspect only the most relevant files before writing the documentation.</p></div>}</div>
       </section>
     </div>
   </ToolCard>;
