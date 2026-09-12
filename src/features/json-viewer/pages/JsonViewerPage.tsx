@@ -169,7 +169,7 @@ export default function JsonViewerPage() {
         <section className="panel-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4"><div><h2 className="font-semibold text-[var(--text-primary)]">Source JSON</h2><p className="mt-1 text-xs text-[var(--text-faint)]">Paste JSON here or load a file from disk.</p></div><FileJson size={20} className="text-[var(--accent)]" /></div>
           <div className="p-5">
-            <textarea value={rawJson} onChange={(event) => setRawJson(event.target.value)} onBlur={() => rawJson.trim() && parsed === null && loadJson(rawJson)} placeholder={'[{\n  "firstName": "Ada",\n  "avatar": "https://..."\n}]'} className="form-textarea min-h-[560px] resize-y lg:min-h-[620px] font-mono text-xs leading-6" spellCheck={false} />
+            <textarea value={rawJson} onChange={(event) => setRawJson(event.target.value)} onBlur={() => rawJson.trim() && parsed === null && loadJson(rawJson)} placeholder={'[{\n  "firstName": "Ada",\n  "avatar": "https://..."\n}]'} className="json-editor-textarea form-textarea resize-y font-mono text-xs leading-6" spellCheck={false} />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-[var(--text-faint)]">{rawJson.length.toLocaleString()} characters · {fileName}</span><button type="button" onClick={() => loadJson(rawJson)} className="btn btn-primary inline-flex items-center gap-2"><WandSparkles size={15} /> Parse JSON</button></div>
             {error && <p className="mt-3 rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-xs text-red-300">{error}</p>}
           </div>

@@ -190,7 +190,17 @@ button { cursor: pointer; }
 }
 
 .form-textarea { resize: vertical; min-height: 80px; }
-
+.json-editor-textarea {
+  min-height: 720px;
+  height: 720px;
+  line-height: 1.75;
+}
+@media (max-width: 1023px) {
+  .json-editor-textarea {
+    min-height: 560px;
+    height: 560px;
+  }
+}
 .form-label {
   display: block;
   font-size: 12px;
