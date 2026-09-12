@@ -375,3 +375,23 @@ button { cursor: pointer; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Markdown Studio syntax highlighting */
+.markdown-content .hljs-comment,
+.markdown-content .hljs-quote { color: #7f9f87; }
+.markdown-content .hljs-keyword,
+.markdown-content .hljs-selector-tag,
+.markdown-content .hljs-literal,
+.markdown-content .hljs-section { color: #c792ea; }
+.markdown-content .hljs-string,
+.markdown-content .hljs-attr,
+.markdown-content .hljs-template-variable { color: #a8d8a8; }
+.markdown-content .hljs-number,
+.markdown-content .hljs-symbol,
+.markdown-content .hljs-bullet { color: #f2c879; }
+.markdown-content .hljs-title,
+.markdown-content .hljs-title.function_,
+.markdown-content .hljs-built_in { color: #82b7e8; }
+.markdown-content .hljs-variable,
+.markdown-content .hljs-type { color: #e6b6a5; }
+.markdown-content .hljs-meta { color: #9aa7b5; }

@@ -4,6 +4,7 @@ import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Check, Copy } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import hljs from 'highlight.js/lib/common';
 
 export default function MarkdownContent({ content }: { content: string }) {
   return (
@@ -103,8 +104,29 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
         </button>
       </div>
       <pre className="max-h-[32rem] overflow-auto p-4 font-mono text-[12px] leading-6 text-[#d5e5d8]">
-        <code>{code}</code>
+        <code className="hljs" dangerouslySetInnerHTML={{ __html: highlightCode(language, code) }} />
       </pre>
     </div>
   );
+}
+
+function highlightCode(language: string, code: string) {
+  try {
+    if (language !== 'code' && hljs.getLanguage(language)) {
+      return hljs.highlight(code, { language }).value;
+    }
+    return hljs.highlightAuto(code).value;
+  } catch {
+    return escapeHtml(code);
+  }
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  })[character] ?? character);
 }
