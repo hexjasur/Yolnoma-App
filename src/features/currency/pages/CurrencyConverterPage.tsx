@@ -121,13 +121,13 @@ export default function CurrencyConverterPage() {
   ];
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-16" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
+    <div className="mx-auto max-w-5xl space-y-5 pb-10" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
       {/* Header */}
       <div>
         <p className="text-[11px] tracking-[0.18em] uppercase text-[var(--accent)] mb-1.5 font-semibold">
           FINANCIAL INSTRUMENTS
         </p>
-        <h1 className="font-serif text-4xl font-medium tracking-tight text-white m-0">
+        <h1 className="m-0 font-serif text-3xl font-medium tracking-tight text-white md:text-4xl">
           Currency Converter
         </h1>
         <p className="mt-1.5 text-sm text-white/40">
@@ -173,7 +173,7 @@ export default function CurrencyConverterPage() {
       )}
 
       {/* ── Main Google-style Converter Card ── */}
-      <div className="rounded-3xl border border-white/[0.08] bg-[#111109] p-7 md:p-8 shadow-2xl relative overflow-hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111109] p-4 shadow-2xl sm:p-5 md:p-6">
         {/* Glow ambient effect */}
         <div
           className="pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-15 blur-3xl"
@@ -181,12 +181,12 @@ export default function CurrencyConverterPage() {
         />
 
         {/* Big Rate Statement */}
-        <div className="mb-7 pb-6 border-b border-white/[0.06]">
-          <p className="text-sm font-medium text-white/60 mb-1">
+        <div className="mb-5 border-b border-white/[0.06] pb-4">
+          <p className="mb-1 text-xs font-medium text-white/60">
             {amount || '1'} {fromMeta.name} equal
           </p>
           <div className="flex flex-wrap items-baseline gap-3">
-            <h2 className="text-3xl md:text-4xl font-bold font-mono tracking-tight text-white">
+            <h2 className="font-mono text-2xl font-bold tracking-tight text-white md:text-3xl">
               {converting ? (
                 <span className="opacity-50 animate-pulse">Calculating…</span>
               ) : conversion ? (
@@ -195,13 +195,13 @@ export default function CurrencyConverterPage() {
                 '—'
               )}
             </h2>
-            <span className="text-xl md:text-2xl font-serif text-[var(--accent)]">
+            <span className="font-serif text-lg text-[var(--accent)] md:text-xl">
               {toMeta.name}
             </span>
           </div>
 
           {/* Reference Rate Badge & Date */}
-          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-white/40">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/40">
             <span className="inline-flex items-center gap-1.5 font-mono text-white/70">
               1 {fromCurrency} = {conversion ? conversion.rate.toLocaleString('uz-UZ', { maximumFractionDigits: 4 }) : '—'} {toCurrency}
             </span>
@@ -216,9 +216,9 @@ export default function CurrencyConverterPage() {
         </div>
 
         {/* Input Controls Form */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] items-center gap-4">
+        <div className="grid grid-cols-1 items-center gap-2.5 md:grid-cols-[minmax(0,1fr),auto,minmax(0,1fr)]">
           {/* FROM Input Box */}
-          <div className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-4 focus-within:border-[var(--accent)] transition-all">
+          <div className="rounded-xl border border-white/[0.09] bg-white/[0.02] p-3 transition-all focus-within:border-[var(--accent)]">
             <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider block mb-1">
               Miqdor ({fromCurrency})
             </span>
@@ -230,19 +230,19 @@ export default function CurrencyConverterPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="1.00"
-                className="w-full bg-transparent text-2xl font-bold font-mono text-white outline-none border-none p-0 focus:ring-0"
+                className="w-full bg-transparent p-0 font-mono text-xl font-bold text-white outline-none focus:ring-0"
               />
               <button
                 type="button"
                 onClick={() => setModalType('from')}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white text-sm font-semibold border border-white/10 shrink-0 transition-all cursor-pointer"
+                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-xs font-semibold text-white transition-all hover:bg-white/[0.1]"
               >
                 <span className="text-base">{fromMeta.flag}</span>
                 <span>{fromCurrency}</span>
                 <ChevronDown size={14} className="text-white/40" />
               </button>
             </div>
-            <p className="text-xs text-white/40 mt-1 truncate">{fromMeta.name}</p>
+            <p className="mt-1 truncate text-[11px] text-white/40">{fromMeta.name}</p>
           </div>
 
           {/* SWAP Button */}
@@ -250,19 +250,19 @@ export default function CurrencyConverterPage() {
             <button
               onClick={handleSwap}
               title="Valyutalarni almashtirish"
-              className="w-12 h-12 rounded-2xl bg-white/[0.05] hover:bg-[var(--accent)] hover:text-white border border-white/10 text-white/70 flex items-center justify-center transition-all cursor-pointer hover:rotate-180 duration-300 shadow-lg active:scale-95"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/70 shadow-lg transition-all duration-300 hover:rotate-180 hover:bg-[var(--accent)] hover:text-white active:scale-95"
             >
               <ArrowRightLeft size={18} />
             </button>
           </div>
 
           {/* TO Result Box */}
-          <div className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-4 transition-all">
+          <div className="rounded-xl border border-white/[0.09] bg-white/[0.02] p-3 transition-all">
             <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider block mb-1">
               Conversion result ({toCurrency})
             </span>
             <div className="flex items-center gap-3">
-              <div className="w-full text-2xl font-bold font-mono text-[var(--accent)] truncate">
+              <div className="w-full truncate font-mono text-xl font-bold text-[var(--accent)]">
                 {converting ? (
                   <span className="opacity-40 animate-pulse text-lg">…</span>
                 ) : conversion ? (
@@ -274,14 +274,14 @@ export default function CurrencyConverterPage() {
               <button
                 type="button"
                 onClick={() => setModalType('to')}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white text-sm font-semibold border border-white/10 shrink-0 transition-all cursor-pointer"
+                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-xs font-semibold text-white transition-all hover:bg-white/[0.1]"
               >
                 <span className="text-base">{toMeta.flag}</span>
                 <span>{toCurrency}</span>
                 <ChevronDown size={14} className="text-white/40" />
               </button>
             </div>
-            <p className="text-xs text-white/40 mt-1 truncate">{toMeta.name}</p>
+            <p className="mt-1 truncate text-[11px] text-white/40">{toMeta.name}</p>
           </div>
         </div>
       </div>
