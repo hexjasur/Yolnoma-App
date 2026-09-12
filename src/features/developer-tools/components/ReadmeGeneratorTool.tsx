@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir, readFile } from '@tauri-apps/plugin-fs';
-import { Check, FileText, FolderOpen, Loader2, Sparkles, WandSparkles } from 'lucide-react';
+import { Check, Code2, Eye, FileText, FolderOpen, Loader2, Sparkles, WandSparkles } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getApiKey } from '@/features/ai/storage';
 import { fetchOpenRouterModels, getShortModelName, isLimitError } from '@/features/ai/api/openRouterApi';
@@ -13,6 +13,7 @@ import { ToolCard, ToolTitle } from './ToolShell';
 
 type ProxyResponse = { status: number; body: { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } } };
 type FileEntry = { path: string; kind: 'file' | 'directory' };
+type AssetCandidate = { path: string; details: string; dataUrl?: string };
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'target', '.next', 'coverage', '.cache', 'out']);
 const TEXT_FILE = /\.(md|mdx|txt|json|jsonc|js|jsx|mjs|cjs|ts|tsx|css|scss|html|xml|yaml|yml|toml|ini|env|rs|py|go|java|kt|swift|c|cpp|h|hpp|cs|php|rb|sh|sql|graphql|vue|svelte|astro)$/i;
@@ -48,6 +49,20 @@ async function describeAsset(path: string) {
   }
 }
 
+function toBase64(bytes: Uint8Array) {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function imageMime(path: string) {
+  const extension = path.split('.').pop()?.toLowerCase();
+  return extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : extension === 'svg' ? 'image/svg+xml' : `image/${extension || 'png'}`;
+}
+
 async function scanFolder(rootPath: string) {
   const files: FileEntry[] = [];
   async function walk(current: string, depth: number) {
@@ -72,8 +87,12 @@ async function scanFolder(rootPath: string) {
   return files;
 }
 
-async function requestReadme(apiKey: string, model: string, context: string, customPrompt: string) {
-  const system = `You are Yolnoma README Architect, a senior open-source documentation engineer. You inspect a real project context and produce a polished, useful README.md — not a generic template. Never invent features, scripts, dependencies, commands, license, or metrics. If evidence is missing, write a concise TODO or omit the claim. Use the project's actual name and stack. Prefer clear headings, tables where useful, copy-pasteable commands, badges only when their URLs are supported by evidence, and a practical quick-start. Include: project identity, logo/visual identity when known, one-sentence value proposition, features grounded in evidence, tech stack, architecture or folder map, prerequisites, installation, configuration/env variables (never expose secret values), scripts, usage, screenshots placeholder only if no screenshot exists, contribution guidance, roadmap only when supported, and license status. Return ONLY the complete Markdown document, beginning with a top-level title.`;
+async function requestReadme(apiKey: string, model: string, context: string, customPrompt: string, assets: AssetCandidate[]) {
+  const system = `You are Yolnoma README Architect, a senior open-source documentation engineer. You inspect real project files AND provided image previews, then produce a polished, useful README.md — not a generic template. Never invent features, scripts, dependencies, commands, license, or metrics. If evidence is missing, omit the claim. Use the project's actual name and stack. Analyze image previews to identify the real logo, app icon, screenshots, banners, and UI images. Use exact relative asset paths from the context: if a logo is clearly identified, place it near the top using Markdown image syntax such as ![Project logo](path/to/logo.png). Add screenshots or other relevant images only in sections where they make sense, with useful alt text; do not dump every asset into the README. Keep image paths relative to README.md. If no logo is identified, do not invent one. Prefer clear headings, tables where useful, copy-pasteable commands, badges only when their URLs are supported by evidence, and a practical quick-start. Include: identity, visual identity, value proposition, evidence-based features, tech stack, architecture/folder map, prerequisites, installation, configuration/env variables (never expose secret values), scripts, usage, contribution guidance, roadmap only when supported, and license status. Return ONLY the complete Markdown document, beginning with a top-level title.`;
+  const imageParts = assets.filter((asset) => asset.dataUrl).flatMap((asset) => [
+    { type: 'text', text: `Image candidate: ${asset.path} (${asset.details})` },
+    { type: 'image_url', image_url: { url: asset.dataUrl } },
+  ]);
   return invoke<ProxyResponse>('proxy_request', {
     method: 'POST',
     url: 'https://openrouter.ai/api/v1/chat/completions',
@@ -83,7 +102,7 @@ async function requestReadme(apiKey: string, model: string, context: string, cus
       'HTTP-Referer': 'https://yolnoma.app',
       'X-Title': 'Yolnoma AI README Generator',
     },
-    body: { model, max_tokens: 5000, temperature: 0.25, messages: [{ role: 'system', content: system }, { role: 'user', content: `${context}\n\nCUSTOM USER INSTRUCTIONS:\n${customPrompt || 'No additional instructions. Use your best documentation judgment.'}` }] },
+    body: { model, max_tokens: 5000, temperature: 0.25, messages: [{ role: 'system', content: system }, { role: 'user', content: [{ type: 'text', text: `${context}\n\nCUSTOM USER INSTRUCTIONS:\n${customPrompt || 'No additional instructions. Use your best documentation judgment.'}` }, ...imageParts] }] },
   });
 }
 
@@ -102,6 +121,8 @@ export default function ReadmeGeneratorTool() {
   const [apiKey, setApiKey] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
   const [activeModel, setActiveModel] = useState('');
+  const [assets, setAssets] = useState<AssetCandidate[]>([]);
+  const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
 
   const projectName = useMemo(() => rootPath.split(/[\\/]/).filter(Boolean).pop() || 'your project', [rootPath]);
   const imageFiles = useMemo(() => entries.filter((entry) => entry.kind === 'file' && IMAGE_FILE.test(entry.path)).map((entry) => relativePath(rootPath, entry.path)), [entries, rootPath]);
@@ -129,8 +150,21 @@ export default function ReadmeGeneratorTool() {
       }
       const tree = found.map((entry) => `${relativePath(selected, entry.path)}${entry.kind === 'directory' ? '/' : ''}`).join('\n');
       const scannedImageFiles = found.filter((entry) => entry.kind === 'file' && IMAGE_FILE.test(entry.path)).map((entry) => relativePath(selected, entry.path));
-      const assetDetails = await Promise.all(found.filter((entry) => entry.kind === 'file' && IMAGE_FILE.test(entry.path)).slice(0, 20).map(async (entry) => `${relativePath(selected, entry.path)} — ${await describeAsset(entry.path)}`));
+      const assetEntries = found.filter((entry) => entry.kind === 'file' && IMAGE_FILE.test(entry.path)).slice(0, 20);
+      const assetCandidates = await Promise.all(assetEntries.map(async (entry): Promise<AssetCandidate> => {
+        const relative = relativePath(selected, entry.path);
+        const details = await describeAsset(entry.path);
+        try {
+          const bytes = await readFile(entry.path);
+          const dataUrl = bytes.byteLength <= 2_000_000 ? `data:${imageMime(entry.path)};base64,${toBase64(bytes)}` : undefined;
+          return { path: relative, details, dataUrl };
+        } catch {
+          return { path: relative, details };
+        }
+      }));
+      const assetDetails = assetCandidates.map((asset) => `${asset.path} — ${asset.details}`);
       setRootPath(selected); setEntries(found);
+      setAssets(assetCandidates);
       setContext(`PROJECT NAME: ${selected.split(/[\\/]/).filter(Boolean).pop() || 'Project'}\nPROJECT ROOT: ${selected}\n\nFILE TREE:\n${tree}\n\nIMAGE / LOGO ASSETS (use the likely logo path and dimensions in the README when relevant):\n${assetDetails.join('\n') || scannedImageFiles.join('\n') || 'No image assets found'}\n\nTEXT FILE SNAPSHOTS:${snapshots.join('')}`);
       const key = await getApiKey(user?.id ?? '');
       setApiKey(key ?? '');
@@ -153,7 +187,7 @@ export default function ReadmeGeneratorTool() {
       let response: ProxyResponse | null = null;
       let lastError = '';
       for (const candidate of candidates) {
-        const attempt = await requestReadme(apiKey, candidate, `${context}\n\nTASK: Create a high-quality README for this project. Use the evidence above deeply. Mention the likely logo path and its role when a logo asset exists. Make the document feel specific to this project, useful to a new contributor, and honest about unknowns.`, customPrompt);
+        const attempt = await requestReadme(apiKey, candidate, `${context}\n\nTASK: Create a high-quality README for this project. Use the evidence above deeply. Mention the likely logo path and its role when a logo asset exists. Make the document feel specific to this project, useful to a new contributor, and honest about unknowns.`, customPrompt, assets);
         if (attempt.status >= 200 && attempt.status < 300 && attempt.body.choices?.[0]?.message?.content) {
           response = attempt;
           setActiveModel(candidate);
@@ -193,8 +227,8 @@ export default function ReadmeGeneratorTool() {
         {error && <p className="mt-3 border-l-2 border-red-400/70 pl-3 text-xs leading-5 text-red-300">{error}</p>}
       </aside>
       <section className="min-w-0 border border-white/[0.08] bg-[#0d0d0a]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] px-4 py-3"><div><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Generated README</span><p className="mt-1 text-xs text-white/30">AI first reads your project context; always review before applying.</p></div><div className="flex gap-2"><button type="button" onClick={() => void generate()} disabled={generating || loadingFolder || !rootPath} className="inline-flex items-center gap-1.5 bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[#1b120e] disabled:opacity-40">{generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {generating ? 'Generating…' : 'Generate README'}</button>{readme && <button type="button" onClick={() => void applyReadme()} disabled={applying} className="inline-flex items-center gap-1.5 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">{applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Apply to project</button>}</div></div>
-        <div className="border-b border-white/[0.08] p-4"><label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Custom instructions <span className="font-normal normal-case tracking-normal text-white/25">(optional)</span><textarea value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} rows={3} placeholder="Masalan: README o‘zbek tilida bo‘lsin, deployment va environment setup’ni batafsil yoz…" className="mt-2 w-full resize-y border border-white/10 bg-white/[0.025] px-3 py-2.5 text-xs leading-5 text-white outline-none placeholder:text-white/25 focus:border-[var(--accent-border)]" /></label></div><div className="min-h-[450px] p-5">{readme ? <article className="markdown-content"><MarkdownContent content={readme} /></article> : <div className="flex min-h-[400px] flex-col items-center justify-center text-center"><FileText size={32} className="text-[var(--accent)]/50" /><h3 className="mt-4 text-base font-semibold text-white/75">A specific README, not a generic template</h3><p className="mt-2 max-w-md text-xs leading-5 text-white/35">Choose a project folder, add optional instructions, and Yolnoma will inspect only the most relevant files before writing the documentation.</p></div>}</div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] px-4 py-3"><div><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Generated README</span><p className="mt-1 text-xs text-white/30">AI first reads your project context and visual assets; always review before applying.</p></div><div className="flex flex-wrap items-center gap-2"><div className="inline-flex border border-white/10 bg-white/[0.03] p-0.5"><button type="button" onClick={() => setViewMode('preview')} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs ${viewMode === 'preview' ? 'bg-white/[0.10] text-white' : 'text-white/40 hover:text-white'}`}><Eye size={14} /> Preview</button><button type="button" onClick={() => setViewMode('code')} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs ${viewMode === 'code' ? 'bg-white/[0.10] text-white' : 'text-white/40 hover:text-white'}`}><Code2 size={14} /> Code</button></div><button type="button" onClick={() => void generate()} disabled={generating || loadingFolder || !rootPath} className="inline-flex items-center gap-1.5 bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[#1b120e] disabled:opacity-40">{generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {generating ? 'Generating…' : 'Generate README'}</button>{readme && <button type="button" onClick={() => void applyReadme()} disabled={applying} className="inline-flex items-center gap-1.5 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">{applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Apply to project</button>}</div></div>
+        <div className="border-b border-white/[0.08] p-4"><label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Custom instructions <span className="font-normal normal-case tracking-normal text-white/25">(optional)</span><textarea value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} rows={3} placeholder="Masalan: README o‘zbek tilida bo‘lsin, deployment va environment setup’ni batafsil yoz…" className="mt-2 w-full resize-y border border-white/10 bg-white/[0.025] px-3 py-2.5 text-xs leading-5 text-white outline-none placeholder:text-white/25 focus:border-[var(--accent-border)]" /></label></div><div className="min-h-[450px] p-5">{readme ? viewMode === 'preview' ? <article className="markdown-content"><MarkdownContent content={readme} /></article> : <textarea value={readme} onChange={(event) => setReadme(event.target.value)} className="min-h-[430px] w-full resize-y border border-white/10 bg-black/20 p-4 font-mono text-xs leading-6 text-white/75 outline-none focus:border-[var(--accent-border)]" spellCheck={false} aria-label="Generated README Markdown code" /> : <div className="flex min-h-[400px] flex-col items-center justify-center text-center"><FileText size={32} className="text-[var(--accent)]/50" /><h3 className="mt-4 text-base font-semibold text-white/75">A specific README, not a generic template</h3><p className="mt-2 max-w-md text-xs leading-5 text-white/35">Choose a project folder, add optional instructions, and Yolnoma will inspect only the most relevant files and visual assets before writing the documentation.</p></div>}</div>
       </section>
     </div>
   </ToolCard>;
