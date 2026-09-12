@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { marked } from 'marked';
 import { Code2, Download, FileCode2, FileText, Printer, RotateCcw, Save } from 'lucide-react';
 import MarkdownContent from '@/features/ai/components/MarkdownContent';
+import { toast } from '@/shared/ui/Toast';
 import { ToolCard, ToolTitle } from './ToolShell';
 
 const initialMarkdown = `# Markdown workspace
@@ -83,15 +84,25 @@ export default function MarkdownStudioTool() {
     setSavedAt('Reset to default');
   };
 
-  const exportMarkdown = () => downloadFile('markdown-studio.md', markdown, 'text/markdown;charset=utf-8');
-  const exportHtml = () => downloadFile('markdown-studio.html', getHtmlDocument(markdown), 'text/html;charset=utf-8');
+  const exportMarkdown = () => {
+    downloadFile('markdown-studio.md', markdown, 'text/markdown;charset=utf-8');
+    toast.success('Downloaded to Downloads folder');
+  };
+  const exportHtml = () => {
+    downloadFile('markdown-studio.html', getHtmlDocument(markdown), 'text/html;charset=utf-8');
+    toast.success('Downloaded to Downloads folder');
+  };
   const exportPdf = () => {
     const printWindow = window.open('', '_blank', 'noopener,noreferrer');
-    if (!printWindow) return;
+    if (!printWindow) {
+      toast.error('Print window could not be opened. Please allow pop-ups and try again.');
+      return;
+    }
     printWindow.document.write(getHtmlDocument(markdown));
     printWindow.document.close();
     printWindow.focus();
     printWindow.addEventListener('load', () => printWindow.print(), { once: true });
+    toast.info('Print dialog opened — choose “Save as PDF” to download.');
   };
 
   const syncScroll = (source: HTMLTextAreaElement | HTMLElement, target: HTMLTextAreaElement | HTMLElement) => {

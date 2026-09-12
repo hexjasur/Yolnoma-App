@@ -95,7 +95,7 @@ export default function CurrencyChart({
     : chartData.coordinates[chartData.coordinates.length - 1];
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#14110E] p-6 flex flex-col gap-6 shadow-xl">
+    <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-[#14110E] p-4 shadow-xl md:p-5">
       {/* Header + Range Selectors */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -143,7 +143,7 @@ export default function CurrencyChart({
       </div>
 
       {/* SVG Chart Canvas */}
-      <div className="relative w-full h-[220px] select-none">
+      <div className="relative h-[180px] w-full select-none md:h-[200px]">
         {loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#14110E]/80 backdrop-blur-sm z-20 rounded-xl">
             <Loader2 className="animate-spin text-[var(--accent)]" size={24} />
@@ -237,7 +237,7 @@ export default function CurrencyChart({
       </div>
 
       {/* Footer Mini Stats */}
-      <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/[0.06] text-center">
+      <div className="grid grid-cols-3 gap-2 border-t border-white/[0.06] pt-3 text-center">
         <div className="bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.04]">
           <p className="text-[11px] text-white/40 mb-0.5">Lowest</p>
           <p className="text-xs font-mono font-semibold text-white/90">
