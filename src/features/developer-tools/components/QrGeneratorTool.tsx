@@ -9,13 +9,20 @@ function toHex(value: string) {
   return value.replace('#', '').toUpperCase();
 }
 
-function openForManualSave(url: string, format: string) {
-  const opened = window.open(url, '_blank', 'noopener,noreferrer');
-  if (opened) {
-    toast.success(`${format} opened in a new tab — save it manually with your browser.`);
-  } else {
-    toast.error('The browser blocked the new tab. Allow pop-ups for Yolnoma and try again.');
+function openSaveTab(format: string): Window | null {
+  const tab = window.open('', '_blank');
+  if (!tab) {
+    toast.error('The browser blocked the new tab. Please allow pop-ups for Yolnoma and try again.');
+    return null;
   }
+  tab.document.title = `Yolnoma ${format}`;
+  tab.document.body.innerHTML = '<p style="font:16px system-ui;padding:24px">Preparing your QR image…</p>';
+  return tab;
+}
+
+function showInSaveTab(tab: Window, url: string, format: string) {
+  tab.location.href = url;
+  toast.success(`${format} opened in a new tab — save it manually with your browser.`);
 }
 
 export default function QrGeneratorTool() {
@@ -57,10 +64,12 @@ export default function QrGeneratorTool() {
 
   const preparePng = async () => {
     if (!value || isPreparing) return;
+    const saveTab = openSaveTab('PNG');
+    if (!saveTab) return;
     setIsPreparing(true);
     try {
       if (!logo) {
-        openForManualSave(qrUrl, 'PNG');
+        showInSaveTab(saveTab, qrUrl, 'PNG');
         return;
       }
       const response = await fetch(qrUrl);
@@ -78,8 +87,9 @@ export default function QrGeneratorTool() {
       context.fillRect(logoX - 10, logoX - 10, logoSize + 20, logoSize + 20);
       context.drawImage(logoImage, logoX, logoX, logoSize, logoSize);
       const dataUrl = canvas.toDataURL('image/png');
-      openForManualSave(dataUrl, 'PNG with logo');
+      showInSaveTab(saveTab, dataUrl, 'PNG with logo');
     } catch {
+      saveTab.close();
       toast.error('Could not prepare the PNG. Check your connection or remove the logo and try again.');
     } finally {
       setIsPreparing(false);
@@ -88,6 +98,8 @@ export default function QrGeneratorTool() {
 
   const prepareSvg = async () => {
     if (!value || isPreparing) return;
+    const saveTab = openSaveTab('SVG');
+    if (!saveTab) return;
     setIsPreparing(true);
     try {
       const params = new URLSearchParams({ size: '600x600', format: 'svg', color: toHex(foreground), bgcolor: toHex(background), ecc: errorCorrection, qzone: '2', data: value });
@@ -97,8 +109,9 @@ export default function QrGeneratorTool() {
       if (logo && svg.includes('</svg>')) {
         svg = svg.replace('</svg>', `<rect x="230" y="230" width="140" height="140" rx="12" fill="${background}"/><image href="${logo}" x="250" y="250" width="100" height="100" preserveAspectRatio="xMidYMid meet"/></svg>`);
       }
-      openForManualSave(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, logo ? 'SVG with logo' : 'SVG');
+      showInSaveTab(saveTab, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, logo ? 'SVG with logo' : 'SVG');
     } catch {
+      saveTab.close();
       toast.error('Could not prepare the SVG. Check your connection and try again.');
     } finally {
       setIsPreparing(false);
