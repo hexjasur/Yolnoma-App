@@ -46,9 +46,15 @@ const CssToolsPage = lazy(() => import('@/features/css-tools/pages/CssToolsPage'
 const GitPage = lazy(() => import('@/features/git/pages/GitPage'));
 const FeedbackPage = lazy(() => import('@/features/feedback/pages/FeedbackPage'));
 const JsonViewerPage = lazy(() => import('@/features/json-viewer/pages/JsonViewerPage'));
+import RouteLoadErrorFallback from '@/app/components/RouteLoadErrorFallback';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 
 function RouteContent({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<RouteLoadingFallback />}>{children}</Suspense>;
+  return (
+    <AppErrorBoundary fallback={<RouteLoadErrorFallback />}>
+      <Suspense fallback={<RouteLoadingFallback />}>{children}</Suspense>
+    </AppErrorBoundary>
+  );
 }
 
 export default function AppRoutes() {
