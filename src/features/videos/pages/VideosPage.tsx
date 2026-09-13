@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Film, Bookmark, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, ArrowUpDown } from 'lucide-react';
+import { Search, Film, Bookmark, AlertCircle, RefreshCw, ArrowUpDown } from 'lucide-react';
 import { usePerformanceList } from '@/features/performance/hooks/usePerformanceQueries';
 import { useSavedVideos } from '@/features/videos/hooks/useSavedVideos';
 import { useVideoSearch } from '@/features/videos/hooks/useVideoQueries';
 import { useAuth } from '@/features/auth/AuthContext';
 import VideoCard from '@/features/videos/components/VideoCard';
-import { Button } from '@/shared/ui';
+import { Button, Pagination, SelectMenu } from '@/shared/ui';
 import type { EPVideo, VideoOrder } from '@/features/videos/types/video';
 import { getErrorMessage } from '@/shared/lib/errors';
 
@@ -231,23 +231,35 @@ export default function VideosPage() {
                   <ArrowUpDown size={12} />
                   Sorting:
                 </span>
-                <select
+                <SelectMenu
                   value={currentOrder}
-                  onChange={(e) => handleOrderChange(e.target.value as VideoOrder)}
+                  onChange={(value) => handleOrderChange(value as VideoOrder)}
                   disabled={loading}
-                  aria-label="Procedure for sorting videos"
-                  className="bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[var(--accent)] transition-colors cursor-pointer"
-                >
-                  <option value="latest">Latest</option>
-                  <option value="longest">Longest</option>
-                  <option value="shortest">Shortest</option>
-                  <option value="most-popular">Most Popular</option>
-                  <option value="top-rated">Top Rated</option>
-                  <option value="top-weekly">Top Weekly</option>
-                  <option value="top-monthly">Top Monthly</option>
-                </select>
+                  ariaLabel="Sort videos"
+                  options={[
+                    { value: 'latest', label: 'Latest' },
+                    { value: 'longest', label: 'Longest' },
+                    { value: 'shortest', label: 'Shortest' },
+                    { value: 'most-popular', label: 'Most Popular' },
+                    { value: 'top-rated', label: 'Top Rated' },
+                    { value: 'top-weekly', label: 'Top Weekly' },
+                    { value: 'top-monthly', label: 'Top Monthly' },
+                  ]}
+                />
               </div>
             </div>
+          )}
+
+          {!loading && totalVideos > 0 && (
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              total={totalVideos}
+              limit={20}
+              onPageChange={handlePageChange}
+              loading={loading}
+              itemLabel="videos"
+            />
           )}
 
           {/* Video Grid */}
@@ -281,64 +293,17 @@ export default function VideosPage() {
           )}
 
           {/* Pagination Controls (Always preserving query and page in URL) */}
-          {!loading && totalPages > 1 && (
-            <div className="flex items-center justify-between flex-wrap gap-4 pt-6 border-t border-[var(--border)] mt-8">
-              <div className="text-xs text-[var(--text-faint)]">
-                Showing: {(currentPage - 1) * 20 + 1} - {Math.min(currentPage * 20, totalVideos)} (Total: {totalVideos} ta)
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  className="gap-1"
-                >
-                  <ChevronLeft size={14} /> Previous
-                </Button>
-
-                {/* Page numbers */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
-                  .map((p, idx, arr) => {
-                    const prev = arr[idx - 1];
-                    const showEllipsis = prev && p - prev > 1;
-                    return (
-                      <span key={p} className="flex items-center gap-1">
-                        {showEllipsis && <span className="text-[var(--text-faint)] px-1">…</span>}
-                        <button
-                          type="button"
-                          onClick={() => handlePageChange(p)}
-                          style={{
-                            minWidth: 32,
-                            height: 32,
-                            padding: '0 6px',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            fontWeight: p === currentPage ? 700 : 500,
-                            background: p === currentPage ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
-                            color: p === currentPage ? '#fff' : 'var(--text-muted)',
-                            border: p === currentPage ? '1px solid var(--accent)' : '1px solid var(--border)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {p}
-                        </button>
-                      </span>
-                    );
-                  })}
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  className="gap-1"
-                >
-                  Next <ChevronRight size={14} />
-                </Button>
-              </div>
+          {!loading && totalVideos > 0 && (
+            <div className="mt-8 border-t border-[var(--border)] pt-6">
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                total={totalVideos}
+                limit={20}
+                onPageChange={handlePageChange}
+                loading={loading}
+                itemLabel="videos"
+              />
             </div>
           )}
         </div>
