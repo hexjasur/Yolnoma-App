@@ -19,7 +19,6 @@ import {
   Trees,
 } from 'lucide-react';
 import ViIcon from '@/assets/VI.svg';
-import DashboardPage from '@/features/dashboard/pages/DashboardPage';
 
 export type RouteStatus = 'stable' | 'dev' | 'test';
 export type RouteComponent = ComponentType;
@@ -56,6 +55,7 @@ export type RouteDefinition = {
 const lazyPage = (load: () => Promise<{ default: RouteComponent }>): LazyRouteComponent =>
   lazy(load);
 
+const DashboardPage = lazyPage(() => import('@/features/dashboard/pages/DashboardPage'));
 const ProfilePage = lazyPage(() => import('@/features/account/pages/ProfilePage'));
 const SettingsPage = lazyPage(() => import('@/features/account/pages/SettingsPage'));
 const BackgroundRemoverPage = lazyPage(() => import('@/features/background-remover/pages/BackgroundRemoverPage'));
