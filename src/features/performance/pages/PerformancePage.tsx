@@ -209,6 +209,7 @@ export default function PerformancePage() {
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
         <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 260 }}>
           <SearchInput
+            size="md"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onClear={handleClearSearch}

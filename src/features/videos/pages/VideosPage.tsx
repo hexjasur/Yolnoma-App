@@ -154,11 +154,12 @@ export default function VideosPage() {
           {/* Search Bar */}
           <form onSubmit={handleSearchSubmit} className="flex gap-2">
             <SearchInput
+              size="lg"
               placeholder="Search by video title, model, or keyword…"
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
               onClear={() => setQueryInput('')}
-              className="w-full"
+              className="flex-1"
             />
             <Button type="submit" variant="primary" disabled={loading}>
               {loading ? 'Searching…' : 'Search'}
