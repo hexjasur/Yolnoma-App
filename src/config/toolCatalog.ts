@@ -14,6 +14,7 @@ import {
   Radar,
   Sparkles,
   Wrench,
+  WandSparkles,
   Palette,
   Trees,
 } from 'lucide-react';
@@ -42,6 +43,7 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   { id: 'steam-sam', label: 'Steam / SAM', description: 'Manage Steam achievements', to: '/tools/steam/sam', icon: Gamepad },
   { id: 'steam-review', label: 'Steam / Review', description: 'Review Steam games', to: '/tools/steam/review', icon: Gamepad2 },
   { id: 'developer-tools', label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', to: '/tools/developer-tools', icon: Wrench },
+  { id: 'ai-tools', label: 'AI Tools', description: 'AI-powered project workspaces', to: '/tools/ai-tools', icon: WandSparkles },
   { id: 'json-viewer', label: 'JSON EDIT/VIEW', description: 'Edit JSON and transform it into cards', to: '/tools/json', icon: Braces },
   { id: 'css-tools', label: 'CSS Tools', description: 'Gradients, scrollbars & minify', to: '/tools/css-tools', icon: Palette },
   { id: 'git', label: 'Git', description: 'Generate best-practice commits', to: '/tools/git', icon: GitBranch },

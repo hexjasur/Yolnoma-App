@@ -9,7 +9,7 @@ import { fetchOpenRouterModels, getShortModelName, isLimitError } from '@/featur
 import { DEFAULT_MODELS, type OpenRouterModel } from '@/features/ai/types';
 import MarkdownContent from '@/features/ai/components/MarkdownContent';
 import { toast } from '@/shared/ui/Toast';
-import { ToolCard, ToolTitle } from './ToolShell';
+import { ToolCard, ToolTitle } from '@/features/developer-tools/components/ToolShell';
 
 type ProxyResponse = { status: number; body: { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } } };
 type FileEntry = { path: string; kind: 'file' | 'directory' };
