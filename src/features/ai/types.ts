@@ -2,6 +2,22 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   model?: string;
+  id?: string;
+  createdAt?: string;
+};
+
+export type ChatSessionSummary = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+  model?: string;
+};
+
+export type ChatSession = ChatSessionSummary & {
+  version: number;
+  messages: ChatMessage[];
 };
 
 export type OpenRouterModel = {

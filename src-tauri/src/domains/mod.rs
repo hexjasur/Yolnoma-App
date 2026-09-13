@@ -1,3 +1,4 @@
+pub mod ai_chat;
 pub mod account;
 pub mod archive;
 pub mod cleaner;

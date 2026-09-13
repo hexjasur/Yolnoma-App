@@ -146,6 +146,11 @@ pub fn run() {
             domains::git::get_git_changes,
             domains::git::get_git_history,
             app_commands::get_idling_count,
+            domains::ai_chat::list_ai_chat_sessions,
+            domains::ai_chat::get_ai_chat_session,
+            domains::ai_chat::save_ai_chat_session,
+            domains::ai_chat::delete_ai_chat_session,
+            domains::ai_chat::create_ai_chat_session,
             // ── Account Storage ──
             domains::account::set_current_user,
             domains::account::get_account_config,
