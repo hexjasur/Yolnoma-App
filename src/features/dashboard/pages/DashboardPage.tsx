@@ -200,7 +200,7 @@ export default function HomePage() {
                 ? `${stats.cpuCores} ta yadro`
                 : monitoringEnabled
                   ? 'Usage'
-                  : 'Nofaol'
+                  : 'inactive'
             }
             percent={stats?.cpuPercent ?? 0}
             color="from-amber-500 to-orange-500"
@@ -217,7 +217,7 @@ export default function HomePage() {
                 ? `${stats.ramUsedGb} / ${stats.ramTotalGb} GB`
                 : monitoringEnabled
                   ? 'Memory'
-                  : 'Nofaol'
+                  : 'inactive'
             }
             percent={
               stats
@@ -238,7 +238,7 @@ export default function HomePage() {
                 ? `${stats.diskUsedGb} / ${stats.diskTotalGb} GB`
                 : monitoringEnabled
                   ? 'Storage'
-                  : 'Nofaol'
+                  : 'inactive'
             }
             percent={
               stats
@@ -269,7 +269,7 @@ export default function HomePage() {
                 ? 'Active'
                 : monitoringEnabled
                   ? 'Integrated / Standby'
-                  : 'Nofaol'
+                  : 'inactive'
             }
             percent={stats?.gpuPercent ?? 0}
             color="from-emerald-500 to-teal-500"
