@@ -6,7 +6,7 @@ import { useSavedVideos } from '@/features/videos/hooks/useSavedVideos';
 import { useVideoSearch } from '@/features/videos/hooks/useVideoQueries';
 import { useAuth } from '@/features/auth/AuthContext';
 import VideoCard from '@/features/videos/components/VideoCard';
-import { Button, Pagination, SelectMenu } from '@/shared/ui';
+import { Button, Pagination, SearchInput, SelectMenu } from '@/shared/ui';
 import type { EPVideo, VideoOrder } from '@/features/videos/types/video';
 import { getErrorMessage } from '@/shared/lib/errors';
 
@@ -153,19 +153,13 @@ export default function VideosPage() {
         <div className="space-y-6">
           {/* Search Bar */}
           <form onSubmit={handleSearchSubmit} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search
-                size={16}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]"
-              />
-              <input
-                type="text"
-                placeholder="Search by video title, model, or keyword…"
-                value={queryInput}
-                onChange={(e) => setQueryInput(e.target.value)}
-                className="form-input w-full pl-10"
-              />
-            </div>
+            <SearchInput
+              placeholder="Search by video title, model, or keyword…"
+              value={queryInput}
+              onChange={(e) => setQueryInput(e.target.value)}
+              onClear={() => setQueryInput('')}
+              className="w-full"
+            />
             <Button type="submit" variant="primary" disabled={loading}>
               {loading ? 'Searching…' : 'Search'}
             </Button>

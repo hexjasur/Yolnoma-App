@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, RefreshCw, Lock, Search, AlertCircle } from 'lucide-react';
+import { Plus, RefreshCw, Lock, AlertCircle } from 'lucide-react';
 
 import PerformanceCard from '@/features/performance/components/PerformanceCard';
 import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
@@ -9,7 +9,7 @@ import DeleteConfirmModal from '@/features/performance/components/DeleteConfirmM
 import { usePerformanceList } from '@/features/performance/hooks/usePerformanceQueries';
 import { useModal } from '@/features/performance/hooks/usePerformanceModal';
 import { useAuth } from '@/features/auth/AuthContext';
-import { Button, CardGridSkeleton, Pagination } from '@/shared/ui';
+import { Button, CardGridSkeleton, Pagination, SearchInput } from '@/shared/ui';
 import type { PaginationMeta } from '@/types';
 import { getErrorMessage } from '@/shared/lib/errors';
 
@@ -208,27 +208,13 @@ export default function PerformancePage() {
       {/* ── Search & Filter Controls ─────────────────────────── */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
         <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 260 }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search
-              size={15}
-              style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-faint)',
-                pointerEvents: 'none',
-              }}
-            />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search by name or keyword…"
-              className="form-input"
-              style={{ paddingLeft: 36, width: '100%' }}
-            />
-          </div>
+          <SearchInput
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onClear={handleClearSearch}
+            placeholder="Search by name or keyword…"
+            className="flex-1"
+          />
           <Button type="submit" variant="ghost">Search</Button>
           {searchParam && (
             <Button type="button" variant="ghost" onClick={handleClearSearch}>Clear</Button>

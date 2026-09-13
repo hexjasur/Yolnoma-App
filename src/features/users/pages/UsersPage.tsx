@@ -2,9 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users, Shield, User as UserIcon, RefreshCw, AlertCircle, Check, Loader2,
-  Pencil, Trash2, Search, X, Ban, ShieldCheck
+  Pencil, Trash2, Ban, ShieldCheck
 } from 'lucide-react';
-import { Button, Modal, ConfirmModal, Pagination, SelectMenu } from '@/shared/ui';
+import { Button, IconButton, Modal, ConfirmModal, Pagination, SearchInput, SelectMenu } from '@/shared/ui';
 import { toast } from '@/shared/ui/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -237,26 +237,13 @@ export default function UsersPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Search bar */}
-            <div className="relative">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type="text"
-                placeholder="Search user..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-8 py-2 text-xs bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--accent)] transition-all w-56 md:w-64"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+            <SearchInput
+              placeholder="Search user..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onClear={() => setSearchQuery('')}
+              className="w-56 md:w-64 text-xs"
+            />
 
             <SelectMenu
               value={roleFilter}
@@ -396,45 +383,38 @@ export default function UsersPage() {
                           <div className="flex items-center justify-end gap-2">
                             {/* 1. Edit Button */}
                             {canEdit && (
-                              <button
-                                type="button"
+                              <IconButton
+                                variant="accent"
                                 onClick={() => openEditModal(u)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.045] text-white/60 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#D97757]/15 hover:text-[#D97757] hover:shadow-[0_6px_16px_rgba(217,119,87,0.16)] active:translate-y-0 cursor-pointer"
                                 title="Edit User"
                                 aria-label="Edit User"
                               >
-                                <Pencil size={13} className="text-[#D97757]" />
-                              </button>
+                                <Pencil size={15} />
+                              </IconButton>
                             )}
 
                             {/* 2. Spam / Block Button */}
                             {canBlock && (
-                              <button
-                                type="button"
+                              <IconButton
+                                variant={isSpam ? 'secondary' : 'ghost'}
                                 onClick={() => setUserToBlock(u)}
-                                className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer ${
-                                  isSpam
-                                    ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 hover:shadow-[0_6px_16px_rgba(245,158,11,0.16)]'
-                                    : 'bg-white/[0.045] text-white/60 hover:text-red-400 hover:bg-red-500/10 hover:shadow-[0_6px_16px_rgba(239,68,68,0.16)]'
-                                }`}
                                 title={isSpam ? 'Unblock User' : 'Block / Mark as Spam'}
                                 aria-label={isSpam ? 'Unblock User' : 'Block / Mark as Spam'}
                               >
-                                <Ban size={13} />
-                              </button>
+                                <Ban size={15} />
+                              </IconButton>
                             )}
 
                             {/* 3. Delete Button */}
                             {canDelete && (
-                              <button
-                                type="button"
+                              <IconButton
+                                variant="danger"
                                 onClick={() => setUserToDelete(u)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.045] text-white/50 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-500/15 hover:text-red-400 hover:shadow-[0_6px_16px_rgba(239,68,68,0.16)] active:translate-y-0 cursor-pointer"
                                 title="Delete User"
                                 aria-label="Delete User"
                               >
-                                <Trash2 size={13} />
-                              </button>
+                                <Trash2 size={15} />
+                              </IconButton>
                             )}
                           </div>
                         </td>
