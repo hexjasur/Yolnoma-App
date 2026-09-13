@@ -1,46 +1,48 @@
-/**
- * AI-chat storage helpers.
- *
- * Chat messages — still stored in localStorage (scoped per account).
- * API key      — stored in secrets.dat via Tauri (AES-256-GCM encrypted).
- *               Use getApiKey / saveApiKey / removeApiKey from useAccountStorage.
- */
-
+/** AI Chat persistence: API key remains encrypted; conversations live in Tauri session JSON files. */
 import type { UserProfile } from '@/features/auth/AuthContext';
-import type { ChatMessage } from './types';
+import type { ChatMessage, ChatSession } from './types';
 import { getApiKey, saveApiKey, removeApiKey } from '@/shared/hooks/useAccountStorage';
+import { createChatSession, getChatSession, listChatSessions, saveChatSession } from './api/openRouterApi';
 
 export { getApiKey, saveApiKey, removeApiKey };
 
-// ── Legacy keys (cleared on first run) ───────────────────────────────────────
+const LEGACY_CHAT_PREFIX = 'yolnoma.ai-chat.';
 
-const STORAGE_PREFIX = 'yolnoma.ai-chat';
-/** @deprecated localStorage-based API key — cleared during migration */
-export const LEGACY_API_KEY = 'yolnoma.openrouter.api-key';
-const LEGACY_CHAT = 'yolnoma.ai-chat.messages';
+function accountId(user: UserProfile | null) { return user?.id ?? ''; }
 
-// ── Account-scoped chat (localStorage) ───────────────────────────────────────
+export async function loadChatSessions(user: UserProfile | null) {
+  return listChatSessions(accountId(user));
+}
 
-function accountScope(user: UserProfile | null) {
+export async function loadChatSession(user: UserProfile | null, sessionId: string) {
+  return getChatSession(accountId(user), sessionId);
+}
+
+export async function createSession(user: UserProfile | null) {
+  return createChatSession(accountId(user));
+}
+
+export async function persistChatSession(user: UserProfile | null, session: ChatSession) {
+  return saveChatSession(accountId(user), session);
+}
+
+/** One-time migration from the old account-scoped localStorage history. */
+export async function migrateLegacyChat(user: UserProfile | null) {
   const identity = user?.id || user?.email;
-  return identity ? encodeURIComponent(identity.trim().toLowerCase()) : 'guest';
-}
-
-export function getAccountChatKey(user: UserProfile | null) {
-  return `${STORAGE_PREFIX}.${accountScope(user)}.messages`;
-}
-
-export function loadAccountChat(user: UserProfile | null): ChatMessage[] {
+  if (!identity) return null;
+  const key = `${LEGACY_CHAT_PREFIX}${encodeURIComponent(identity.trim().toLowerCase())}.messages`;
   try {
-    const stored = localStorage.getItem(getAccountChatKey(user));
-    return stored ? (JSON.parse(stored) as ChatMessage[]) : [];
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const messages = JSON.parse(raw) as ChatMessage[];
+    if (!Array.isArray(messages) || !messages.length) return null;
+    const session = await createSession(user);
+    session.title = 'Previous conversation';
+    session.messages = messages;
+    await persistChatSession(user, session);
+    localStorage.removeItem(key);
+    return session;
   } catch {
-    return [];
+    return null;
   }
-}
-
-/** Remove stale global (non-scoped) legacy keys on first run. */
-export function clearLegacyAiStorage() {
-  localStorage.removeItem(LEGACY_API_KEY);
-  localStorage.removeItem(LEGACY_CHAT);
 }

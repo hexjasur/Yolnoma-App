@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, KeyRound, Settings2, ShieldCheck, Trash2 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { Bot, KeyRound, Settings2, ShieldCheck, Trash2, MessageSquare, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
 import { Button } from '@/shared/ui';
 import { useAuth } from '@/features/auth/AuthContext';
 import {
@@ -7,31 +8,40 @@ import {
   getShortModelName,
   isLimitError,
   requestChatCompletion,
+  generateChatTitle,
 } from '../api/openRouterApi';
 import {
   DEFAULT_MODELS,
   type ChatMessage,
   type ModelCategory,
   type OpenRouterModel,
+  type ChatSession,
+  type ChatSessionSummary,
 } from '../types';
 import ChatComposer from '../components/ChatComposer';
 import ChatMessages from '../components/ChatMessages';
 import ApiKeyModal from '../components/ApiKeyModal';
 import { buildProjectContext } from '../context/projectContext';
 import {
-  clearLegacyAiStorage,
-  getAccountChatKey,
-  loadAccountChat,
   getApiKey,
   saveApiKey,
   removeApiKey,
 } from '../storage';
+import { createSession, loadChatSession, loadChatSessions, migrateLegacyChat, persistChatSession } from '../storage';
 
 export default function AiChatPage() {
   const { user } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [draftKey, setDraftKey] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
+  const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
+  const [sidebarTab, setSidebarTab] = useState<'models' | 'sessions'>('models');
+  const [sessionSearch, setSessionSearch] = useState('');
+  const [openSessionMenu, setOpenSessionMenu] = useState<string | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [titleGenerating, setTitleGenerating] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
   const [models, setModels] = useState<OpenRouterModel[]>(DEFAULT_MODELS);
   const [selectedModels, setSelectedModels] = useState<string[]>([
@@ -53,7 +63,6 @@ export default function AiChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    clearLegacyAiStorage();
     setStorageReady(false);
 
     const userId = user?.id ?? '';
@@ -68,16 +77,34 @@ export default function AiChatPage() {
       setStorageReady(true);
     });
 
-    setMessages(loadAccountChat(user));
+    if (!userId) return;
+    void (async () => {
+      let loaded = await loadChatSessions(user);
+      const migrated = await migrateLegacyChat(user);
+      if (migrated) loaded = await loadChatSessions(user);
+      setSessions(loaded);
+      if (loaded[0]) {
+        const session = await loadChatSession(user, loaded[0].id);
+        setActiveSession(session);
+        setMessages(session.messages);
+      } else {
+        const session = await createSession(user);
+        setActiveSession(session);
+        setSessions([{ ...session, messageCount: 0 }]);
+        setMessages([]);
+      }
+      setStorageReady(true);
+    })().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load chat sessions.'));
   }, [user?.id, user?.email]);
 
   useEffect(() => {
-    if (!storageReady) return;
-    localStorage.setItem(
-      getAccountChatKey(user),
-      JSON.stringify(messages),
-    );
-  }, [messages, storageReady, user]);
+    if (!storageReady || !activeSession || !user) return;
+    const session = { ...activeSession, messages };
+    void persistChatSession(user, session).then(() => {
+      setActiveSession(session);
+      setSessions((current) => current.map((item) => item.id === session.id ? { ...item, title: session.title, updatedAt: session.updatedAt, messageCount: messages.length, model: session.model } : item).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+    });
+  }, [messages]);
 
 
   useEffect(() => {
@@ -203,6 +230,46 @@ export default function AiChatPage() {
     setSelectedModels((current) => (current[0] === id ? current : [id]));
   };
 
+  const newChat = async () => {
+    if (!user) return;
+    const session = await createSession(user);
+    setActiveSession(session);
+    setMessages([]);
+    setSessions((current) => [{ ...session, messageCount: 0 }, ...current]);
+    setSidebarTab('sessions');
+  };
+
+  const selectSession = async (id: string) => {
+    if (!user || id === activeSession?.id) return;
+    const session = await loadChatSession(user, id);
+    setActiveSession(session);
+    setMessages(session.messages);
+    setOpenSessionMenu(null);
+  };
+
+  const saveSessionTitle = async (id: string) => {
+    if (!user || !editingTitle.trim()) return;
+    const target = activeSession?.id === id ? activeSession : await loadChatSession(user, id);
+    const next = { ...target, title: editingTitle.trim() };
+    await persistChatSession(user, next);
+    if (activeSession?.id === id) setActiveSession(next);
+    setSessions((current) => current.map((item) => item.id === id ? { ...item, title: next.title } : item));
+    setEditingSessionId(null);
+  };
+
+  const deleteSession = async (id: string) => {
+    if (!user || !window.confirm('Delete this chat session?')) return;
+    await invoke('delete_ai_chat_session', { userId: user.id, sessionId: id });
+    const remaining = sessions.filter((session) => session.id !== id);
+    if (activeSession?.id === id) {
+      const replacement = remaining[0] ? await loadChatSession(user, remaining[0].id) : await createSession(user);
+      setActiveSession(replacement);
+      setMessages(replacement.messages);
+      setSessions(remaining.length ? remaining : [{ ...replacement, messageCount: 0 }]);
+    } else setSessions(remaining);
+    setOpenSessionMenu(null);
+  };
+
   const sendMessage = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const text = prompt.trim();
@@ -212,7 +279,7 @@ export default function AiChatPage() {
       return;
     }
 
-    const userMessage: ChatMessage = { role: 'user', content: text };
+    const userMessage: ChatMessage = { role: 'user', content: text, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
     setPrompt('');
@@ -221,6 +288,22 @@ export default function AiChatPage() {
     setError('');
     setLimitCheckedAt('');
     setLoading(true);
+
+    if (activeSession && activeSession.title === 'New chat') {
+      setTitleGenerating(true);
+      void generateChatTitle(apiKey, selectedModels[0], text)
+        .then((title) => {
+          setActiveSession((current) => {
+            if (!current) return current;
+            const next = { ...current, title };
+            if (user) void persistChatSession(user, next);
+            return next;
+          });
+          setSessions((current) => current.map((item) => item.id === activeSession.id ? { ...item, title } : item));
+        })
+        .catch(() => undefined)
+        .finally(() => setTitleGenerating(false));
+    }
 
     try {
       for (const model of selectedModels) {
@@ -247,6 +330,8 @@ export default function AiChatPage() {
             role: 'assistant',
             content: response.body.choices?.[0]?.message?.content ?? '',
             model,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
           },
         ]);
         return;
@@ -336,13 +421,14 @@ export default function AiChatPage() {
       {/* Sidebar */}
       <aside className="order-2 flex flex-col gap-4 lg:order-2">
         <section className="rounded-2xl border border-white/[0.08] bg-[#111109] p-5">
+          <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
+            <button type="button" onClick={() => setSidebarTab('models')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'models' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><Settings2 size={13} /> Models</button>
+            <button type="button" onClick={() => setSidebarTab('sessions')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'sessions' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><MessageSquare size={13} /> Sessions</button>
+          </div>
+          {sidebarTab === 'models' ? <>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Settings2 size={16} /> Models
-            </div>
-            <span className="text-[10px] uppercase tracking-wider text-white/30">
-              Choose one
-            </span>
+            <div className="text-sm font-semibold text-white">Choose a model</div>
+            {modelsLoading && <span className="text-[10px] text-white/30">Loading…</span>}
           </div>
           <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
             {(['all', 'free', 'paid'] as ModelCategory[]).map((category) => (
@@ -391,6 +477,20 @@ export default function AiChatPage() {
                 </label>
               ))}
           </div>
+          </> : <>
+            <div className="mb-3 flex items-center justify-between gap-2"><span className="text-sm font-semibold text-white">Your conversations</span><button type="button" onClick={() => void newChat()} className="rounded-lg p-1.5 text-[var(--accent)] hover:bg-white/[0.08]" title="New chat"><Plus size={16} /></button></div>
+            <div className="mb-3 flex items-center gap-2 rounded-lg border border-white/[0.07] bg-black/10 px-2.5 py-2"><Search size={13} className="text-white/30" /><input value={sessionSearch} onChange={(event) => setSessionSearch(event.target.value)} placeholder="Search sessions" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/25" /></div>
+            <div className="flex max-h-[315px] flex-col gap-1.5 overflow-y-auto pr-1">
+              {sessions.filter((session) => session.title.toLowerCase().includes(sessionSearch.toLowerCase())).map((session) => (
+                <div key={session.id} className={`group relative flex items-center gap-2 rounded-xl border px-3 py-2.5 ${activeSession?.id === session.id ? 'border-[var(--accent-border)] bg-[var(--accent-glow)]' : 'border-white/[0.06] hover:border-white/[0.14]'}`}>
+                  {editingSessionId === session.id ? <input autoFocus value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveSessionTitle(session.id); if (event.key === 'Escape') setEditingSessionId(null); }} onBlur={() => void saveSessionTitle(session.id)} className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none" /> : <button type="button" onClick={() => void selectSession(session.id)} className="min-w-0 flex-1 text-left"><span className="block truncate text-xs font-medium text-white/80">{session.title}{titleGenerating && activeSession?.id === session.id && ' …'}</span><span className="text-[10px] text-white/30">{session.messageCount} messages</span></button>}
+                  <button type="button" onClick={() => setOpenSessionMenu(openSessionMenu === session.id ? null : session.id)} className="shrink-0 rounded-md p-1 text-white/30 hover:bg-white/[0.08] hover:text-white" aria-label="Session actions"><MoreHorizontal size={15} /></button>
+                  {openSessionMenu === session.id && <div className="absolute right-2 top-9 z-20 w-32 rounded-xl border border-white/10 bg-[#211b17] p-1 shadow-xl"><button type="button" onClick={() => { setEditingSessionId(session.id); setEditingTitle(session.title); setOpenSessionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-white/70 hover:bg-white/[0.08]"><Pencil size={12} /> Rename</button><button type="button" onClick={() => void deleteSession(session.id)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-red-300 hover:bg-red-400/10"><Trash2 size={12} /> Delete</button></div>}
+                </div>
+              ))}
+              {!sessions.length && <p className="py-5 text-center text-xs text-white/30">No sessions yet.</p>}
+            </div>
+          </>}
         </section>
 
         <section className="rounded-2xl border border-white/[0.08] bg-[#111109] p-5">
