@@ -4,7 +4,7 @@ import {
   Users, Shield, User as UserIcon, RefreshCw, AlertCircle, Check, Loader2,
   Pencil, Trash2, Search, X, Ban, ShieldCheck
 } from 'lucide-react';
-import { Button, Modal, ConfirmModal, Pagination } from '@/shared/ui';
+import { Button, Modal, ConfirmModal, Pagination, SelectMenu } from '@/shared/ui';
 import { toast } from '@/shared/ui/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -258,29 +258,29 @@ export default function UsersPage() {
               )}
             </div>
 
-            <select
+            <SelectMenu
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
-              className="px-3 py-2 text-xs bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[var(--accent)]"
-              aria-label="Filter users by role"
-            >
-              <option value="all" className="bg-[#181410]">All roles</option>
-              <option value="owner" className="bg-[#181410]">Owner</option>
-              <option value="admin" className="bg-[#181410]">Admin</option>
-              <option value="tester" className="bg-[#181410]">Tester</option>
-              <option value="user" className="bg-[#181410]">User</option>
-            </select>
+              onChange={(value) => setRoleFilter(value as UserRole | 'all')}
+              ariaLabel="Filter users by role"
+              options={[
+                { value: 'all', label: 'All roles' },
+                { value: 'owner', label: 'Owner' },
+                { value: 'admin', label: 'Admin' },
+                { value: 'tester', label: 'Tester' },
+                { value: 'user', label: 'User' },
+              ]}
+            />
 
-            <select
+            <SelectMenu
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'blocked')}
-              className="px-3 py-2 text-xs bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[var(--accent)]"
-              aria-label="Filter users by status"
-            >
-              <option value="all" className="bg-[#181410]">All statuses</option>
-              <option value="active" className="bg-[#181410]">Active</option>
-              <option value="blocked" className="bg-[#181410]">Blocked / Spam</option>
-            </select>
+              onChange={(value) => setStatusFilter(value as 'all' | 'active' | 'blocked')}
+              ariaLabel="Filter users by status"
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'active', label: 'Active' },
+                { value: 'blocked', label: 'Blocked / Spam' },
+              ]}
+            />
 
             <Button
               variant="ghost"
@@ -393,13 +393,13 @@ export default function UsersPage() {
 
                         {/* Actions (3 Icons: Edit, Block/Spam, Delete) */}
                         <td className="py-3.5 px-5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-2">
                             {/* 1. Edit Button */}
                             {canEdit && (
                               <button
                                 type="button"
                                 onClick={() => openEditModal(u)}
-                                className="p-2 rounded-md text-white/60 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 transition-all cursor-pointer"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.045] text-white/60 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#D97757]/15 hover:text-[#D97757] hover:shadow-[0_6px_16px_rgba(217,119,87,0.16)] active:translate-y-0 cursor-pointer"
                                 title="Edit User"
                                 aria-label="Edit User"
                               >
@@ -412,10 +412,10 @@ export default function UsersPage() {
                               <button
                                 type="button"
                                 onClick={() => setUserToBlock(u)}
-                                className={`p-2 rounded-md border transition-all cursor-pointer ${
+                                className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer ${
                                   isSpam
-                                    ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
-                                    : 'bg-white/[0.04] text-white/60 border-white/10 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10'
+                                    ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 hover:shadow-[0_6px_16px_rgba(245,158,11,0.16)]'
+                                    : 'bg-white/[0.045] text-white/60 hover:text-red-400 hover:bg-red-500/10 hover:shadow-[0_6px_16px_rgba(239,68,68,0.16)]'
                                 }`}
                                 title={isSpam ? 'Unblock User' : 'Block / Mark as Spam'}
                                 aria-label={isSpam ? 'Unblock User' : 'Block / Mark as Spam'}
@@ -429,7 +429,7 @@ export default function UsersPage() {
                               <button
                                 type="button"
                                 onClick={() => setUserToDelete(u)}
-                                className="p-2 rounded-md text-white/50 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 transition-all cursor-pointer"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.045] text-white/50 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-500/15 hover:text-red-400 hover:shadow-[0_6px_16px_rgba(239,68,68,0.16)] active:translate-y-0 cursor-pointer"
                                 title="Delete User"
                                 aria-label="Delete User"
                               >
