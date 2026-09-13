@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, RefreshCw, Lock, ChevronLeft, ChevronRight, Search, AlertCircle } from 'lucide-react';
+import { Plus, RefreshCw, Lock, Search, AlertCircle } from 'lucide-react';
 
 import PerformanceCard from '@/features/performance/components/PerformanceCard';
 import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
@@ -9,7 +9,7 @@ import DeleteConfirmModal from '@/features/performance/components/DeleteConfirmM
 import { usePerformanceList } from '@/features/performance/hooks/usePerformanceQueries';
 import { useModal } from '@/features/performance/hooks/usePerformanceModal';
 import { useAuth } from '@/features/auth/AuthContext';
-import { Button, CardGridSkeleton } from '@/shared/ui';
+import { Button, CardGridSkeleton, Pagination } from '@/shared/ui';
 import type { PaginationMeta } from '@/types';
 import { getErrorMessage } from '@/shared/lib/errors';
 
@@ -137,9 +137,6 @@ export default function PerformancePage() {
   }
 
 
-  const startCount = pagination.total === 0 ? 0 : (currentPage - 1) * currentLimit + 1;
-  const endCount = Math.min(currentPage * currentLimit, pagination.total);
-
   return (
     <div
       style={{
@@ -264,6 +261,22 @@ export default function PerformancePage() {
         </div>
       </div>
 
+      {!loading && pagination.total > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <Pagination
+            page={currentPage}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={currentLimit}
+            onPageChange={handlePageChange}
+            onLimitChange={handleLimitChange}
+            limitOptions={[15, 20, 40]}
+            loading={loading}
+            itemLabel="performances"
+          />
+        </div>
+      )}
+
       {/* ── Error ────────────────────────────────────────────── */}
       {error && (
         <div
@@ -361,107 +374,18 @@ export default function PerformancePage() {
 
       {/* ── Pagination Bar (Preserved in Query URL) ───────────── */}
       {!loading && pagination.total > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 16,
-            padding: '16px 20px',
-            borderRadius: 12,
-            border: '1px solid var(--border)',
-            background: 'var(--bg-elevated)',
-            marginTop: 20,
-          }}
-        >
-          {/* Status */}
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Showing: <strong style={{ color: 'var(--text-primary)' }}>{startCount} - {endCount}</strong> (Total: <strong>{pagination.total}</strong> items)
-          </div>
-
-          {/* Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {/* Prev */}
-            <button
-              type="button"
-              disabled={currentPage <= 1 || loading}
-              onClick={() => handlePageChange(currentPage - 1)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '6px 12px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid var(--border)',
-                color: currentPage <= 1 ? 'rgba(255,255,255,0.2)' : 'var(--text-primary)',
-                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <ChevronLeft size={15} />
-              Previous
-            </button>
-
-            {/* Page buttons */}
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === pagination.totalPages || Math.abs(p - currentPage) <= 2)
-              .map((p, idx, arr) => {
-                const prev = arr[idx - 1];
-                const showEllipsis = prev && p - prev > 1;
-                return (
-                  <span key={p} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    {showEllipsis && <span style={{ color: 'var(--text-faint)', padding: '0 4px' }}>…</span>}
-                    <button
-                      type="button"
-                      onClick={() => handlePageChange(p)}
-                      style={{
-                        minWidth: 34,
-                        height: 34,
-                        padding: '0 8px',
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: p === currentPage ? 700 : 500,
-                        background: p === currentPage ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
-                        color: p === currentPage ? '#fff' : 'var(--text-muted)',
-                        border: p === currentPage ? '1px solid var(--accent)' : '1px solid var(--border)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      {p}
-                    </button>
-                  </span>
-                );
-              })}
-
-            {/* Next */}
-            <button
-              type="button"
-              disabled={!pagination.hasNextPage || currentPage >= pagination.totalPages || loading}
-              onClick={() => handlePageChange(currentPage + 1)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '6px 12px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid var(--border)',
-                color: (!pagination.hasNextPage || currentPage >= pagination.totalPages) ? 'rgba(255,255,255,0.2)' : 'var(--text-primary)',
-                cursor: (!pagination.hasNextPage || currentPage >= pagination.totalPages) ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              Next
-              <ChevronRight size={15} />
-            </button>
-          </div>
+        <div style={{ marginTop: 20 }}>
+          <Pagination
+            page={currentPage}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={currentLimit}
+            onPageChange={handlePageChange}
+            onLimitChange={handleLimitChange}
+            limitOptions={[15, 20, 40]}
+            loading={loading}
+            itemLabel="performances"
+          />
         </div>
       )}
 
