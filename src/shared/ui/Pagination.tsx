@@ -34,7 +34,7 @@ export default function Pagination({
   const canGoNext = page < safeTotalPages && !loading;
 
   return (
-    <div className="flex items-center justify-between gap-4 flex-wrap px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]">
+    <div className="flex items-center justify-between gap-4 flex-wrap px-1 py-2">
       <div className="flex items-center gap-3 flex-wrap text-xs text-[var(--text-muted)]">
         <span>
           Showing <strong className="text-[var(--text-primary)]">{start}–{end}</strong> of{' '}
@@ -47,7 +47,7 @@ export default function Pagination({
               value={limit}
               onChange={(event) => onLimitChange(Number(event.target.value))}
               disabled={loading}
-              className="rounded-md border border-[var(--border)] bg-white/[0.04] px-2 py-1 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+              className="rounded-md bg-white/[0.06] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none transition-colors hover:bg-white/[0.11] focus:bg-white/[0.1]"
               aria-label="Items per page"
             >
               {limitOptions.map((option) => <option key={option} value={option}>{option}</option>)}
@@ -61,9 +61,11 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={!canGoPrevious}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-white/[0.04] px-2.5 py-1.5 text-xs text-[var(--text-primary)] transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-30"
+          aria-label="Previous page"
+          title="Previous page"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/[0.06] text-[var(--text-primary)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.14] hover:text-white hover:shadow-[0_6px_18px_rgba(0,0,0,0.22)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:translate-y-0 disabled:hover:bg-white/[0.06]"
         >
-          <ChevronLeft size={14} /> Previous
+          <ChevronLeft size={18} strokeWidth={2.2} />
         </button>
         {pages.map((value, index) => {
           const previous = pages[index - 1];
@@ -75,9 +77,9 @@ export default function Pagination({
                 onClick={() => onPageChange(value)}
                 disabled={loading}
                 aria-current={value === page ? 'page' : undefined}
-                className={`min-w-8 rounded-lg border px-2 py-1.5 text-xs transition ${value === page
-                  ? 'border-[var(--accent)] bg-[var(--accent)] font-bold text-white'
-                  : 'border-[var(--border)] bg-white/[0.03] text-[var(--text-muted)] hover:bg-white/[0.08]'} disabled:cursor-not-allowed`}
+                className={`h-10 min-w-10 rounded-md px-2.5 text-sm transition-all duration-200 ${value === page
+                  ? 'bg-[var(--accent)] font-bold text-white shadow-[0_5px_16px_rgba(217,119,87,0.28)]'
+                  : 'bg-white/[0.06] font-medium text-[var(--text-muted)] hover:-translate-y-0.5 hover:bg-white/[0.14] hover:text-white hover:shadow-[0_6px_18px_rgba(0,0,0,0.22)]'} disabled:cursor-not-allowed disabled:hover:translate-y-0`}
               >
                 {value}
               </button>
@@ -88,9 +90,11 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={!canGoNext}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-white/[0.04] px-2.5 py-1.5 text-xs text-[var(--text-primary)] transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-30"
+          aria-label="Next page"
+          title="Next page"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/[0.06] text-[var(--text-primary)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.14] hover:text-white hover:shadow-[0_6px_18px_rgba(0,0,0,0.22)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:translate-y-0 disabled:hover:bg-white/[0.06]"
         >
-          Next <ChevronRight size={14} />
+          <ChevronRight size={18} strokeWidth={2.2} />
         </button>
       </div>
     </div>
