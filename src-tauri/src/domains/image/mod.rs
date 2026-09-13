@@ -36,6 +36,8 @@ pub struct ConversionTask {
     pub output_dir: Option<String>,
     pub output_format: String,
     pub quality: Option<u8>,
+    #[serde(default)]
+    pub avoid_larger: bool,
 }
 
 fn format_from_str(s: &str) -> Option<ImageFormat> {
@@ -231,7 +233,7 @@ pub async fn convert_image(
 
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
+        .map(|d| d.as_millis())
         .unwrap_or(0);
 
     let output_filename = format!("{}_{}.{}", stem, timestamp, ext);
@@ -332,7 +334,7 @@ pub async fn convert_images_batch(
 
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs())
+                    .map(|d| d.as_millis())
                     .unwrap_or(0);
 
                 let output_filename = format!("{}_{}.{}", stem, timestamp, ext);
@@ -342,25 +344,40 @@ pub async fn convert_images_batch(
                 match do_convert(&img, &output_path, fmt, task.quality) {
                     Ok(()) => {
                         let file_size = std::fs::metadata(&output_path).map(|m| m.len()).ok();
-                        let output_img = image::open(&output_path).ok();
-                        let thumbnail = output_img
-                            .as_ref()
-                            .and_then(|o| generate_thumbnail_base64(o, 300));
-                        let width = output_img.as_ref().map(|o| o.width()).or(Some(img.width()));
-                        let height = output_img
-                            .as_ref()
-                            .map(|o| o.height())
-                            .or(Some(img.height()));
+                        let original_size = std::fs::metadata(&task.input_path).map(|m| m.len()).unwrap_or(0);
+                        if task.avoid_larger && file_size.unwrap_or(0) >= original_size {
+                            let _ = std::fs::remove_file(&output_path);
+                            ConvertResult {
+                                input_path: task.input_path,
+                                output_path: output_path_str,
+                                success: false,
+                                error: Some("Compression did not reduce the file size; original kept safe.".to_string()),
+                                file_size: None,
+                                thumbnail: None,
+                                width: Some(img.width()),
+                                height: Some(img.height()),
+                            }
+                        } else {
+                            let output_img = image::open(&output_path).ok();
+                            let thumbnail = output_img
+                                .as_ref()
+                                .and_then(|o| generate_thumbnail_base64(o, 300));
+                            let width = output_img.as_ref().map(|o| o.width()).or(Some(img.width()));
+                            let height = output_img
+                                .as_ref()
+                                .map(|o| o.height())
+                                .or(Some(img.height()));
 
-                        ConvertResult {
-                            input_path: task.input_path,
-                            output_path: output_path_str,
-                            success: true,
-                            error: None,
-                            file_size,
-                            thumbnail,
-                            width,
-                            height,
+                            ConvertResult {
+                                input_path: task.input_path,
+                                output_path: output_path_str,
+                                success: true,
+                                error: None,
+                                file_size,
+                                thumbnail,
+                                width,
+                                height,
+                            }
                         }
                     }
                     Err(e) => ConvertResult {
