@@ -348,7 +348,7 @@ export default function ImageConverterPage() {
       {/* ── Main Work Area ── */}
       <div className="flex flex-col gap-6">
         {/* ── Top Conversion Hero Banner ── */}
-        <div className="relative rounded-2xl p-6 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl flex flex-col items-center justify-center overflow-hidden">
+        <div className="relative rounded-none p-6 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl flex flex-col items-center justify-center overflow-hidden">
           {/* Warm background glow */}
           <div
             className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-3xl opacity-20"
@@ -439,7 +439,7 @@ export default function ImageConverterPage() {
           /* Empty State Dropzone */
           <div
             onClick={handlePickFiles}
-            className={`flex-1 min-h-[280px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-8 text-center cursor-pointer transition-all ${
+            className={`flex-1 min-h-[280px] rounded-none border-2 border-dashed flex flex-col items-center justify-center p-8 text-center cursor-pointer transition-all ${
               isDragging
                 ? 'border-[var(--accent)] bg-[var(--accent-glow)] scale-[1.01]'
                 : 'border-[var(--border)] hover:border-[var(--accent-border)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)]'
