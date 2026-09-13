@@ -177,9 +177,13 @@ export default function Sidebar() {
       ),
     },
     {
+      label: 'AI Tools',
+      items: filteredLinks.filter((link) => link.name === 'ai-tools'),
+    },
+    {
       label: 'Tools',
       items: filteredLinks
-        .filter((link) => TOOL_CATALOG.some((tool) => tool.id === link.name) && link.name !== 'developer-tools')
+        .filter((link) => TOOL_CATALOG.some((tool) => tool.id === link.name) && !['developer-tools', 'ai-tools'].includes(link.name))
         .sort((left, right) => left.label.localeCompare(right.label)),
     },
   ];
@@ -301,7 +305,7 @@ export default function Sidebar() {
                             {!isCollapsed &&
                               TOOL_CATALOG.some(
                                 (tool) => tool.id === link.name,
-                              ) && link.name !== 'developer-tools' && (
+                              ) && !['developer-tools', 'ai-tools'].includes(link.name) && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
