@@ -1,0 +1,43 @@
+import { useEffect, useState } from 'react';
+import { Image as ImageIcon, Minimize2, RefreshCw } from 'lucide-react';
+import ImageConverterTool from '../components/ImageConverterTool';
+import ImageCompressorTool from '../components/ImageCompressorTool';
+
+type ImageTab = 'converter' | 'compressor';
+
+function readTab(): ImageTab {
+  const value = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('tab');
+  return value === 'compressor' ? 'compressor' : 'converter';
+}
+
+export default function ImagePage() {
+  const [tab, setTab] = useState<ImageTab>(readTab);
+
+  useEffect(() => {
+    const onHashChange = () => setTab(readTab());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const selectTab = (next: ImageTab) => {
+    setTab(next);
+    const route = window.location.hash.split('?')[0] || '#/tools/image';
+    window.location.hash = `${route}?tab=${next}`;
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <header className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-elevated)] px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-2.5"><ImageIcon size={22} className="text-[var(--accent)]" /></div>
+          <div><h1 className="text-base font-semibold tracking-wide text-[var(--text-primary)]">Image</h1><p className="text-xs text-[var(--text-muted)]">Convert, compress, and optimize images locally.</p></div>
+        </div>
+        <div className="mt-4 flex gap-2 border-t border-white/[0.06] pt-3">
+          <button type="button" onClick={() => selectTab('converter')} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${tab === 'converter' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/45 hover:bg-white/[0.05] hover:text-white'}`}><RefreshCw size={14} /> Converter</button>
+          <button type="button" onClick={() => selectTab('compressor')} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${tab === 'compressor' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/45 hover:bg-white/[0.05] hover:text-white'}`}><Minimize2 size={14} /> Compressor</button>
+        </div>
+      </header>
+      <main className="min-h-0 flex-1 overflow-y-auto"><div className="p-6">{tab === 'converter' ? <ImageConverterTool /> : <ImageCompressorTool />}</div></main>
+    </div>
+  );
+}

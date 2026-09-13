@@ -76,7 +76,7 @@ const VideoDownloader = lazyPage(() =>
 );
 const SteamReviewPage = lazyPage(() => import('@/features/steam/review/SteamReviewPage'));
 const CrosshairPage = lazyPage(() => import('@/features/crosshair/pages/CrosshairPage'));
-const ImageConverterPage = lazyPage(() => import('@/features/image-converter/pages/ImageConverterPage'));
+const ImagePage = lazyPage(() => import('@/features/image/pages/ImagePage'));
 const PortScannerPage = lazyPage(() => import('@/features/port-scanner/pages/PortScannerPage'));
 const ArchiveExplorerPage = lazyPage(() => import('@/features/archive-explorer/pages/ArchiveExplorerPage'));
 const AiChatPage = lazyPage(() => import('@/features/ai/pages/AiChatPage'));
@@ -109,7 +109,7 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   { id: 'currency', path: '/tools/currency', component: CurrencyConverterPage, label: 'Currency Converter', description: '160+ currencies & charts', icon: Coins, navGroup: 'tools', pinnable: true },
   { id: 'bg-remover', path: '/tools/bg-remover', component: BackgroundRemoverPage, label: 'Remove background', description: 'Through AI', icon: Sparkles, navGroup: 'tools', pinnable: true },
   { id: 'steam-idler', path: '/tools/steam/steam-idler', component: SteamIdlerPage, label: 'Steam / Idler', description: 'Automated idling', icon: Gamepad2, navGroup: 'tools', pinnable: true },
-  { id: 'image-converter', path: '/tools/image-converter', component: ImageConverterPage, label: 'Image Converter', description: 'Convert and optimize images', icon: ImageIcon, navGroup: 'tools', pinnable: true },
+  { id: 'image', path: '/tools/image', component: ImagePage, label: 'Image', description: 'Convert, compress & optimize images', icon: ImageIcon, navGroup: 'tools', pinnable: true },
   { id: 'video-downloader', path: '/tools/video-downloader', component: VideoDownloader, label: 'YT Video Downloader', description: 'Download videos locally', icon: Download, navGroup: 'tools', pinnable: true },
   { id: 'port-scanner', path: '/tools/port-scanner', component: PortScannerPage, label: 'Port Scanner', description: 'Inspect local network ports', icon: Radar, navGroup: 'tools', pinnable: true },
   { id: 'archive-explorer', path: '/tools/archive-explorer', component: ArchiveExplorerPage, label: 'Archive Explorer', description: 'Browse compressed files', icon: Archive, navGroup: 'tools', pinnable: true },
