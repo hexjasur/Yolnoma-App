@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, type ReactElement, type ReactNode } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 
 import Layout from '@/app/layout/Layout';
@@ -23,7 +23,7 @@ function RouteContent({ children }: { children: ReactNode }) {
   );
 }
 
-function ConfiguredRoute({ route }: { route: RouteDefinition }) {
+function createConfiguredRoute(route: RouteDefinition): ReactElement {
   const Page = route.component;
   let content = (
     <RouteStatusGuard status={route.status} featureName={route.id}>
@@ -41,7 +41,7 @@ function ConfiguredRoute({ route }: { route: RouteDefinition }) {
     );
   }
 
-  return <Route path={route.path} element={content} />;
+  return <Route key={route.id} path={route.path} element={content} />;
 }
 
 function RoleGuardWrapper({
@@ -96,9 +96,7 @@ export default function AppRoutes() {
             />
           )}
           <Route element={<Layout />}>
-            {layoutRoutes.map((route) => (
-              <ConfiguredRoute key={route.id} route={route} />
-            ))}
+            {layoutRoutes.map(createConfiguredRoute)}
             {pluginRoutes.map((route) => {
               const Component = route.component;
               return (
