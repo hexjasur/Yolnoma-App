@@ -177,10 +177,6 @@ export default function Sidebar() {
       ),
     },
     {
-      label: 'AI Tools',
-      items: filteredLinks.filter((link) => link.name === 'ai-tools'),
-    },
-    {
       label: 'Tools',
       items: filteredLinks
         .filter((link) => TOOL_CATALOG.some((tool) => tool.id === link.name) && !['developer-tools', 'ai-tools'].includes(link.name))
