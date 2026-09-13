@@ -238,11 +238,12 @@ export default function UsersPage() {
 
           <div className="flex items-center gap-3">
             <SearchInput
+              size="md"
               placeholder="Search user..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
-              className="w-56 md:w-64 text-xs"
+              className="w-56 md:w-64"
             />
 
             <SelectMenu
