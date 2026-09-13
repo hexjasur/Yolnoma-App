@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users, Shield, User as UserIcon, RefreshCw, AlertCircle, Check, Loader2,
   Pencil, Trash2, Search, X, Ban, ShieldCheck
 } from 'lucide-react';
-import { Button, Modal, ConfirmModal } from '@/shared/ui';
+import { Button, Modal, ConfirmModal, Pagination } from '@/shared/ui';
 import { toast } from '@/shared/ui/Toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -15,6 +15,10 @@ export default function UsersPage() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(15);
 
   // ── React Query for Users (Smooth caching, zero flashing)
   const {
@@ -193,15 +197,25 @@ export default function UsersPage() {
   // ── Filtered Users
   const filteredUsers = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return users;
     return users.filter((u) => {
       const name = (u.displayName || u.name || '').toLowerCase();
       const email = (u.email || '').toLowerCase();
       const role = (u.role || '').toLowerCase();
       const id = u.id.toLowerCase();
-      return name.includes(q) || email.includes(q) || role.includes(q) || id.includes(q);
+      const isBlocked = Boolean(u.isSpam || u.isBlocked);
+      const matchesSearch = !q || name.includes(q) || email.includes(q) || role.includes(q) || id.includes(q);
+      const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'blocked' ? isBlocked : !isBlocked);
+      return matchesSearch && matchesRole && matchesStatus;
     });
-  }, [users, searchQuery]);
+  }, [users, searchQuery, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter, pageLimit]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageLimit));
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageLimit, currentPage * pageLimit);
 
   const isOwner = currentUser?.role === 'owner';
 
@@ -244,6 +258,30 @@ export default function UsersPage() {
               )}
             </div>
 
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
+              className="px-3 py-2 text-xs bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[var(--accent)]"
+              aria-label="Filter users by role"
+            >
+              <option value="all" className="bg-[#181410]">All roles</option>
+              <option value="owner" className="bg-[#181410]">Owner</option>
+              <option value="admin" className="bg-[#181410]">Admin</option>
+              <option value="tester" className="bg-[#181410]">Tester</option>
+              <option value="user" className="bg-[#181410]">User</option>
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'blocked')}
+              className="px-3 py-2 text-xs bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[var(--accent)]"
+              aria-label="Filter users by status"
+            >
+              <option value="all" className="bg-[#181410]">All statuses</option>
+              <option value="active" className="bg-[#181410]">Active</option>
+              <option value="blocked" className="bg-[#181410]">Blocked / Spam</option>
+            </select>
+
             <Button
               variant="ghost"
               onClick={() => refetch()}
@@ -275,10 +313,10 @@ export default function UsersPage() {
           <div className="text-center py-20 text-white/40 border border-dashed border-white/10 rounded-lg bg-[#14110E]">
             <Users className="mx-auto mb-3 text-white/20" size={36} />
             <p className="text-sm font-medium text-white/80 mb-1">
-              {searchQuery ? 'No users matching your search' : 'No users registered yet'}
+              {searchQuery || roleFilter !== 'all' || statusFilter !== 'all' ? 'No users matching your filters' : 'No users registered yet'}
             </p>
             <p className="text-xs text-white/40">
-              {searchQuery ? 'Try clearing or changing your search filters.' : 'Users will appear here once registered.'}
+              {searchQuery || roleFilter !== 'all' || statusFilter !== 'all' ? 'Try clearing or changing your filters.' : 'Users will appear here once registered.'}
             </p>
           </div>
         ) : (
@@ -295,7 +333,7 @@ export default function UsersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
-                  {filteredUsers.map((u) => {
+                  {paginatedUsers.map((u) => {
                     const isSelf = currentUser?.id === u.id;
                     const avatar = u.avatarUrl || u.avatar;
                     const isSpam = Boolean(u.isSpam || u.isBlocked);
@@ -407,6 +445,20 @@ export default function UsersPage() {
               </table>
             </div>
           </div>
+        )}
+
+        {!isLoading && filteredUsers.length > 0 && (
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            total={filteredUsers.length}
+            limit={pageLimit}
+            onPageChange={setCurrentPage}
+            onLimitChange={setPageLimit}
+            limitOptions={[10, 15, 25, 50]}
+            loading={isFetching}
+            itemLabel="users"
+          />
         )}
       </div>
 
