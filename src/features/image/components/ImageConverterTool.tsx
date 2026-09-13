@@ -284,11 +284,6 @@ export default function ImageConverterPage() {
     });
   };
 
-  const handleClearAll = () => {
-    setFiles([]);
-    setSourceFormat('AUTO');
-  };
-
   // ── Conversion ──────────────────────────────────────────────────────────────
 
   const handleConvert = async () => {
@@ -349,53 +344,9 @@ export default function ImageConverterPage() {
   });
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[var(--bg-base)] text-[var(--text-primary)]">
-      {/* ── Header ── */}
-      <div className="shrink-0 px-6 py-4 border-b border-[var(--border)] bg-[var(--bg-elevated)] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] shadow-inner">
-            <ImageIcon size={22} className="text-[var(--accent)]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold text-[var(--text-primary)] tracking-wide">
-                Image Converter
-              </h1>
-              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-[var(--accent-glow)] text-[var(--accent)] border border-[var(--accent-border)]">
-                Fast & Local
-              </span>
-            </div>
-            <p className="text-xs text-[var(--text-muted)]">
-              Convert PNG, JPEG, BMP, WEBP, GIF, ICO, TIFF instantly with live preview
-            </p>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleOpenFolder}
-            title="Open Output Folder in Explorer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-primary)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-all cursor-pointer shadow-sm"
-          >
-            <FolderOpen size={14} className="text-[var(--accent)]" />
-            <span>Open Output Folder</span>
-          </button>
-
-          {files.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400/80 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all cursor-pointer"
-            >
-              <Trash2 size={13} />
-              <span>Clear</span>
-            </button>
-          )}
-        </div>
-      </div>
-
+    <div className="flex w-full flex-col gap-6 text-[var(--text-primary)]">
       {/* ── Main Work Area ── */}
-      <div className="flex-1 overflow-y-auto flex flex-col p-6 gap-6">
+      <div className="flex flex-col gap-6">
         {/* ── Top Conversion Hero Banner ── */}
         <div className="relative rounded-2xl p-6 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl flex flex-col items-center justify-center overflow-hidden">
           {/* Warm background glow */}
