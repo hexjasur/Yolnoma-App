@@ -1,53 +1,19 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, type ReactElement, type ReactNode } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 
 import Layout from '@/app/layout/Layout';
 import ProtectedLayout from '@/app/layout/ProtectedLayout';
 import RouteLoadingFallback from '@/app/components/RouteLoadingFallback';
+import RouteLoadErrorFallback from '@/app/components/RouteLoadErrorFallback';
+import RouteStatusGuard from '@/app/components/RouteStatusGuard';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import SessionManagementPage from '@/features/auth/pages/SessionManagementPage';
-import DashboardPage from '@/features/dashboard/pages/DashboardPage';
-import DevelopmentGuard from '@/shared/ui/DevelopmentGuard';
 import RoleGuard from '@/shared/ui/RoleGuard';
 import { usePluginRoutes } from '@/plugins';
+import { ROUTE_CONFIG, type RouteDefinition } from './routes.config';
 
-const ProfilePage = lazy(() => import('@/features/account/pages/ProfilePage'));
-const SettingsPage = lazy(() => import('@/features/account/pages/SettingsPage'));
-const BackgroundRemoverPage = lazy(() => import('@/features/background-remover/pages/BackgroundRemoverPage'));
-const MarketplacePage = lazy(() => import('@/features/marketplace/pages/MarketplacePage'));
-const CurrencyConverterPage = lazy(() => import('@/features/currency/pages/CurrencyConverterPage'));
-const PerformanceDetailPage = lazy(() => import('@/features/performance/pages/PerformanceDetailPage'));
-const PerformancePage = lazy(() => import('@/features/performance/pages/PerformancePage'));
-const SteamIdlerPage = lazy(() => import('@/features/steam-idler/pages/SteamIdlerPage'));
-const SteamSamPage = lazy(() => import('@/features/steam-sam/pages/SteamSamPage'));
-const UsersPage = lazy(() => import('@/features/users/pages/UsersPage'));
-const VideoDetailPage = lazy(() => import('@/features/videos/pages/VideoDetailPage'));
-const VideosPage = lazy(() => import('@/features/videos/pages/VideosPage'));
-const CleanerPage = lazy(() => import('@/features/cleaner/pages/CleanerPage'));
-const VideoDownloader = lazy(() =>
-  import('@/features/yt-video-downloader/pages/YTVideoDownloader').then(({ VideoDownloader }) => ({
-    default: VideoDownloader,
-  })),
-);
-const SteamReviewPage = lazy(() => import('@/features/steam/review/SteamReviewPage'));
-const CrosshairPage = lazy(() => import('@/features/crosshair/pages/CrosshairPage'));
 const CrosshairOverlayWindow = lazy(() => import('@/features/crosshair/pages/CrosshairOverlayWindow'));
-const ImageConverterPage = lazy(() => import('@/features/image-converter/pages/ImageConverterPage'));
-const PortScannerPage = lazy(() => import('@/features/port-scanner/pages/PortScannerPage'));
-const ArchiveExplorerPage = lazy(() => import('@/features/archive-explorer/pages/ArchiveExplorerPage'));
-const AiChatPage = lazy(() => import('@/features/ai/pages/AiChatPage'));
-const AiAgentPage = lazy(() => import('@/features/ai/pages/AiAgentPage'));
-const CodebaseAgentPage = lazy(() => import('@/features/ai/pages/CodebaseAgentPage'));
-const ViCountdown = lazy(() => import('@/features/vi/pages/ViCountdown'));
-const World3DPage = lazy(() => import('@/features/world3d/pages/World3DPage'));
-const DeveloperToolsPage = lazy(() => import('@/features/developer-tools/pages/DeveloperToolsPage'));
-const AiToolsPage = lazy(() => import('@/features/ai-tools/pages/AiToolsPage'));
-const CssToolsPage = lazy(() => import('@/features/css-tools/pages/CssToolsPage'));
-const GitPage = lazy(() => import('@/features/git/pages/GitPage'));
-const FeedbackPage = lazy(() => import('@/features/feedback/pages/FeedbackPage'));
-const JsonViewerPage = lazy(() => import('@/features/json-viewer/pages/JsonViewerPage'));
-import RouteLoadErrorFallback from '@/app/components/RouteLoadErrorFallback';
-import { AppErrorBoundary } from './components/AppErrorBoundary';
 
 function RouteContent({ children }: { children: ReactNode }) {
   return (
@@ -57,13 +23,52 @@ function RouteContent({ children }: { children: ReactNode }) {
   );
 }
 
+function createConfiguredRoute(route: RouteDefinition): ReactElement {
+  const Page = route.component;
+  let content = (
+    <RouteStatusGuard status={route.status} featureName={route.id}>
+      <RouteContent>
+        <Page />
+      </RouteContent>
+    </RouteStatusGuard>
+  );
+
+  if (route.guard?.kind === 'role') {
+    content = (
+      <RoleGuardWrapper page={route.guard.page} message={route.guard.message}>
+        {content}
+      </RoleGuardWrapper>
+    );
+  }
+
+  return <Route key={route.id} path={route.path} element={content} />;
+}
+
+function RoleGuardWrapper({
+  page,
+  message,
+  children,
+}: {
+  page: string;
+  message: string;
+  children: ReactNode;
+}) {
+  return (
+    <RoleGuard page={page} message={message}>
+      {children}
+    </RoleGuard>
+  );
+}
+
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
+  const layoutRoutes = ROUTE_CONFIG.filter((route) => route.id !== 'agent');
+  const agentRoute = ROUTE_CONFIG.find((route) => route.id === 'agent');
+  const AgentPage = agentRoute?.component;
 
   return (
     <HashRouter>
       <Routes>
-        {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/session-limit" element={<SessionManagementPage />} />
         <Route
@@ -75,297 +80,23 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Protected Routes */}
         <Route element={<ProtectedLayout />}>
-          <Route
-            path="/agent"
-            element={
-              <DevelopmentGuard featureName="agent">
-                <RouteContent>
-                  <AiAgentPage />
-                </RouteContent>
-              </DevelopmentGuard>
-            }
-          />
+          {agentRoute && (
+            <Route
+              path={agentRoute.path}
+              element={
+                <RouteStatusGuard status={agentRoute.status} featureName={agentRoute.id}>
+                  {AgentPage && (
+                    <RouteContent>
+                      <AgentPage />
+                    </RouteContent>
+                  )}
+                </RouteStatusGuard>
+              }
+            />
+          )}
           <Route element={<Layout />}>
-            <Route path="/" element={<DashboardPage />} />
-
-            <Route
-              path="/codebase-agent"
-              element={
-                <DevelopmentGuard featureName="codebase-agent">
-                  <RouteContent>
-                    <CodebaseAgentPage />
-                  </RouteContent>
-                </DevelopmentGuard>
-              }
-            />
-
-            {/* IN-DEVELOPMENT PROTECTED ROUTES */}
-            <Route
-              path="/marketplace"
-              element={
-                <DevelopmentGuard featureName="marketplace">
-                  <RouteContent>
-                    <MarketplacePage />
-                  </RouteContent>
-                </DevelopmentGuard>
-              }
-            />
-
-            <Route
-              path="/vi"
-              element={
-                <RouteContent>
-                  <ViCountdown />
-                </RouteContent>
-              }
-            />
-
-            {/* STABLE TOOLS */}
-            <Route
-              path="/tools/currency"
-              element={
-                <RouteContent>
-                  <CurrencyConverterPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/bg-remover"
-              element={
-                <RouteContent>
-                  <BackgroundRemoverPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/cleaner"
-              element={
-                <RouteContent>
-                  <CleanerPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/crosshair-overlay"
-              element={
-                <RouteContent>
-                  <CrosshairPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/image-converter"
-              element={
-                <RouteContent>
-                  <ImageConverterPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/port-scanner"
-              element={
-                <RouteContent>
-                  <PortScannerPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/archive-explorer"
-              element={
-                <RouteContent>
-                  <ArchiveExplorerPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/ai-chat"
-              element={
-                <RouteContent>
-                  <AiChatPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/ai-tools"
-              element={
-                <RouteContent>
-                  <AiToolsPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/steam/sam"
-              element={
-                <RouteContent>
-                  <SteamSamPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/developer-tools"
-              element={
-                <RouteContent>
-                  <DeveloperToolsPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/css-tools"
-              element={
-                <RouteContent>
-                  <CssToolsPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/json"
-              element={
-                <RouteContent>
-                  <JsonViewerPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/git"
-              element={
-                <RouteContent>
-                  <GitPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/feedback"
-              element={
-                <RouteContent>
-                  <FeedbackPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/world-3d"
-              element={
-                <RouteContent>
-                  <World3DPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/steam/review"
-              element={
-                <RouteContent>
-                  <SteamReviewPage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/tools/steam/steam-idler"
-              element={
-                <RouteContent>
-                  <SteamIdlerPage />
-                </RouteContent>
-              }
-            />
-
-            {/* PERFORMANCE ROUTES — Owner only */}
-            <Route
-              path="/performances"
-              element={
-                <RoleGuard
-                  page="performances"
-                  message="Access restricted: Performances section is available to Owner only."
-                >
-                  <RouteContent>
-                    <PerformancePage />
-                  </RouteContent>
-                </RoleGuard>
-              }
-            />
-            <Route
-              path="/performances/:id"
-              element={
-                <RoleGuard
-                  page="performances"
-                  message="Access restricted: Performances section is available to Owner only."
-                >
-                  <RouteContent>
-                    <PerformanceDetailPage />
-                  </RouteContent>
-                </RoleGuard>
-              }
-            />
-
-            {/* VIDEO ROUTES */}
-            <Route
-              path="/tools/video-downloader"
-              element={
-                <RouteContent>
-                  <VideoDownloader />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/videos"
-              element={
-                <RoleGuard
-                  page="videos"
-                  message="Access restricted: Stream section is available to Owner only."
-                >
-                  <RouteContent>
-                    <VideosPage />
-                  </RouteContent>
-                </RoleGuard>
-              }
-            />
-            <Route
-              path="/videos/:videoId"
-              element={
-                <RoleGuard
-                  page="videos"
-                  message="Access restricted: Stream section is available to Owner only."
-                >
-                  <RouteContent>
-                    <VideoDetailPage />
-                  </RouteContent>
-                </RoleGuard>
-              }
-            />
-
-            {/* USERS ROUTES — Owner & Admin only */}
-            <Route
-              path="/users"
-              element={
-                <RoleGuard
-                  page="users"
-                  message="You do not have permission to access the Users management page."
-                >
-                  <RouteContent>
-                    <UsersPage />
-                  </RouteContent>
-                </RoleGuard>
-              }
-            />
-
-            {/* PROFILE & SETTINGS ROUTES */}
-            <Route
-              path="/profile"
-              element={
-                <RouteContent>
-                  <ProfilePage />
-                </RouteContent>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <RouteContent>
-                  <SettingsPage />
-                </RouteContent>
-              }
-            />
-
-            {/* PLUGIN DYNAMIC ROUTES */}
+            {layoutRoutes.map(createConfiguredRoute)}
             {pluginRoutes.map((route) => {
               const Component = route.component;
               return (

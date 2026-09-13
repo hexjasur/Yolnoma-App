@@ -13,72 +13,46 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Star,
-  Bot,
   MessageSquarePlus,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
-import {
-  isFeatureInDevelopment,
-  canAccessDevFeature,
-  handleDevFeatureClick,
-} from '@/config/features';
+import { canAccessDevFeature, handleDevFeatureClick } from '@/config/features';
 import { usePluginNavigation } from '@/plugins';
 import { ConfirmModal } from '@/shared/ui';
 import { TOOL_CATALOG } from '@/config/toolCatalog';
 import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
 import type { LucideIcon } from 'lucide-react';
 import { openAgentWindow } from '@/shared/lib/window';
+import { getNavigationRoutes } from '@/app/routes.config';
 
 type SidebarLink = {
   to: string;
   label: string;
   icon: LucideIcon | string;
   name: string;
-  inDevelopment?: boolean;
+  status: 'stable' | 'dev' | 'test';
+  navGroup: 'home' | 'workspace' | 'tools';
 };
 
-const links: SidebarLink[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutGrid, name: 'dashboard' },
-  {
-    to: '/agent',
-    label: 'Yolnoma Agent',
-    icon: Bot,
-    name: 'agent',
-    inDevelopment: true,
-  },
-  {
-    to: '/codebase-agent',
-    label: 'Codebase Agent',
-    icon: Bot,
-    name: 'codebase-agent',
-  },
+const NAV_ICON_OVERRIDES: Record<string, LucideIcon> = {
+  dashboard: LayoutGrid,
+  performances: Drama,
+  videos: Film,
+  users: Users,
+  profile: CircleUser,
+  feedback: MessageSquarePlus,
+  marketplace: ShoppingCart,
+};
 
-  {
-    to: '/performances',
-    label: 'Performance',
-    icon: Drama,
-    name: 'performances',
-  },
-  { to: '/videos', label: 'Stream', icon: Film, name: 'videos' },
-
-  { to: '/users', label: 'Users', icon: Users, name: 'users' },
-  { to: '/profile', label: 'Profile', icon: CircleUser, name: 'profile' },
-
-  {
-    to: '/marketplace',
-    label: 'Marketplace',
-    icon: ShoppingCart,
-    name: 'marketplace',
-    inDevelopment: true,
-  },
-  {
-    to: '/feedback',
-    label: 'Ideas & Bugs',
-    icon: MessageSquarePlus,
-    name: 'feedback',
-  },
-];
+const links: SidebarLink[] = getNavigationRoutes().map((route) => ({
+  to: route.path,
+  label: route.label ?? route.id,
+  icon: NAV_ICON_OVERRIDES[route.id] ?? route.icon ?? Blocks,
+  name: route.id,
+  status: route.status ?? 'stable',
+  navGroup: route.navGroup ?? 'tools',
+}));
 
 const SIDEBAR_WIDTH_KEY = 'yolnoma_sidebar_width';
 const SIDEBAR_COLLAPSED_KEY = 'yolnoma_sidebar_collapsed';
@@ -154,32 +128,22 @@ export default function Sidebar() {
   };
 
   // Filter links based on user's role
-  const toolLinks: SidebarLink[] = TOOL_CATALOG.map((tool) => ({
-    ...tool,
-    name: tool.id,
-  }));
-  const filteredLinks = [...links, ...toolLinks].filter((link) =>
+  const filteredLinks = links.filter((link) =>
     canAccessPage(user?.role, link.name),
   );
   const navigationGroups = [
     {
       label: 'Home',
-      items: filteredLinks.filter((link) =>
-        ['dashboard', 'agent', 'codebase-agent'].includes(link.name),
-      ),
+      items: filteredLinks.filter((link) => link.navGroup === 'home'),
     },
     {
       label: 'Workspace',
-      items: filteredLinks.filter((link) =>
-        ['performances', 'videos', 'users', 'profile', 'marketplace', 'developer-tools', 'feedback'].includes(
-          link.name,
-        ),
-      ),
+      items: filteredLinks.filter((link) => link.navGroup === 'workspace'),
     },
     {
       label: 'Tools',
       items: filteredLinks
-        .filter((link) => TOOL_CATALOG.some((tool) => tool.id === link.name) && !['developer-tools', 'ai-tools'].includes(link.name))
+        .filter((link) => link.navGroup === 'tools' && !['developer-tools', 'ai-tools'].includes(link.name))
         .sort((left, right) => left.label.localeCompare(right.label)),
     },
   ];
@@ -237,8 +201,7 @@ export default function Sidebar() {
                 )}
                 {group.items.map((link) => {
                   const { to, label, icon: Icon } = link;
-                  const inDev =
-                    link.inDevelopment || isFeatureInDevelopment(link.name);
+                  const inDev = link.status !== 'stable';
                   const hasBypass = canAccessDevFeature(user?.role, link.name);
 
                   return (
@@ -348,7 +311,7 @@ export default function Sidebar() {
                                     : 'In Development (Locked)'
                                 }
                               >
-                                {hasBypass ? 'TEST' : 'DEV'}
+                                {link.status === 'test' || hasBypass ? 'TEST' : 'DEV'}
                               </span>
                             )}
                           </>
