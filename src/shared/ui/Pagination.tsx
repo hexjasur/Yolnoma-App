@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import SelectMenu from './SelectMenu';
 
 export interface PaginationProps {
   page: number;
@@ -41,18 +42,17 @@ export default function Pagination({
           <strong className="text-[var(--text-primary)]">{total}</strong> {itemLabel}
         </span>
         {onLimitChange && (
-          <label className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <span>Per page</span>
-            <select
-              value={limit}
-              onChange={(event) => onLimitChange(Number(event.target.value))}
+            <SelectMenu
+              value={String(limit)}
+              onChange={(value) => onLimitChange(Number(value))}
               disabled={loading}
-              className="rounded-md bg-white/[0.06] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none transition-colors hover:bg-white/[0.11] focus:bg-white/[0.1]"
-              aria-label="Items per page"
-            >
-              {limitOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
+              ariaLabel="Items per page"
+              options={limitOptions.map((option) => ({ value: String(option), label: String(option) }))}
+              className="min-w-[92px]"
+            />
+          </div>
         )}
       </div>
 
