@@ -210,11 +210,11 @@ export default function PerformancePage() {
         <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 260 }}>
           <SearchInput
             size="md"
+            width="wide"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onClear={handleClearSearch}
             placeholder="Search by name or keyword…"
-            className="flex-1"
           />
           <Button type="submit" variant="ghost">Search</Button>
           {searchParam && (
