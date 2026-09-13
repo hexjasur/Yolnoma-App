@@ -1,44 +1,55 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 
 import Layout from '@/app/layout/Layout';
 import ProtectedLayout from '@/app/layout/ProtectedLayout';
+import RouteLoadingFallback from '@/app/components/RouteLoadingFallback';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import SessionManagementPage from '@/features/auth/pages/SessionManagementPage';
-import ProfilePage from '@/features/account/pages/ProfilePage';
-import SettingsPage from '@/features/account/pages/SettingsPage';
-import BackgroundRemoverPage from '@/features/background-remover/pages/BackgroundRemoverPage';
-import MarketplacePage from '@/features/marketplace/pages/MarketplacePage';
-import CurrencyConverterPage from '@/features/currency/pages/CurrencyConverterPage';
 import DashboardPage from '@/features/dashboard/pages/DashboardPage';
-import PerformanceDetailPage from '@/features/performance/pages/PerformanceDetailPage';
-import PerformancePage from '@/features/performance/pages/PerformancePage';
-import SteamIdlerPage from '@/features/steam-idler/pages/SteamIdlerPage';
-import SteamSamPage from '@/features/steam-sam/pages/SteamSamPage';
-import UsersPage from '@/features/users/pages/UsersPage';
-import VideoDetailPage from '@/features/videos/pages/VideoDetailPage';
-import VideosPage from '@/features/videos/pages/VideosPage';
-import { usePluginRoutes } from '@/plugins';
-import CleanerPage from '@/features/cleaner/pages/CleanerPage';
 import DevelopmentGuard from '@/shared/ui/DevelopmentGuard';
 import RoleGuard from '@/shared/ui/RoleGuard';
-import { VideoDownloader } from '@/features/yt-video-downloader/pages/YTVideoDownloader';
-import SteamReviewPage from '@/features/steam/review/SteamReviewPage';
-import CrosshairPage from '@/features/crosshair/pages/CrosshairPage';
-import CrosshairOverlayWindow from '@/features/crosshair/pages/CrosshairOverlayWindow';
-import ImageConverterPage from '@/features/image-converter/pages/ImageConverterPage';
-import PortScannerPage from '@/features/port-scanner/pages/PortScannerPage';
-import ArchiveExplorerPage from '@/features/archive-explorer/pages/ArchiveExplorerPage';
-import AiChatPage from '@/features/ai/pages/AiChatPage';
-import AiAgentPage from '@/features/ai/pages/AiAgentPage';
-import CodebaseAgentPage from '@/features/ai/pages/CodebaseAgentPage';
-import ViCountdown from '@/features/vi/pages/ViCountdown';
-import World3DPage from '@/features/world3d/pages/World3DPage';
-import DeveloperToolsPage from '@/features/developer-tools/pages/DeveloperToolsPage';
-import AiToolsPage from '@/features/ai-tools/pages/AiToolsPage';
-import CssToolsPage from '@/features/css-tools/pages/CssToolsPage';
-import GitPage from '@/features/git/pages/GitPage';
-import FeedbackPage from '@/features/feedback/pages/FeedbackPage';
-import JsonViewerPage from '@/features/json-viewer/pages/JsonViewerPage';
+import { usePluginRoutes } from '@/plugins';
+
+const ProfilePage = lazy(() => import('@/features/account/pages/ProfilePage'));
+const SettingsPage = lazy(() => import('@/features/account/pages/SettingsPage'));
+const BackgroundRemoverPage = lazy(() => import('@/features/background-remover/pages/BackgroundRemoverPage'));
+const MarketplacePage = lazy(() => import('@/features/marketplace/pages/MarketplacePage'));
+const CurrencyConverterPage = lazy(() => import('@/features/currency/pages/CurrencyConverterPage'));
+const PerformanceDetailPage = lazy(() => import('@/features/performance/pages/PerformanceDetailPage'));
+const PerformancePage = lazy(() => import('@/features/performance/pages/PerformancePage'));
+const SteamIdlerPage = lazy(() => import('@/features/steam-idler/pages/SteamIdlerPage'));
+const SteamSamPage = lazy(() => import('@/features/steam-sam/pages/SteamSamPage'));
+const UsersPage = lazy(() => import('@/features/users/pages/UsersPage'));
+const VideoDetailPage = lazy(() => import('@/features/videos/pages/VideoDetailPage'));
+const VideosPage = lazy(() => import('@/features/videos/pages/VideosPage'));
+const CleanerPage = lazy(() => import('@/features/cleaner/pages/CleanerPage'));
+const VideoDownloader = lazy(() =>
+  import('@/features/yt-video-downloader/pages/YTVideoDownloader').then(({ VideoDownloader }) => ({
+    default: VideoDownloader,
+  })),
+);
+const SteamReviewPage = lazy(() => import('@/features/steam/review/SteamReviewPage'));
+const CrosshairPage = lazy(() => import('@/features/crosshair/pages/CrosshairPage'));
+const CrosshairOverlayWindow = lazy(() => import('@/features/crosshair/pages/CrosshairOverlayWindow'));
+const ImageConverterPage = lazy(() => import('@/features/image-converter/pages/ImageConverterPage'));
+const PortScannerPage = lazy(() => import('@/features/port-scanner/pages/PortScannerPage'));
+const ArchiveExplorerPage = lazy(() => import('@/features/archive-explorer/pages/ArchiveExplorerPage'));
+const AiChatPage = lazy(() => import('@/features/ai/pages/AiChatPage'));
+const AiAgentPage = lazy(() => import('@/features/ai/pages/AiAgentPage'));
+const CodebaseAgentPage = lazy(() => import('@/features/ai/pages/CodebaseAgentPage'));
+const ViCountdown = lazy(() => import('@/features/vi/pages/ViCountdown'));
+const World3DPage = lazy(() => import('@/features/world3d/pages/World3DPage'));
+const DeveloperToolsPage = lazy(() => import('@/features/developer-tools/pages/DeveloperToolsPage'));
+const AiToolsPage = lazy(() => import('@/features/ai-tools/pages/AiToolsPage'));
+const CssToolsPage = lazy(() => import('@/features/css-tools/pages/CssToolsPage'));
+const GitPage = lazy(() => import('@/features/git/pages/GitPage'));
+const FeedbackPage = lazy(() => import('@/features/feedback/pages/FeedbackPage'));
+const JsonViewerPage = lazy(() => import('@/features/json-viewer/pages/JsonViewerPage'));
+
+function RouteContent({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RouteLoadingFallback />}>{children}</Suspense>;
+}
 
 export default function AppRoutes() {
   const pluginRoutes = usePluginRoutes();
@@ -51,7 +62,11 @@ export default function AppRoutes() {
         <Route path="/session-limit" element={<SessionManagementPage />} />
         <Route
           path="/crosshair-overlay-window"
-          element={<CrosshairOverlayWindow />}
+          element={
+            <RouteContent>
+              <CrosshairOverlayWindow />
+            </RouteContent>
+          }
         />
 
         {/* Protected Routes */}
@@ -60,7 +75,9 @@ export default function AppRoutes() {
             path="/agent"
             element={
               <DevelopmentGuard featureName="agent">
-                <AiAgentPage />
+                <RouteContent>
+                  <AiAgentPage />
+                </RouteContent>
               </DevelopmentGuard>
             }
           />
@@ -71,7 +88,9 @@ export default function AppRoutes() {
               path="/codebase-agent"
               element={
                 <DevelopmentGuard featureName="codebase-agent">
-                  <CodebaseAgentPage />
+                  <RouteContent>
+                    <CodebaseAgentPage />
+                  </RouteContent>
                 </DevelopmentGuard>
               }
             />
@@ -81,46 +100,166 @@ export default function AppRoutes() {
               path="/marketplace"
               element={
                 <DevelopmentGuard featureName="marketplace">
-                  <MarketplacePage />
+                  <RouteContent>
+                    <MarketplacePage />
+                  </RouteContent>
                 </DevelopmentGuard>
               }
             />
 
-            <Route path="/vi" element={<ViCountdown />} />
+            <Route
+              path="/vi"
+              element={
+                <RouteContent>
+                  <ViCountdown />
+                </RouteContent>
+              }
+            />
 
             {/* STABLE TOOLS */}
-            <Route path="/tools/currency" element={<CurrencyConverterPage />} />
+            <Route
+              path="/tools/currency"
+              element={
+                <RouteContent>
+                  <CurrencyConverterPage />
+                </RouteContent>
+              }
+            />
             <Route
               path="/tools/bg-remover"
-              element={<BackgroundRemoverPage />}
+              element={
+                <RouteContent>
+                  <BackgroundRemoverPage />
+                </RouteContent>
+              }
             />
-            <Route path="/tools/cleaner" element={<CleanerPage />} />
+            <Route
+              path="/tools/cleaner"
+              element={
+                <RouteContent>
+                  <CleanerPage />
+                </RouteContent>
+              }
+            />
             <Route
               path="/tools/crosshair-overlay"
-              element={<CrosshairPage />}
+              element={
+                <RouteContent>
+                  <CrosshairPage />
+                </RouteContent>
+              }
             />
             <Route
               path="/tools/image-converter"
-              element={<ImageConverterPage />}
+              element={
+                <RouteContent>
+                  <ImageConverterPage />
+                </RouteContent>
+              }
             />
-            <Route path="/tools/port-scanner" element={<PortScannerPage />} />
+            <Route
+              path="/tools/port-scanner"
+              element={
+                <RouteContent>
+                  <PortScannerPage />
+                </RouteContent>
+              }
+            />
             <Route
               path="/tools/archive-explorer"
-              element={<ArchiveExplorerPage />}
+              element={
+                <RouteContent>
+                  <ArchiveExplorerPage />
+                </RouteContent>
+              }
             />
-            <Route path="/tools/ai-chat" element={<AiChatPage />} />
-            <Route path="/tools/ai-tools" element={<AiToolsPage />} />
-            <Route path="/tools/steam/sam" element={<SteamSamPage />} />
-            <Route path="/tools/developer-tools" element={<DeveloperToolsPage />} />
-            <Route path="/tools/css-tools" element={<CssToolsPage />} />
-            <Route path="/tools/json" element={<JsonViewerPage />} />
-            <Route path="/tools/git" element={<GitPage />} />
-            <Route path="/feedback" element={<FeedbackPage />} />
-            <Route path="/tools/world-3d" element={<World3DPage />} />
-            <Route path="/tools/steam/review" element={<SteamReviewPage />} />
+            <Route
+              path="/tools/ai-chat"
+              element={
+                <RouteContent>
+                  <AiChatPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/ai-tools"
+              element={
+                <RouteContent>
+                  <AiToolsPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/steam/sam"
+              element={
+                <RouteContent>
+                  <SteamSamPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/developer-tools"
+              element={
+                <RouteContent>
+                  <DeveloperToolsPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/css-tools"
+              element={
+                <RouteContent>
+                  <CssToolsPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/json"
+              element={
+                <RouteContent>
+                  <JsonViewerPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/git"
+              element={
+                <RouteContent>
+                  <GitPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/feedback"
+              element={
+                <RouteContent>
+                  <FeedbackPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/world-3d"
+              element={
+                <RouteContent>
+                  <World3DPage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/tools/steam/review"
+              element={
+                <RouteContent>
+                  <SteamReviewPage />
+                </RouteContent>
+              }
+            />
             <Route
               path="/tools/steam/steam-idler"
-              element={<SteamIdlerPage />}
+              element={
+                <RouteContent>
+                  <SteamIdlerPage />
+                </RouteContent>
+              }
             />
 
             {/* PERFORMANCE ROUTES — Owner only */}
@@ -131,7 +270,9 @@ export default function AppRoutes() {
                   page="performances"
                   message="Access restricted: Performances section is available to Owner only."
                 >
-                  <PerformancePage />
+                  <RouteContent>
+                    <PerformancePage />
+                  </RouteContent>
                 </RoleGuard>
               }
             />
@@ -142,7 +283,9 @@ export default function AppRoutes() {
                   page="performances"
                   message="Access restricted: Performances section is available to Owner only."
                 >
-                  <PerformanceDetailPage />
+                  <RouteContent>
+                    <PerformanceDetailPage />
+                  </RouteContent>
                 </RoleGuard>
               }
             />
@@ -150,7 +293,11 @@ export default function AppRoutes() {
             {/* VIDEO ROUTES */}
             <Route
               path="/tools/video-downloader"
-              element={<VideoDownloader />}
+              element={
+                <RouteContent>
+                  <VideoDownloader />
+                </RouteContent>
+              }
             />
             <Route
               path="/videos"
@@ -159,7 +306,9 @@ export default function AppRoutes() {
                   page="videos"
                   message="Access restricted: Stream section is available to Owner only."
                 >
-                  <VideosPage />
+                  <RouteContent>
+                    <VideosPage />
+                  </RouteContent>
                 </RoleGuard>
               }
             />
@@ -170,7 +319,9 @@ export default function AppRoutes() {
                   page="videos"
                   message="Access restricted: Stream section is available to Owner only."
                 >
-                  <VideoDetailPage />
+                  <RouteContent>
+                    <VideoDetailPage />
+                  </RouteContent>
                 </RoleGuard>
               }
             />
@@ -183,14 +334,30 @@ export default function AppRoutes() {
                   page="users"
                   message="You do not have permission to access the Users management page."
                 >
-                  <UsersPage />
+                  <RouteContent>
+                    <UsersPage />
+                  </RouteContent>
                 </RoleGuard>
               }
             />
 
             {/* PROFILE & SETTINGS ROUTES */}
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route
+              path="/profile"
+              element={
+                <RouteContent>
+                  <ProfilePage />
+                </RouteContent>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RouteContent>
+                  <SettingsPage />
+                </RouteContent>
+              }
+            />
 
             {/* PLUGIN DYNAMIC ROUTES */}
             {pluginRoutes.map((route) => {
@@ -199,7 +366,11 @@ export default function AppRoutes() {
                 <Route
                   key={route.fullPath}
                   path={route.fullPath}
-                  element={<Component />}
+                  element={
+                    <RouteContent>
+                      <Component />
+                    </RouteContent>
+                  }
                 />
               );
             })}
