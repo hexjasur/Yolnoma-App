@@ -119,7 +119,7 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   { id: 'vi', path: '/vi', component: ViCountdown, label: 'VI COUNTDOWN', description: 'Countdown GTA VI', icon: ViIcon, navGroup: 'tools', pinnable: true },
   { id: 'steam-sam', path: '/tools/steam/sam', component: SteamSamPage, label: 'Steam / SAM', description: 'Manage Steam achievements', icon: Gamepad, navGroup: 'tools', pinnable: true },
   { id: 'steam-review', path: '/tools/steam/review', component: SteamReviewPage, label: 'Steam / Review', description: 'Review Steam games', icon: Gamepad2, navGroup: 'tools', pinnable: true },
-  { id: 'developer-tools', path: '/tools/developer-tools', component: DeveloperToolsPage, label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', icon: Wrench, navGroup: 'tools', pinnable: true },
+  { id: 'developer-tools', path: '/tools/developer-tools', component: DeveloperToolsPage, label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', icon: Wrench, navGroup: 'workspace', pinnable: true },
   { id: 'ai-tools', path: '/tools/ai-tools', component: AiToolsPage, label: 'AI Tools', description: 'AI-powered project workspaces', icon: WandSparkles, navGroup: 'tools', pinnable: true },
   { id: 'json-viewer', path: '/tools/json', component: JsonViewerPage, label: 'JSON EDIT/VIEW', description: 'Edit JSON and transform it into cards', icon: Wrench, navGroup: 'tools', pinnable: true },
   { id: 'css-tools', path: '/tools/css-tools', component: CssToolsPage, label: 'CSS Tools', description: 'Gradients, scrollbars & minify', icon: Palette, navGroup: 'tools', pinnable: true },
