@@ -37,7 +37,7 @@ export default function ImagePage() {
           <button type="button" onClick={() => selectTab('compressor')} className={`inline-flex items-center gap-2 border px-4 py-2 text-xs font-semibold transition-colors ${tab === 'compressor' ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-white/[0.08] text-white/45 hover:bg-white/[0.05] hover:text-white'}`}><Minimize2 size={14} /> Compressor</button>
         </div>
       </header>
-      <main className="min-h-0 flex-1 overflow-y-auto"><div className="px-6 pb-6">{tab === 'converter' ? <ImageConverterTool /> : <ImageCompressorTool />}</div></main>
+      <main className="min-h-0 flex-1 overflow-y-auto"><div className="p-6 pb-6">{tab === 'converter' ? <ImageConverterTool /> : <ImageCompressorTool />}</div></main>
     </div>
   );
 }
