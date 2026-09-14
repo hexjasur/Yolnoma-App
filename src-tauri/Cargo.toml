@@ -7,7 +7,7 @@
 
 [package]
 name = "yolnoma-app"
-version = "1.0.10"
+version = "1.0.11"
 description = "Yolnoma Desktop Utility App"
 authors = ["Jasurbek Haydarov"]
 edition = "2021"
