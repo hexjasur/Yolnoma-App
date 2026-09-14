@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import {
+  steamApi,
+  readSteamGamesCache,
+  writeSteamGamesCache,
+  setAchievementsBounded,
+  type SteamGame,
+  type SteamUser,
+} from '../../steam/api/steamApi';
 import {
   Trophy, BarChart3, Search, RefreshCw, Lock, Unlock,
   CheckCircle2, AlertTriangle, Shield, Wifi, WifiOff,
@@ -14,18 +21,6 @@ import { AuditLogPanel, type AuditEntry } from '../components/AuditLogPanel';
 // ────────────────────────────────────────────────────────────────────────────
 // TYPES
 // ────────────────────────────────────────────────────────────────────────────
-
-interface SteamUser {
-  steamId: string;
-  personaName: string;
-  mostRecent: boolean;
-}
-
-interface SteamGame {
-  appId: number;
-  name: string;
-  playtimeForever: number;
-}
 
 interface Achievement {
   id: string;
@@ -48,15 +43,9 @@ interface Stat {
   protectedStat: boolean;
 }
 
-interface AchievementData {
-  achievements: Achievement[];
-  stats: Stat[];
-}
-
 type AchFilter = 'all' | 'unlocked' | 'locked';
 type AchSort = 'rarity' | 'name' | 'status';
 
-const CACHE_KEY = 'yolnoma_steam_games_cache';
 const AUDIT_LOG_KEY = 'yolnoma_steam_sam_audit_log';
 const MAX_AUDIT_ENTRIES = 30;
 
@@ -126,7 +115,7 @@ export default function SteamSamPage() {
   // Check Steam client status
   const checkSteam = useCallback(async () => {
     try {
-      const running = await invoke<boolean>('steam_is_running');
+      const running = await steamApi.isRunning();
       setSteamRunning(running);
     } catch {
       setSteamRunning(false);
@@ -143,7 +132,7 @@ export default function SteamSamPage() {
   useEffect(() => {
     (async () => {
       try {
-        const users = await invoke<SteamUser[]>('get_steam_accounts');
+        const users = await steamApi.getAccounts();
         setAccounts(users);
         const recent = users.find((u) => u.mostRecent) ?? users[0];
         if (recent) setSelectedSteamId(recent.steamId);
@@ -157,26 +146,18 @@ export default function SteamSamPage() {
   const loadGames = useCallback(async () => {
     if (!selectedSteamId) return;
 
-    try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      if (raw) {
-        const cache = JSON.parse(raw);
-        if (cache.steamId === selectedSteamId && cache.games?.length > 0) {
-          setGames(cache.games);
-        }
-      }
-    } catch {}
+    const cached = readSteamGamesCache(selectedSteamId);
+    if (cached) {
+      setGames(cached.games);
+      return;
+    }
 
     setGamesLoading(true);
     try {
-      const list = await invoke<SteamGame[]>('get_steam_games', {
-        steamId: selectedSteamId,
-      });
+      const list = await steamApi.getGames(selectedSteamId);
       list.sort((a, b) => b.playtimeForever - a.playtimeForever);
       setGames(list);
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ steamId: selectedSteamId, games: list }));
-      } catch {}
+      writeSteamGamesCache(selectedSteamId, list);
     } catch (e: unknown) {
       console.error(e);
     } finally {
@@ -194,7 +175,7 @@ export default function SteamSamPage() {
     setSamError(null);
     setSelectedAchIds(new Set());
     try {
-      const data = await invoke<AchievementData>('get_achievement_data', { appId });
+      const data = await steamApi.getAchievementData(appId);
       setAchievements(data.achievements || []);
       setStats(data.stats || []);
 
@@ -280,7 +261,7 @@ export default function SteamSamPage() {
     try {
       const requestedCount = mode === 'all' ? achievements.length : selectedAchIds.size;
       if (mode === 'all') {
-        await invoke('unlock_all_achievements', { appId: selectedGame.appId });
+        await steamApi.unlockAllAchievements(selectedGame.appId);
         setAchievements((prev) =>
           prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: true }))
         );
@@ -289,20 +270,7 @@ export default function SteamSamPage() {
         toast.success('All achievements unlocked in Steam!');
       } else {
         const targetIds = Array.from(selectedAchIds);
-        let successCount = 0;
-        let failedCount = 0;
-        for (const achId of targetIds) {
-          try {
-            await invoke('set_achievement', {
-              appId: selectedGame.appId,
-              achId,
-              unlock: true,
-            });
-            successCount++;
-          } catch {
-            failedCount++;
-          }
-        }
+        const { successCount, failedCount } = await setAchievementsBounded(selectedGame.appId, targetIds, true);
         setAchievements((prev) =>
           prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: true } : a))
         );
@@ -325,7 +293,7 @@ export default function SteamSamPage() {
     try {
       const requestedCount = mode === 'all' ? achievements.length : selectedAchIds.size;
       if (mode === 'all') {
-        await invoke('lock_all_achievements', { appId: selectedGame.appId });
+        await steamApi.lockAllAchievements(selectedGame.appId);
         setAchievements((prev) =>
           prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: false }))
         );
@@ -334,20 +302,7 @@ export default function SteamSamPage() {
         toast.success('All achievements locked!');
       } else {
         const targetIds = Array.from(selectedAchIds);
-        let successCount = 0;
-        let failedCount = 0;
-        for (const achId of targetIds) {
-          try {
-            await invoke('set_achievement', {
-              appId: selectedGame.appId,
-              achId,
-              unlock: false,
-            });
-            successCount++;
-          } catch {
-            failedCount++;
-          }
-        }
+        const { successCount, failedCount } = await setAchievementsBounded(selectedGame.appId, targetIds, false);
         setAchievements((prev) =>
           prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: false } : a))
         );
@@ -372,10 +327,7 @@ export default function SteamSamPage() {
         value: typeof value === 'string' && !isNaN(Number(value)) ? Number(value) : value,
       }));
 
-      await invoke('update_stats', {
-        appId: selectedGame.appId,
-        statsJson: JSON.stringify(payload),
-      });
+      await steamApi.updateStats(selectedGame.appId, JSON.stringify(payload));
 
       setAuditLog(appendAuditLog({ action: 'stats-update', gameName: selectedGame.name, appId: selectedGame.appId, count: payload.length, success: payload.length, failed: 0 }));
       toast.success('Statistics successfully updated in Steam!');
@@ -392,7 +344,7 @@ export default function SteamSamPage() {
     setShowResetStatsConfirm(false);
     setActionLoading(true);
     try {
-      await invoke('reset_all_stats', { appId: selectedGame.appId });
+      await steamApi.resetAllStats(selectedGame.appId);
       setAuditLog(appendAuditLog({ action: 'stats-reset', gameName: selectedGame.name, appId: selectedGame.appId, count: stats.length, success: stats.length, failed: 0 }));
       toast.success('Statistics reset to zero.');
       loadSamData(selectedGame.appId);
