@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SteamStatusBadge } from '../components/SteamStatusBadge';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Gamepad2,
@@ -8,8 +9,6 @@ import {
   StopCircle,
   RefreshCw,
   AlertTriangle,
-  Wifi,
-  WifiOff,
   Users,
   Star,
   Clock,
@@ -708,37 +707,7 @@ export default function SteamIdlerPage() {
           </div>
 
           {/* Steam Status Badge */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 16px',
-              background: steamRunning
-                ? 'rgba(217,119,87,0.08)'
-                : 'rgba(239,68,68,0.08)',
-              border: `1px solid ${
-                steamRunning ? 'rgba(217,119,87,0.25)' : 'rgba(239,68,68,0.2)'
-              }`,
-              borderRadius: 24,
-              fontSize: 13,
-              fontWeight: 500,
-              color: steamRunning ? '#D97757' : '#f87171',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            {steamRunning ? (
-              <>
-                <Wifi size={14} />
-                Steam Running
-              </>
-            ) : (
-              <>
-                <WifiOff size={14} />
-                Steam Offline
-              </>
-            )}
-          </div>
+          <SteamStatusBadge running={steamRunning} />
         </div>
       </div>
 
