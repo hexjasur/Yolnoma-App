@@ -118,6 +118,7 @@ export default function SteamSamPage() {
   const [showAuditLog, setShowAuditLog] = useState(false);
 
   const initialLoadedRef = useRef(false);
+  const activeAccount = accounts.find((account) => account.mostRecent) ?? accounts[0];
 
   // Check Steam client status
   const checkSteam = useCallback(async () => {
@@ -517,28 +518,18 @@ export default function SteamSamPage() {
                 Active Steam User
               </span>
             </div>
-            {accounts.length > 0 ? (
-              <select
-                value={selectedSteamId}
-                onChange={(e) => setSelectedSteamId(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#1B1713',
-                  border: '1px solid rgba(242,237,230,0.1)',
-                  borderRadius: 8,
-                  padding: '6px 10px',
-                  color: '#F2EDE6',
-                  fontSize: 12,
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                {accounts.map((u) => (
-                  <option key={u.steamId} value={u.steamId}>
-                    {u.personaName} {u.mostRecent ? '(Active)' : ''}
-                  </option>
-                ))}
-              </select>
+            {activeAccount ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'rgba(217,119,87,0.08)', border: '1px solid rgba(217,119,87,0.2)' }}>
+                <span style={{ display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: '50%', background: 'rgba(217,119,87,0.18)' }}>
+                  <Users size={15} color="#D97757" />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#F2EDE6', fontSize: 12 }}>
+                    {activeAccount.personaName}
+                  </strong>
+                  <span style={{ color: '#D97757', fontSize: 10, fontWeight: 700 }}>Active Steam account</span>
+                </div>
+              </div>
             ) : (
               <p style={{ margin: 0, fontSize: 12, color: 'rgba(242,237,230,0.4)' }}>Detecting Steam...</p>
             )}
