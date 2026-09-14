@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { SteamStatusBadge } from '../components/SteamStatusBadge';
 import Pagination from '@/shared/ui/Pagination';
 import Button from '@/shared/ui/Button';
-import { invoke } from '@tauri-apps/api/core';
+import {
+  steamApi,
+  readSteamGamesCache,
+  writeSteamGamesCache,
+  STEAM_GAMES_CACHE_TTL,
+  type SteamGame,
+  type SteamProfile,
+  type SteamUser,
+} from '../../steam/api/steamApi';
 import {
   Gamepad2,
   Play,
@@ -26,71 +34,13 @@ import {
 // TYPES & INTERFACES
 // ────────────────────────────────────────────────────────────────────────────
 
-interface SteamUser {
-  steamId: string;
-  personaName: string;
-  mostRecent: boolean;
-}
-
-interface SteamProfile {
-  steamId: string;
-  personaName: string;
-  profileUrl?: string;
-  avatar?: string;
-  avatarMedium?: string;
-  avatarFull?: string;
-  personaState: number;
-  realName?: string;
-  countryCode?: string;
-  timeCreated?: number;
-  steamLevel?: number;
-}
-
-interface SteamGame {
-  appId: number;
-  name: string;
-  playtimeForever: number;
-}
-
-interface IdleResult {
-  running: number[];
-  failed: number[];
-}
-
-interface GamesCache {
-  steamId: string;
-  games: SteamGame[];
-  timestamp: number;
-}
-
 type Tab = 'favorites' | 'idling' | 'all';
 
 // ────────────────────────────────────────────────────────────────────────────
 // CACHE & STORAGE
 // ────────────────────────────────────────────────────────────────────────────
 
-const CACHE_KEY = 'yolnoma_steam_games_cache';
 const FAVORITES_KEY = 'yolnoma_steam_favorites';
-const CACHE_TTL = 5 * 60 * 1000; // 5m
-
-function getCachedGames(
-  steamId: string,
-): { games: SteamGame[]; age: number } | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const cache: GamesCache = JSON.parse(raw);
-    if (cache.steamId !== steamId) return null;
-    return { games: cache.games, age: Date.now() - cache.timestamp };
-  } catch {
-    return null;
-  }
-}
-
-function setCachedGames(steamId: string, games: SteamGame[]) {
-  const cache: GamesCache = { steamId, games, timestamp: Date.now() };
-  localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-}
 
 function getFavorites(): Set<number> {
   try {
@@ -444,7 +394,7 @@ export default function SteamIdlerPage() {
     setProfileOpen(true);
     setProfileLoading(true);
     try {
-      const data = await invoke<SteamProfile>('get_steam_profile', { steamId: activeAccount.steamId });
+      const data = await steamApi.getProfile(activeAccount.steamId);
       setProfile(data);
     } catch (e: unknown) {
       setError(String(e));
@@ -456,7 +406,7 @@ export default function SteamIdlerPage() {
   useEffect(() => {
     if (!activeAccount) return;
     let cancelled = false;
-    invoke<SteamProfile>('get_steam_profile', { steamId: activeAccount.steamId })
+    steamApi.getProfile(activeAccount.steamId)
       .then((data) => {
         if (!cancelled) setProfile(data);
       })
@@ -475,7 +425,7 @@ export default function SteamIdlerPage() {
   // Polling Steam status & idling processes
   const checkSteam = useCallback(async () => {
     try {
-      const running = await invoke<boolean>('steam_is_running');
+      const running = await steamApi.isRunning();
       setSteamRunning(running);
     } catch {
       setSteamRunning(false);
@@ -484,7 +434,7 @@ export default function SteamIdlerPage() {
 
   const refreshIdleState = useCallback(async () => {
     try {
-      const ids = await invoke<number[]>('get_idle_state');
+      const ids = await steamApi.getIdleState();
       const idSet = new Set(ids);
       const now = Date.now();
 
@@ -536,7 +486,7 @@ export default function SteamIdlerPage() {
     (async () => {
       setAccountsLoading(true);
       try {
-        const users = await invoke<SteamUser[]>('get_steam_accounts');
+        const users = await steamApi.getAccounts();
         setAccounts(users);
         const recent = users.find((u) => u.mostRecent) ?? users[0];
         if (recent) setSelectedSteamId(recent.steamId);
@@ -554,14 +504,14 @@ export default function SteamIdlerPage() {
       if (!selectedSteamId) return;
 
       if (!forceRefresh) {
-        const cached = getCachedGames(selectedSteamId);
+        const cached = readSteamGamesCache(selectedSteamId);
         if (cached) {
           setGames(cached.games);
           setCacheAge(cached.age);
           const ageMs = cached.age;
-          if (ageMs < CACHE_TTL) {
+          if (ageMs < STEAM_GAMES_CACHE_TTL) {
             setCanRefresh(false);
-            setSecondsLeft(Math.ceil((CACHE_TTL - ageMs) / 1000));
+            setSecondsLeft(Math.ceil((STEAM_GAMES_CACHE_TTL - ageMs) / 1000));
           } else {
             setCanRefresh(true);
             setSecondsLeft(0);
@@ -574,13 +524,11 @@ export default function SteamIdlerPage() {
       setError(null);
       setCanRefresh(false);
       try {
-        const list = await invoke<SteamGame[]>('get_steam_games', {
-          steamId: selectedSteamId,
-        });
+        const list = await steamApi.getGames(selectedSteamId);
         list.sort((a, b) => b.playtimeForever - a.playtimeForever);
         setGames(list);
         setCacheAge(0);
-        setCachedGames(selectedSteamId, list);
+        writeSteamGamesCache(selectedSteamId, list);
         setSecondsLeft(300);
       } catch (e: unknown) {
         setError(String(e));
@@ -618,7 +566,7 @@ export default function SteamIdlerPage() {
     setActionLoading(true);
     setError(null);
     try {
-      const result = await invoke<IdleResult>('start_idling', { targets });
+      const result = await steamApi.startIdling(targets);
       setIdlingIds(new Set(result.running));
       await refreshIdleState();
       if (result.failed.length > 0) {
@@ -635,7 +583,7 @@ export default function SteamIdlerPage() {
 
   const stopOne = async (appId: number) => {
     try {
-      await invoke('stop_idling', { appId });
+      await steamApi.stopIdling(appId);
       await refreshIdleState();
       setIdlingIds((prev) => {
         const n = new Set(prev);
@@ -649,7 +597,7 @@ export default function SteamIdlerPage() {
 
   const stopAll = async () => {
     try {
-      await invoke('stop_all_idling');
+      await steamApi.stopAllIdling();
       await refreshIdleState();
       setIdlingIds(new Set());
     } catch (e: unknown) {
@@ -1228,6 +1176,8 @@ export default function SteamIdlerPage() {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
                 gap: 10,
+                alignItems: 'start',
+                gridAutoRows: 'max-content',
                 paddingBottom: 16,
               }}
             >
