@@ -197,6 +197,7 @@ pub fn run() {
             domains::steam::steam_is_running,
             domains::steam::get_steam_accounts,
             domains::steam::get_steam_games,
+            domains::steam::get_steam_profile,
             domains::steam::start_idling,
             domains::steam::stop_idling,
             domains::steam::stop_all_idling,
@@ -216,6 +217,18 @@ pub fn run() {
             domains::archive::extract_single_entry,
             domains::archive::extract_archive,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Last-resort cleanup for OS shutdowns and exits that bypass the tray menu.
+            // The tray quit action and exit_app command also clean up eagerly; this
+            // callback protects against the remaining Tauri lifecycle paths.
+            if let tauri::RunEvent::Exit = event {
+                let state = app.state::<domains::steam::IdlingState>();
+                tauri::async_runtime::block_on(async {
+                    app_commands::stop_idling_processes(&state).await;
+                });
+            }
+        });
+
 }

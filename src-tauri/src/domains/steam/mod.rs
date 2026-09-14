@@ -28,6 +28,24 @@ pub struct SteamGame {
     pub playtime_forever: u64, // daqiqada
 }
 
+#[derive(Debug, Deserialize)]
+struct OwnedGamesResponse {
+    response: OwnedGamesPayload,
+}
+
+#[derive(Debug, Deserialize)]
+struct OwnedGamesPayload {
+    game_count: Option<u32>,
+    games: Option<Vec<RawSteamGame>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawSteamGame {
+    appid: Option<u64>,
+    name: Option<String>,
+    playtime_forever: Option<u64>,
+}
+
 /// loginusers.vdf dan o'qilgan akkaunt ma'lumoti
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -35,6 +53,22 @@ pub struct SteamUser {
     pub steam_id: String,
     pub persona_name: String,
     pub most_recent: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SteamProfile {
+    pub steam_id: String,
+    pub persona_name: String,
+    pub profile_url: Option<String>,
+    pub avatar: Option<String>,
+    pub avatar_medium: Option<String>,
+    pub avatar_full: Option<String>,
+    pub persona_state: u8,
+    pub real_name: Option<String>,
+    pub country_code: Option<String>,
+    pub time_created: Option<u64>,
+    pub steam_level: Option<u32>,
 }
 
 /// Idling natijasi
@@ -198,13 +232,13 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         return Err(format!("Steam API error: HTTP {}", resp.status()));
     }
 
-    let json: serde_json::Value = resp
+    let payload: OwnedGamesResponse = resp
         .json()
         .await
         .map_err(|e| format!("JSON parse error: {e}"))?;
 
-    // game_count yo'q = profil yopiq
-    if json.pointer("/response/game_count").is_none() {
+    // game_count yo'q = profil yopiq; game_count=0 esa normal bo'sh library.
+    if payload.response.game_count.is_none() {
         return Err(
             "Steam profile is private. Steam → Profile → Privacy Settings → \
              Game data: Make visible to everyone."
@@ -212,29 +246,83 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         );
     }
 
-    let games_arr = json
-        .pointer("/response/games")
-        .and_then(|g| g.as_array())
-        .ok_or_else(|| "O'yinlar ro'yxati bo'sh.".to_string())?;
-
-    let games: Vec<SteamGame> = games_arr
-        .iter()
-        .filter_map(|g| {
-            let app_id = g.get("appid")?.as_u64()? as u32;
-            let name = g.get("name")?.as_str()?.to_string();
-            let playtime = g
-                .get("playtime_forever")
-                .and_then(|p| p.as_u64())
-                .unwrap_or(0);
+    let mut games: Vec<SteamGame> = payload
+        .response
+        .games
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|raw| {
+            let app_id = u32::try_from(raw.appid?).ok()?;
+            let name = raw.name?.trim().to_string();
+            if name.is_empty() {
+                return None;
+            }
             Some(SteamGame {
                 app_id,
                 name,
-                playtime_forever: playtime,
+                playtime_forever: raw.playtime_forever.unwrap_or(0),
             })
         })
         .collect();
+    games.sort_by(|a, b| b.playtime_forever.cmp(&a.playtime_forever));
 
     Ok(games)
+}
+
+#[tauri::command]
+pub async fn get_steam_profile(steam_id: String) -> Result<SteamProfile, String> {
+    let api_key = crate::embedded_api_key::decode()
+        .ok_or_else(|| "Steam API key not found. Rebuild the program.".to_string())?;
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .user_agent("Yolnoma-App Steam Toolkit")
+        .build()
+        .map_err(|e| format!("HTTP client error: {e}"))?;
+
+    let summary = client
+        .get("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/")
+        .query(&[("key", api_key.as_str()), ("steamids", steam_id.as_str())])
+        .send()
+        .await
+        .map_err(|e| format!("Steam profile request failed: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("Steam profile API error: {e}"))?
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("Steam profile response error: {e}"))?;
+
+    let player = summary
+        .pointer("/response/players/0")
+        .ok_or_else(|| "Steam profile was not found or is unavailable.".to_string())?;
+    let level_response = client
+        .get("https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/")
+        .query(&[("key", api_key.as_str()), ("steamid", steam_id.as_str())])
+        .send()
+        .await
+        .ok();
+    let level = match level_response {
+        Some(response) => response
+            .json::<serde_json::Value>()
+            .await
+            .ok()
+            .and_then(|json| json.pointer("/response/player_level").and_then(|v| v.as_u64()))
+            .map(|value| value as u32),
+        None => None,
+    };
+
+    Ok(SteamProfile {
+        steam_id: player.get("steamid").and_then(|v| v.as_str()).unwrap_or(&steam_id).to_string(),
+        persona_name: player.get("personaname").and_then(|v| v.as_str()).unwrap_or("Steam User").to_string(),
+        profile_url: player.get("profileurl").and_then(|v| v.as_str()).map(str::to_string),
+        avatar: player.get("avatar").and_then(|v| v.as_str()).map(str::to_string),
+        avatar_medium: player.get("avatarmedium").and_then(|v| v.as_str()).map(str::to_string),
+        avatar_full: player.get("avatarfull").and_then(|v| v.as_str()).map(str::to_string),
+        persona_state: player.get("personastate").and_then(|v| v.as_u64()).unwrap_or(0) as u8,
+        real_name: player.get("realname").and_then(|v| v.as_str()).map(str::to_string),
+        country_code: player.get("loccountrycode").and_then(|v| v.as_str()).map(str::to_string),
+        time_created: player.get("timecreated").and_then(|v| v.as_u64()),
+        steam_level: level,
+    })
 }
 
 // ── O'yin(lar)ni idling boshlash ──────────────────────────────────────
@@ -460,7 +548,51 @@ async fn run_steam_utility(args: &[&str]) -> Result<serde_json::Value, String> {
 pub async fn get_achievement_data(app_id: u32) -> Result<serde_json::Value, String> {
     let id = app_id.to_string();
     let json = run_steam_utility(&["get_achievement_data", &id]).await?;
-    Ok(json.get("result").cloned().unwrap_or(json))
+    let mut result = json.get("result").cloned().unwrap_or(json);
+
+    // SteamUtility can return achievement metadata without the CDN icon hashes.
+    // Fill those fields from Steam's public game schema so the SAM UI can render
+    // the normal and locked artwork without making a request per achievement.
+    if let Some(api_key) = crate::embedded_api_key::decode() {
+        let schema_url = format!(
+            "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={api_key}&appid={app_id}&format=json"
+        );
+        if let Ok(response) = reqwest::Client::new().get(schema_url).send().await {
+            if let Ok(schema) = response.json::<serde_json::Value>().await {
+                let schema_achievements = schema
+                    .pointer("/game/availableGameStats/achievements")
+                    .and_then(|value| value.as_array());
+                if let (Some(items), Some(schema_items)) = (
+                    result.get_mut("achievements").and_then(|value| value.as_array_mut()),
+                    schema_achievements,
+                ) {
+                    let icons: HashMap<&str, (&str, &str)> = schema_items
+                        .iter()
+                        .filter_map(|item| {
+                            Some((
+                                item.get("name")?.as_str()?,
+                                (item.get("icon")?.as_str()?, item.get("icongray")?.as_str()?),
+                            ))
+                        })
+                        .collect();
+                    for item in items {
+                        if let Some(name) = item.get("id").and_then(|value| value.as_str()) {
+                            if let Some((normal, locked)) = icons.get(name) {
+                                if item.get("iconNormal").and_then(|value| value.as_str()).unwrap_or("").is_empty() {
+                                    item["iconNormal"] = serde_json::Value::String((*normal).to_string());
+                                }
+                                if item.get("iconLocked").and_then(|value| value.as_str()).unwrap_or("").is_empty() {
+                                    item["iconLocked"] = serde_json::Value::String((*locked).to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(result)
 }
 
 // ── Unlock or lock a single achievement ──────────────────────────────
