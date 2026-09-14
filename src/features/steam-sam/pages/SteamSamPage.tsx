@@ -5,7 +5,7 @@ import {
   Trophy, BarChart3, Search, RefreshCw, Lock, Unlock,
   CheckCircle2, AlertTriangle, Shield, Wifi, WifiOff,
   ChevronRight, Loader2, Users, ArrowUpDown,
-  Sparkles, Check
+  Sparkles, Check, History
 } from 'lucide-react';
 import { toast } from '@/shared/ui/Toast';
 import { ConfirmModal } from '@/shared/ui';
@@ -56,6 +56,37 @@ type AchFilter = 'all' | 'unlocked' | 'locked';
 type AchSort = 'rarity' | 'name' | 'status';
 
 const CACHE_KEY = 'yolnoma_steam_games_cache';
+const AUDIT_LOG_KEY = 'yolnoma_steam_sam_audit_log';
+const MAX_AUDIT_ENTRIES = 30;
+
+interface AuditEntry {
+  id: string;
+  action: 'unlock' | 'lock' | 'stats-update' | 'stats-reset';
+  gameName: string;
+  appId: number;
+  count?: number;
+  success?: number;
+  failed?: number;
+  timestamp: number;
+}
+
+function readAuditLog(): AuditEntry[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_AUDIT_ENTRIES) : [];
+  } catch {
+    return [];
+  }
+}
+
+function appendAuditLog(entry: Omit<AuditEntry, 'id' | 'timestamp'>): AuditEntry[] {
+  const next: AuditEntry[] = [
+    { ...entry, id: crypto.randomUUID(), timestamp: Date.now() },
+    ...readAuditLog(),
+  ].slice(0, MAX_AUDIT_ENTRIES);
+  localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify(next));
+  return next;
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // MAIN SAM PAGE COMPONENT
@@ -97,6 +128,8 @@ export default function SteamSamPage() {
   const [achSort, setAchSort] = useState<AchSort>('rarity');
   const [achSearch, setAchSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>(readAuditLog);
+  const [showAuditLog, setShowAuditLog] = useState(false);
 
   const initialLoadedRef = useRef(false);
 
@@ -255,16 +288,19 @@ export default function SteamSamPage() {
     setActionLoading(true);
 
     try {
+      const requestedCount = mode === 'all' ? achievements.length : selectedAchIds.size;
       if (mode === 'all') {
         await invoke('unlock_all_achievements', { appId: selectedGame.appId });
         setAchievements((prev) =>
           prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: true }))
         );
         setSelectedAchIds(new Set());
+        setAuditLog(appendAuditLog({ action: 'unlock', gameName: selectedGame.name, appId: selectedGame.appId, count: requestedCount, success: requestedCount, failed: 0 }));
         toast.success('All achievements unlocked in Steam!');
       } else {
         const targetIds = Array.from(selectedAchIds);
         let successCount = 0;
+        let failedCount = 0;
         for (const achId of targetIds) {
           try {
             await invoke('set_achievement', {
@@ -273,12 +309,15 @@ export default function SteamSamPage() {
               unlock: true,
             });
             successCount++;
-          } catch {}
+          } catch {
+            failedCount++;
+          }
         }
         setAchievements((prev) =>
           prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: true } : a))
         );
         setSelectedAchIds(new Set());
+        setAuditLog(appendAuditLog({ action: 'unlock', gameName: selectedGame.name, appId: selectedGame.appId, count: targetIds.length, success: successCount, failed: failedCount }));
         toast.success(`Successfully unlocked ${successCount} achievement${successCount === 1 ? '' : 's'}!`);
       }
     } catch (err: unknown) {
@@ -294,16 +333,19 @@ export default function SteamSamPage() {
     setActionLoading(true);
 
     try {
+      const requestedCount = mode === 'all' ? achievements.length : selectedAchIds.size;
       if (mode === 'all') {
         await invoke('lock_all_achievements', { appId: selectedGame.appId });
         setAchievements((prev) =>
           prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: false }))
         );
         setSelectedAchIds(new Set());
+        setAuditLog(appendAuditLog({ action: 'lock', gameName: selectedGame.name, appId: selectedGame.appId, count: requestedCount, success: requestedCount, failed: 0 }));
         toast.success('All achievements locked!');
       } else {
         const targetIds = Array.from(selectedAchIds);
         let successCount = 0;
+        let failedCount = 0;
         for (const achId of targetIds) {
           try {
             await invoke('set_achievement', {
@@ -312,12 +354,15 @@ export default function SteamSamPage() {
               unlock: false,
             });
             successCount++;
-          } catch {}
+          } catch {
+            failedCount++;
+          }
         }
         setAchievements((prev) =>
           prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: false } : a))
         );
         setSelectedAchIds(new Set());
+        setAuditLog(appendAuditLog({ action: 'lock', gameName: selectedGame.name, appId: selectedGame.appId, count: targetIds.length, success: successCount, failed: failedCount }));
         toast.success(`Successfully locked ${successCount} achievement${successCount === 1 ? '' : 's'}!`);
       }
     } catch (err: unknown) {
@@ -342,6 +387,7 @@ export default function SteamSamPage() {
         statsJson: JSON.stringify(payload),
       });
 
+      setAuditLog(appendAuditLog({ action: 'stats-update', gameName: selectedGame.name, appId: selectedGame.appId, count: payload.length, success: payload.length, failed: 0 }));
       toast.success('Statistics successfully updated in Steam!');
       loadSamData(selectedGame.appId);
     } catch (err: unknown) {
@@ -357,6 +403,7 @@ export default function SteamSamPage() {
     setActionLoading(true);
     try {
       await invoke('reset_all_stats', { appId: selectedGame.appId });
+      setAuditLog(appendAuditLog({ action: 'stats-reset', gameName: selectedGame.name, appId: selectedGame.appId, count: stats.length, success: stats.length, failed: 0 }));
       toast.success('Statistics reset to zero.');
       loadSamData(selectedGame.appId);
     } catch (err: unknown) {
@@ -1391,6 +1438,33 @@ export default function SteamSamPage() {
         </div>
       </div>
 
+      {selectedGame && (
+        <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 20 }}>
+          <button
+            type="button"
+            onClick={() => setShowAuditLog((value) => !value)}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: '#1B1713', border: '1px solid rgba(242,237,230,0.14)', color: 'rgba(242,237,230,0.75)', fontSize: 12, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}
+          >
+            <History size={14} /> Audit history ({auditLog.length})
+          </button>
+          {showAuditLog && (
+            <div style={{ position: 'absolute', right: 0, bottom: 42, width: 340, maxHeight: 320, overflowY: 'auto', padding: 12, borderRadius: 12, background: '#1B1713', border: '1px solid rgba(242,237,230,0.14)', boxShadow: '0 12px 32px rgba(0,0,0,0.35)' }}>
+              <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 700, color: '#F2EDE6' }}>Recent Steam changes</p>
+              {auditLog.length === 0 ? <p style={{ margin: 0, fontSize: 11, color: 'rgba(242,237,230,0.45)' }}>No changes recorded yet.</p> : auditLog.map((entry) => (
+                <div key={entry.id} style={{ padding: '8px 0', borderTop: '1px solid rgba(242,237,230,0.07)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <strong style={{ fontSize: 11, color: entry.action === 'lock' || entry.action === 'stats-reset' ? '#f87171' : '#86efac' }}>{entry.action.replace('-', ' ')}</strong>
+                    <span style={{ fontSize: 10, color: 'rgba(242,237,230,0.4)' }}>{new Date(entry.timestamp).toLocaleString()}</span>
+                  </div>
+                  <p style={{ margin: '3px 0 0', fontSize: 11, color: 'rgba(242,237,230,0.65)' }}>{entry.gameName} · App {entry.appId}</p>
+                  <p style={{ margin: '3px 0 0', fontSize: 10, color: 'rgba(242,237,230,0.4)' }}>Requested {entry.count ?? 0} · Success {entry.success ?? 0} · Failed {entry.failed ?? 0}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── UNLOCK CONFIRMATION MODAL ── */}
       <ConfirmModal
         open={confirmUnlockModal.open}
@@ -1399,7 +1473,8 @@ export default function SteamSamPage() {
         title={confirmUnlockModal.mode === 'all' ? 'Unlock All Achievements' : 'Unlock Selected Achievements'}
         description={
           <>
-            Are you sure you want to unlock {confirmUnlockModal.mode === 'all' ? 'all' : <strong className="text-white">{confirmUnlockModal.count}</strong>} achievement{confirmUnlockModal.count === 1 ? '' : 's'} for <strong className="text-white">{selectedGame?.name}</strong> in Steam?
+            <span style={{ display: 'block' }}>Are you sure you want to unlock {confirmUnlockModal.mode === 'all' ? 'all' : <strong className="text-white">{confirmUnlockModal.count}</strong>} achievement{confirmUnlockModal.count === 1 ? '' : 's'} for <strong className="text-white">{selectedGame?.name}</strong> in Steam?</span>
+            <span style={{ display: 'block', marginTop: 10, padding: 8, borderRadius: 7, background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.25)', color: '#facc15', fontSize: 12 }}><AlertTriangle size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />This changes your Steam profile permanently and may affect achievement integrity.</span>
           </>
         }
         confirmText="Unlock Now"
@@ -1416,7 +1491,8 @@ export default function SteamSamPage() {
         title={confirmLockModal.mode === 'all' ? 'Lock All Achievements' : 'Lock Selected Achievements'}
         description={
           <>
-            Are you sure you want to lock/relock {confirmLockModal.mode === 'all' ? 'all' : <strong className="text-white">{confirmLockModal.count}</strong>} achievement{confirmLockModal.count === 1 ? '' : 's'} for <strong className="text-white">{selectedGame?.name}</strong>?
+            <span style={{ display: 'block' }}>Are you sure you want to lock/relock {confirmLockModal.mode === 'all' ? 'all' : <strong className="text-white">{confirmLockModal.count}</strong>} achievement{confirmLockModal.count === 1 ? '' : 's'} for <strong className="text-white">{selectedGame?.name}</strong>?</span>
+            <span style={{ display: 'block', marginTop: 10, padding: 8, borderRadius: 7, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: 12 }}><AlertTriangle size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />This is destructive and cannot be automatically undone.</span>
           </>
         }
         confirmText="Lock Achievements"
