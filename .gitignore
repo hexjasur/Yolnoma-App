@@ -28,4 +28,4 @@ src-tauri/.env
 libs/
 resources
 
-docs/Tauri_Singer.txt
+secret
