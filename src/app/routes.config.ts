@@ -96,7 +96,7 @@ const roleGuard = (page: string, message: string): RouteRoleGuard => ({ kind: 'r
 export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   { id: 'dashboard', path: '/', component: DashboardPage, label: 'Dashboard', navGroup: 'home' },
   { id: 'agent', path: '/agent', component: AiAgentPage, status: 'dev', label: 'Yolnoma Agent', icon: Bot, navGroup: 'home' },
-  { id: 'codebase-agent', path: '/codebase-agent', component: CodebaseAgentPage, status: 'stable', label: 'Codebase Agent', icon: Bot, navGroup: 'home' },
+  { id: 'codebase-agent', path: '/codebase-agent', component: CodebaseAgentPage, status: 'dev', label: 'Codebase Agent', icon: Bot, navGroup: 'home' },
   { id: 'performances', path: '/performances', component: PerformancePage, guard: roleGuard('performances', 'Access restricted: Performances section is available to Owner only.'), label: 'Performance', icon: Gamepad, navGroup: 'workspace' },
   { id: 'performance-detail', path: '/performances/:id', component: PerformanceDetailPage, guard: roleGuard('performances', 'Access restricted: Performances section is available to Owner only.') },
   { id: 'videos', path: '/videos', component: VideosPage, guard: roleGuard('videos', 'Access restricted: Stream section is available to Owner only.'), label: 'Stream', icon: Download, navGroup: 'workspace' },
@@ -120,7 +120,7 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   { id: 'steam-sam', path: '/tools/steam/sam', component: SteamSamPage, label: 'Steam / SAM', description: 'Manage Steam achievements', icon: Gamepad, navGroup: 'tools', pinnable: true },
   { id: 'steam-review', path: '/tools/steam/review', component: SteamReviewPage, label: 'Steam / Review', description: 'Review Steam games', icon: Gamepad2, navGroup: 'tools', pinnable: true },
   { id: 'developer-tools', path: '/tools/developer-tools', component: DeveloperToolsPage, label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', icon: Wrench, navGroup: 'workspace', pinnable: true },
-  { id: 'ai-tools', path: '/tools/ai-tools', component: AiToolsPage, label: 'AI Tools', description: 'AI-powered project workspaces', icon: WandSparkles, navGroup: 'tools', pinnable: true },
+  { id: 'ai-tools', path: '/tools/ai-tools', component: AiToolsPage, label: 'AI Tools', description: 'AI-powered project workspaces', icon: WandSparkles, navGroup: 'workspace', pinnable: true },
   { id: 'json-viewer', path: '/tools/json', component: JsonViewerPage, label: 'JSON EDIT/VIEW', description: 'Edit JSON and transform it into cards', icon: Wrench, navGroup: 'tools', pinnable: true },
   { id: 'css-tools', path: '/tools/css-tools', component: CssToolsPage, label: 'CSS Tools', description: 'Gradients, scrollbars & minify', icon: Palette, navGroup: 'tools', pinnable: true },
   { id: 'git', path: '/tools/git', component: GitPage, label: 'Git', description: 'Generate best-practice commits', icon: GitBranch, navGroup: 'tools', pinnable: true },

@@ -143,7 +143,7 @@ export default function Sidebar() {
     {
       label: 'Tools',
       items: filteredLinks
-        .filter((link) => link.navGroup === 'tools' && link.name !== 'ai-tools')
+        .filter((link) => link.navGroup === 'tools')
         .sort((left, right) => left.label.localeCompare(right.label)),
     },
   ];

@@ -197,7 +197,7 @@ export default function HomePage() {
             value={statsLoading ? '—' : stats ? `${stats.cpuPercent}%` : '—'}
             detail={
               stats?.cpuCores
-                ? `${stats.cpuCores} ta yadro`
+                ? `${stats.cpuCores} cores`
                 : monitoringEnabled
                   ? 'Usage'
                   : 'inactive'
