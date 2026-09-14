@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SteamStatusBadge } from '../components/SteamStatusBadge';
 import Pagination from '@/shared/ui/Pagination';
+import Button from '@/shared/ui/Button';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Gamepad2,
@@ -385,29 +386,16 @@ function GameCard({
 
         {/* Action Button: Stop if Idling */}
         {isIdling && (
-          <button
+          <Button
+            type="button"
             onClick={() => onStop(game.appId)}
-            style={{
-              marginTop: 4,
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.25)',
-              borderRadius: 8,
-              padding: '6px 10px',
-              color: '#f87171',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 5,
-              transition: 'all 0.15s ease',
-              width: '100%',
-            }}
+            variant="danger"
+            size="sm"
+            className="mt-1 w-full justify-center gap-2"
           >
-            <Square size={11} fill="#f87171" />
+            <Square size={13} fill="currentColor" />
             Stop Idling
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -705,38 +693,36 @@ export default function SteamIdlerPage() {
       style={{
         fontFamily: '"Inter", sans-serif',
         color: '#F2EDE6',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
+        minHeight: '100%',
       }}
     >
       {/* ── HEADER ── */}
-      <div style={{ marginBottom: 20 }}>
-        <p
-          style={{
-            fontSize: 11,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: '#D97757',
-            fontWeight: 700,
-            margin: '0 0 6px 0',
-          }}
-        >
-          Steam Toolkit
-        </p>
+      <div
+        style={{
+          marginBottom: 16,
+          padding: '18px 20px',
+          borderRadius: 16,
+          background: 'linear-gradient(120deg, rgba(217,119,87,0.10), rgba(24,20,16,0.88) 48%)',
+          border: '1px solid rgba(217,119,87,0.18)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.14)',
+        }}
+      >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: 18,
+            flexWrap: 'wrap',
           }}
         >
-          <div>
+          <div style={{ minWidth: 220 }}>
+            <p style={{ fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#D97757', fontWeight: 700, margin: '0 0 6px' }}>
+              Steam Toolkit
+            </p>
             <h1
               style={{
-                fontFamily: '"Georgia", serif',
-                fontSize: 32,
-                fontWeight: 500,
+                fontFamily: '"Georgia", serif', fontSize: 28, fontWeight: 500,
                 margin: 0,
                 letterSpacing: '-0.02em',
               }}
@@ -745,7 +731,7 @@ export default function SteamIdlerPage() {
             </h1>
             <p
               style={{
-                margin: '4px 0 0',
+                margin: '5px 0 0',
                 fontSize: 13,
                 color: 'rgba(242,237,230,0.45)',
               }}
@@ -754,8 +740,13 @@ export default function SteamIdlerPage() {
             </p>
           </div>
 
-          {/* Steam Status Badge */}
-          <SteamStatusBadge running={steamRunning} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 11px', borderRadius: 11, background: 'rgba(0,0,0,0.20)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <Users size={16} color="#D97757" />
+              <span style={{ fontSize: 11, color: 'rgba(242,237,230,0.55)' }}>Account tools</span>
+            </div>
+            <SteamStatusBadge running={steamRunning} />
+          </div>
         </div>
       </div>
 
@@ -849,10 +840,10 @@ export default function SteamIdlerPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 9,
-                background: '#1B1713',
-                border: '1px solid rgba(242,237,230,0.12)',
-                borderRadius: 8,
-                padding: '6px 12px',
+                background: 'rgba(217,119,87,0.08)',
+                border: '1px solid rgba(217,119,87,0.24)',
+                borderRadius: 10,
+                padding: '7px 11px',
                 color: '#F2EDE6',
                 fontSize: 13,
                 cursor: 'pointer',
@@ -860,9 +851,9 @@ export default function SteamIdlerPage() {
                 fontFamily: '"Inter", sans-serif',
               }}
             >
-              {profile?.avatar ? <img src={profile.avatar} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} /> : <Users size={17} />}
+              {profile?.avatar ? <img src={profile.avatar} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover' }} /> : <span style={{ display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: '50%', background: 'rgba(217,119,87,0.18)' }}><Users size={15} color="#D97757" /></span>}
               <span>{profile?.personaName ?? activeAccount.personaName}</span>
-              <span style={{ color: '#D97757', fontSize: 11 }}>(Active)</span>
+              <span style={{ color: '#D97757', fontSize: 11, fontWeight: 700 }}>Active</span>
             </button>
           ) : null}
         </div>
@@ -902,38 +893,13 @@ export default function SteamIdlerPage() {
         )}
 
         {/* Refresh button */}
-        <button
+        <Button
+          type="button"
           onClick={() => loadGames(true)}
           disabled={gamesLoading || !selectedSteamId || secondsLeft > 0}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            background:
-              canRefresh && secondsLeft === 0
-                ? 'rgba(217,119,87,0.12)'
-                : 'rgba(242,237,230,0.04)',
-            border: `1px solid ${
-              canRefresh && secondsLeft === 0
-                ? 'rgba(217,119,87,0.3)'
-                : 'rgba(242,237,230,0.1)'
-            }`,
-            borderRadius: 10,
-            padding: '7px 15px',
-            color:
-              canRefresh && secondsLeft === 0
-                ? '#D97757'
-                : 'rgba(242,237,230,0.45)',
-            fontSize: 13,
-            fontWeight: 500,
-            cursor:
-              gamesLoading || !selectedSteamId || secondsLeft > 0
-                ? 'not-allowed'
-                : 'pointer',
-            opacity:
-              gamesLoading || !selectedSteamId || secondsLeft > 0 ? 0.5 : 1,
-            transition: 'all 0.15s ease',
-          }}
+          variant="secondary"
+          size="sm"
+          className={`gap-2 ${canRefresh && secondsLeft === 0 ? 'text-[#D97757]' : ''}`}
         >
           {gamesLoading ? (
             <Loader2
@@ -944,7 +910,7 @@ export default function SteamIdlerPage() {
             <RefreshCw size={14} />
           )}
           {gamesLoading ? 'Loading Library...' : 'Refresh'}
-        </button>
+        </Button>
       </div>
 
       {/* ── 3 TABS: Favorites | Now Idling | All Games ── */}
@@ -1029,64 +995,6 @@ export default function SteamIdlerPage() {
           </button>
         ))}
 
-        {/* Global Stop All Button */}
-        {idlingIds.size > 0 && (
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              paddingBottom: 8,
-            }}
-          >
-            <span
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                fontSize: 12,
-                color: '#D97757',
-                background: 'rgba(217,119,87,0.08)',
-                border: '1px solid rgba(217,119,87,0.25)',
-                borderRadius: 20,
-                padding: '4px 12px',
-                fontWeight: 500,
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: '#D97757',
-                  animation: 'idlePulse 1.5s infinite',
-                  display: 'inline-block',
-                }}
-              />
-              {idlingIds.size} Idling
-            </span>
-            <button
-              onClick={stopAll}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                background: 'rgba(239,68,68,0.08)',
-                border: '1px solid rgba(239,68,68,0.2)',
-                borderRadius: 20,
-                padding: '4px 12px',
-                color: '#f87171',
-                fontSize: 12,
-                cursor: 'pointer',
-                fontWeight: 500,
-              }}
-            >
-              <StopCircle size={13} />
-              Stop All
-            </button>
-          </div>
-        )}
       </div>
 
       {/* ── FAVORITES TAB: BATCH IDLING BAR ── */}
@@ -1129,54 +1037,32 @@ export default function SteamIdlerPage() {
             </p>
           </div>
 
-          <button
-            onClick={startIdling}
-            disabled={favorites.size === 0 || !steamRunning || actionLoading}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              background:
-                favorites.size > 0 && steamRunning && !actionLoading
-                  ? '#D97757'
-                  : 'rgba(242,237,230,0.05)',
-              border: `1px solid ${
-                favorites.size > 0 && steamRunning && !actionLoading
-                  ? '#D97757'
-                  : 'rgba(242,237,230,0.1)'
-              }`,
-              borderRadius: 12,
-              padding: '9px 20px',
-              color:
-                favorites.size > 0 && steamRunning && !actionLoading
-                  ? '#fff'
-                  : 'rgba(242,237,230,0.3)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor:
-                favorites.size > 0 && steamRunning && !actionLoading
-                  ? 'pointer'
-                  : 'not-allowed',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {actionLoading ? (
-              <Loader2
-                size={15}
-                style={{ animation: 'spin 1s linear infinite' }}
-              />
-            ) : (
-              <Play
-                size={15}
-                fill={
-                  favorites.size > 0 && steamRunning ? '#fff' : 'transparent'
-                }
-              />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {idlingIds.size > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 10, background: 'rgba(217,119,87,0.08)', border: '1px solid rgba(217,119,87,0.2)', color: '#D97757', fontSize: 12, fontWeight: 700 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#D97757', animation: 'idlePulse 1.5s infinite' }} />
+                {idlingIds.size} idling
+              </span>
             )}
-            {idlingIds.size > 0
-              ? 'Restart Favorites Idling'
-              : 'Start Idling Favorites'}
-          </button>
+            <Button
+              type="button"
+              onClick={startIdling}
+              disabled={favorites.size === 0 || !steamRunning || actionLoading}
+              variant="primary"
+              size="md"
+              loading={actionLoading}
+              className="min-w-[210px] justify-center gap-2"
+            >
+              <Play size={16} fill="currentColor" />
+              {idlingIds.size > 0 ? 'Restart Favorites Idling' : 'Start Idling Favorites'}
+            </Button>
+            {idlingIds.size > 0 && (
+              <Button type="button" onClick={stopAll} variant="danger" size="md" className="min-w-[150px] justify-center gap-2 font-bold">
+                <StopCircle size={17} />
+                Stop Idling
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1208,7 +1094,7 @@ export default function SteamIdlerPage() {
       )}
 
       {/* ── GAMES GRID ── */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      <div style={{ minHeight: 0 }}>
         {gamesLoading ? (
           <div
             style={{
