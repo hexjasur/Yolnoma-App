@@ -225,11 +225,13 @@ jobs:
           retention-days: 7
 
   # ============================================================================
-  # Job 2: Publish Updater (.exe, .sig, latest.json) to Public Repository
+  # Job 2: Publish updater artifacts to this repository's isolated updates branch.
+  # The source branch remains untouched; only the updates branch contains the
+  # installer, signature, and latest.json consumed by the updater and website.
   # Independent job: If publishing fails, retrying will NOT rebuild Tauri app.
   # ============================================================================
   publish-updates:
-    name: Publish Updater to Public Repo
+    name: Publish Updater to Yolnoma-App updates branch
     needs: build
     runs-on: windows-latest
 
@@ -245,16 +247,12 @@ jobs:
           name: updater-artifacts
           path: updater-files
 
-      - name: Generate Release Notes and Publish to Public Repo
+      - name: Generate Release Notes and Publish to updates branch
         shell: pwsh
         env:
-          UPDATES_REPO_TOKEN: ${{ secrets.UPDATES_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
-
-          if ([string]::IsNullOrWhiteSpace($env:UPDATES_REPO_TOKEN)) {
-            throw "Secret UPDATES_REPO_TOKEN is missing or empty in repository secrets."
-          }
 
           # 1. Locate downloaded artifacts
           $exe = Get-ChildItem -Path "updater-files" -Filter "*.exe" | Select-Object -First 1
@@ -404,7 +402,9 @@ jobs:
           # ----------------------------------------------------------------
           # 5. Construct latest.json according to Tauri 2 updater manifest schema
           # ----------------------------------------------------------------
-          $baseUrl = "https://raw.githubusercontent.com/Yolnoma/Yolnoma-Updates/main"
+          $updatesBranch = "updates"
+          $repoSlug = "${{ github.repository }}"
+          $baseUrl = "https://raw.githubusercontent.com/$repoSlug/$updatesBranch"
 
           $manifest = [ordered]@{
             version = $version
@@ -425,37 +425,20 @@ jobs:
           Write-Host "Generated latest.json:"
           Write-Host $jsonContent
 
-          # 6. Clone public repo, copy updater files, commit and push
-          $repoOwner = "Yolnoma"
-          $repoName = "Yolnoma-Updates"
-          $repoSlug = "$repoOwner/$repoName"
-          $publicRepoUrl = "https://github.com/$repoSlug.git"
-          $pushUrl = "https://x-access-token:$($env:UPDATES_REPO_TOKEN)@github.com/$repoSlug.git"
-
+          # 6. Prepare the isolated updates branch in this repository.
+          # Do not use the source checkout as the artifact worktree.
+          $repoUrl = "https://github.com/$repoSlug.git"
+          $authHeader = "AUTHORIZATION: bearer $($env:GITHUB_TOKEN)"
           if (Test-Path "updates-repo") {
             Remove-Item -Recurse -Force "updates-repo"
           }
-
-          $isCloned = $false
-          try {
-            Write-Host "Attempting to clone public repository $repoSlug..."
-            git clone --quiet $publicRepoUrl updates-repo 2>$null
-            if ($LASTEXITCODE -eq 0 -and (Test-Path "updates-repo/.git")) {
-              $isCloned = $true
-            }
-          } catch {
-            $isCloned = $false
-          }
-
-          if ($isCloned) {
-            Write-Host "Successfully cloned existing repository $repoSlug."
-            Set-Location updates-repo
-            git checkout -B main
-          } else {
-            Write-Host "Repository is empty or fresh clone not possible. Initializing local git repository on branch main..."
-            New-Item -ItemType Directory -Force -Path "updates-repo" | Out-Null
-            Set-Location updates-repo
-            git init -b main
+          New-Item -ItemType Directory -Force -Path "updates-repo" | Out-Null
+          Set-Location updates-repo
+          git init -b $updatesBranch
+          git remote add origin $repoUrl
+          git -c http.extraheader=$authHeader fetch origin $updatesBranch 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            git checkout -B $updatesBranch FETCH_HEAD
           }
 
           # Configure Git user identity for commit
@@ -492,9 +475,7 @@ jobs:
             Write-Host "Committing update files for v$version..."
             git commit -m "release: v$version"
 
-            Write-Host "Configuring remote origin and pushing to $repoSlug (main)..."
-            git remote remove origin 2>$null
-            git remote add origin $pushUrl
-            git push -u origin main --force
-            Write-Host "Successfully published v$version to $repoSlug!"
+            Write-Host "Pushing updates branch to $repoSlug..."
+            git -c http.extraheader=$authHeader push -u origin $updatesBranch --force
+            Write-Host "Successfully published v$version to $repoSlug/$updatesBranch!"
           }
