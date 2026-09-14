@@ -1,11 +1,11 @@
 {
-  "version": "1.0.11",
-  "notes": "Yolnoma v1.0.11",
-  "pub_date": "2026-09-14T15:25:00Z",
+  "version": "1.0.12",
+  "notes": "Yolnoma v1.0.12",
+  "pub_date": "2026-09-14T16:36:46Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSGhKR2Q1YVZaS1Z4WU84cjVBalNjbnpqMHNaQWxjMnQ0TG5FNm9idG5OdFdCSElCR0xWY0pORVArYlRhYkJ2ZkZCQkhzL3d3eEdvUmx1YndVR2Q3REFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDAwMzE3CWZpbGU6WW9sbm9tYV8xLjAuMTFfeDY0LXNldHVwLmV4ZQoxRk9LNEt5ejlNN3gxc1hZMHM5aFJKUVVtUmJIUXlVM3JmUjMzMDhsVnczSHF1ZFZBRUVaNHpFWmtkbDB5MU9OSCttOXZWalFvMVY0dERZd2hjWDdCQT09Cg==",
-      "url": "https://raw.githubusercontent.com/hexjasur/Yolnoma-App/updates/Yolnoma_1.0.11_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSGdLa2ZHNUhCOW1DMEo5R1RhZ2tzblVmTG9rMldOb3ZnS2JaVDNJK2svMTkxS0pWZytUK2RNZVo2WFd5T2dZRFB2akZzc3dkZ0h1ZlMrNFgweCtOY1E4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDAzODAzCWZpbGU6WW9sbm9tYV8xLjAuMTJfeDY0LXNldHVwLmV4ZQpEYmp1aDlsdGpPQTJBa3FPQlVOMUNXdkNKNmlFbFJyQ0tsVE9yUnIzcllCZU1tYjh5N1RlS3hNbmR6MTR3bnZFSXBqVkx0Vm5tbkI3MTlmSTc3U1ZCUT09Cg==",
+      "url": "https://raw.githubusercontent.com/hexjasur/Yolnoma-App/updates/Yolnoma_1.0.12_x64-setup.exe"
     }
   }
 }
