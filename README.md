@@ -49,6 +49,7 @@ reports, and constructive feedback are welcome through the repository.
 Additional features include:
 
 - AI Chat for general questions, coding help, and related workflows.
+- Local AI chat history stored as JSON files on the user’s computer.
 - Cleaner and CSS tools.
 - JSON editing and viewing.
 - Steam Idler and Steam achievement-management integrations.
@@ -107,6 +108,26 @@ Steam credentials and session data must be handled only through the supported
 application flows. Users are responsible for complying with Steam's terms and
 for protecting their accounts.
 
+### AI Chat data flow
+
+Yolnoma stores AI Chat conversations locally on the user’s computer as JSON
+session files. On Windows, the current location is:
+
+```text
+%LOCALAPPDATA%\Yolnoma\accounts\<user-id>\ai-chat\sessions\<session-id>.json
+```
+
+The chat history is not uploaded to a Yolnoma-owned database. However, when a
+user sends a prompt, the prompt, selected project context, and required request
+metadata are sent to the configured AI provider—currently OpenRouter—in order
+to generate a response. Therefore, do not send passwords, private keys, access
+tokens, confidential source code, or other sensitive information unless you
+have reviewed and accepted the provider’s terms and privacy policy. Yolnoma
+does not provide a shared server-side AI key; the user supplies their own key.
+
+For the full security boundaries, data-flow notes, credential guidance, and
+vulnerability-reporting process, see [SECURITY.md](./SECURITY.md).
+
 ## License
 
 Yolnoma-App original code is source-available under the
@@ -130,3 +151,4 @@ React, and the other open-source projects that make Yolnoma-App possible.
 
 Do not report private credentials in a public issue. For a suspected security
 problem, contact the repository maintainers privately before disclosure.
+See [SECURITY.md](./SECURITY.md) for the complete security policy.
