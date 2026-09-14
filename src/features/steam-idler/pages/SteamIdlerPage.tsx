@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SteamStatusBadge } from '../components/SteamStatusBadge';
+import Pagination from '@/shared/ui/Pagination';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Gamepad2,
@@ -16,6 +17,8 @@ import {
   Loader2,
   Trophy,
   Flame,
+  X,
+  ExternalLink,
 } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -26,6 +29,20 @@ interface SteamUser {
   steamId: string;
   personaName: string;
   mostRecent: boolean;
+}
+
+interface SteamProfile {
+  steamId: string;
+  personaName: string;
+  profileUrl?: string;
+  avatar?: string;
+  avatarMedium?: string;
+  avatarFull?: string;
+  personaState: number;
+  realName?: string;
+  countryCode?: string;
+  timeCreated?: number;
+  steamLevel?: number;
 }
 
 interface SteamGame {
@@ -280,7 +297,7 @@ function GameCard({
       {/* Cover Image */}
       <div
         style={{
-          height: 132,
+          height: 112,
           background:
             'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%)',
           overflow: 'hidden',
@@ -318,7 +335,7 @@ function GameCard({
       {/* Info Section */}
       <div
         style={{
-          padding: '12px 14px',
+          padding: '10px 12px',
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
@@ -420,6 +437,9 @@ export default function SteamIdlerPage() {
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [profile, setProfile] = useState<SteamProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // ── Cache & Cooldown
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -429,6 +449,34 @@ export default function SteamIdlerPage() {
   // ── Timers
   const [tick, setTick] = useState(0);
   const idleStartTimesRef = useRef<Map<number, number>>(new Map());
+
+  const activeAccount = accounts.find((account) => account.mostRecent) ?? accounts[0];
+  const openActiveProfile = async () => {
+    if (!activeAccount) return;
+    setProfileOpen(true);
+    setProfileLoading(true);
+    try {
+      const data = await invoke<SteamProfile>('get_steam_profile', { steamId: activeAccount.steamId });
+      setProfile(data);
+    } catch (e: unknown) {
+      setError(String(e));
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeAccount) return;
+    let cancelled = false;
+    invoke<SteamProfile>('get_steam_profile', { steamId: activeAccount.steamId })
+      .then((data) => {
+        if (!cancelled) setProfile(data);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAccount?.steamId]);
 
   // Timer ticker
   useEffect(() => {
@@ -793,11 +841,14 @@ export default function SteamIdlerPage() {
             >
               No Steam accounts detected on this PC
             </p>
-          ) : (
-            <select
-              value={selectedSteamId}
-              onChange={(e) => setSelectedSteamId(e.target.value)}
+          ) : activeAccount ? (
+            <button
+              type="button"
+              onClick={openActiveProfile}
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 9,
                 background: '#1B1713',
                 border: '1px solid rgba(242,237,230,0.12)',
                 borderRadius: 8,
@@ -809,13 +860,11 @@ export default function SteamIdlerPage() {
                 fontFamily: '"Inter", sans-serif',
               }}
             >
-              {accounts.map((u) => (
-                <option key={u.steamId} value={u.steamId}>
-                  {u.personaName} {u.mostRecent ? '(Active)' : ''}
-                </option>
-              ))}
-            </select>
-          )}
+              {profile?.avatar ? <img src={profile.avatar} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} /> : <Users size={17} />}
+              <span>{profile?.personaName ?? activeAccount.personaName}</span>
+              <span style={{ color: '#D97757', fontSize: 11 }}>(Active)</span>
+            </button>
+          ) : null}
         </div>
 
         {/* Cache status info */}
@@ -1164,9 +1213,8 @@ export default function SteamIdlerPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 280px))',
-              justifyContent: 'start',
-              gap: 12,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+              gap: 10,
             }}
           >
             {[...Array(12)].map((_, i) => (
@@ -1292,9 +1340,8 @@ export default function SteamIdlerPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 280px))',
-                justifyContent: 'start',
-                gap: 12,
+                gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                gap: 10,
                 paddingBottom: 16,
               }}
             >
@@ -1313,129 +1360,51 @@ export default function SteamIdlerPage() {
               ))}
             </div>
 
-            {/* Pagination Controls (All Games tab) */}
             {isPaginated && totalPages > 1 && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  paddingTop: 8,
-                  paddingBottom: 20,
-                  flexWrap: 'wrap',
-                }}
-              >
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={safePage <= 1}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 10,
-                    background:
-                      safePage <= 1
-                        ? 'rgba(242,237,230,0.04)'
-                        : 'rgba(217,119,87,0.1)',
-                    border: `1px solid ${safePage <= 1 ? 'rgba(242,237,230,0.08)' : 'rgba(217,119,87,0.25)'}`,
-                    color: safePage <= 1 ? 'rgba(242,237,230,0.3)' : '#D97757',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  ← Previous
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(
-                    (p) =>
-                      p === 1 ||
-                      p === totalPages ||
-                      Math.abs(p - safePage) <= 2,
-                  )
-                  .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                    if (idx > 0 && p - (arr[idx - 1] as number) > 1)
-                      acc.push('...');
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((p, idx) =>
-                    p === '...' ? (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        style={{
-                          color: 'rgba(242,237,230,0.3)',
-                          fontSize: 13,
-                          padding: '0 4px',
-                        }}
-                      >
-                        …
-                      </span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => setCurrentPage(p as number)}
-                        style={{
-                          minWidth: 36,
-                          padding: '6px 10px',
-                          borderRadius: 10,
-                          background:
-                            safePage === p
-                              ? '#D97757'
-                              : 'rgba(242,237,230,0.04)',
-                          border: `1px solid ${safePage === p ? '#D97757' : 'rgba(242,237,230,0.08)'}`,
-                          color:
-                            safePage === p ? '#fff' : 'rgba(242,237,230,0.6)',
-                          fontSize: 13,
-                          fontWeight: safePage === p ? 700 : 400,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {p}
-                      </button>
-                    ),
-                  )}
-
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={safePage >= totalPages}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 10,
-                    background:
-                      safePage >= totalPages
-                        ? 'rgba(242,237,230,0.04)'
-                        : 'rgba(217,119,87,0.1)',
-                    border: `1px solid ${safePage >= totalPages ? 'rgba(242,237,230,0.08)' : 'rgba(217,119,87,0.25)'}`,
-                    color:
-                      safePage >= totalPages
-                        ? 'rgba(242,237,230,0.3)'
-                        : '#D97757',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  Next →
-                </button>
-
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: 'rgba(242,237,230,0.4)',
-                    marginLeft: 8,
-                  }}
-                >
-                  Page {safePage} of {totalPages} · {filteredGames.length} games
-                </span>
-              </div>
+              <Pagination
+                page={safePage}
+                totalPages={totalPages}
+                total={filteredGames.length}
+                limit={GAMES_PER_PAGE}
+                onPageChange={setCurrentPage}
+                itemLabel="games"
+                limitOptions={[GAMES_PER_PAGE]}
+              />
             )}
           </>
         )}
       </div>
 
+      {profileOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Active Steam account profile"
+          onClick={() => setProfileOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+        >
+          <div onClick={(event) => event.stopPropagation()} style={{ width: 'min(460px, 100%)', borderRadius: 16, overflow: 'hidden', background: '#1B1713', border: '1px solid rgba(242,237,230,0.15)', boxShadow: '0 24px 80px rgba(0,0,0,0.5)' }}>
+            <div style={{ height: 110, background: 'linear-gradient(135deg, rgba(217,119,87,0.35), rgba(24,20,16,0.9))', position: 'relative' }}>
+              <button type="button" onClick={() => setProfileOpen(false)} aria-label="Close profile" style={{ position: 'absolute', right: 12, top: 12, width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(0,0,0,0.35)', color: '#fff', cursor: 'pointer' }}><X size={16} /></button>
+              {profile?.avatarFull && <img src={profile.avatarFull} alt="" style={{ position: 'absolute', left: 24, bottom: -38, width: 84, height: 84, borderRadius: 14, objectFit: 'cover', border: '4px solid #1B1713' }} />}
+            </div>
+            <div style={{ padding: '48px 24px 24px' }}>
+              {profileLoading ? <div style={{ color: 'rgba(242,237,230,0.55)', fontSize: 13 }}>Loading Steam profile…</div> : profile ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12 }}>
+                    <div><h2 style={{ margin: 0, color: '#F2EDE6', fontSize: 22 }}>{profile.personaName}</h2><p style={{ margin: '5px 0 0', color: profile.personaState > 0 ? '#86efac' : 'rgba(242,237,230,0.45)', fontSize: 12 }}>{profile.personaState > 0 ? 'Online' : 'Offline'}</p></div>
+                    {profile.profileUrl && <a href={profile.profileUrl} target="_blank" rel="noreferrer" aria-label="Open Steam profile" style={{ color: '#D97757' }}><ExternalLink size={18} /></a>}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 20 }}>
+                    {[['Steam ID', profile.steamId], ['Steam Level', profile.steamLevel ?? 'Unavailable'], ['Real name', profile.realName ?? 'Not public'], ['Country', profile.countryCode ?? 'Not public']].map(([label, value]) => <div key={label} style={{ padding: '10px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}><span style={{ display: 'block', color: 'rgba(242,237,230,0.4)', fontSize: 10 }}>{label}</span><strong style={{ display: 'block', marginTop: 4, color: '#F2EDE6', fontSize: 12, wordBreak: 'break-all' }}>{value}</strong></div>)}
+                  </div>
+                  {profile.timeCreated && <p style={{ margin: '16px 0 0', color: 'rgba(242,237,230,0.45)', fontSize: 11 }}>Account created {new Date(profile.timeCreated * 1000).toLocaleDateString()}</p>}
+                </>
+              ) : <p style={{ color: '#f87171', fontSize: 13 }}>Steam profile information could not be loaded.</p>}
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }

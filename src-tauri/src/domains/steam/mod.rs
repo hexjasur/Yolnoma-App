@@ -37,6 +37,22 @@ pub struct SteamUser {
     pub most_recent: bool,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SteamProfile {
+    pub steam_id: String,
+    pub persona_name: String,
+    pub profile_url: Option<String>,
+    pub avatar: Option<String>,
+    pub avatar_medium: Option<String>,
+    pub avatar_full: Option<String>,
+    pub persona_state: u8,
+    pub real_name: Option<String>,
+    pub country_code: Option<String>,
+    pub time_created: Option<u64>,
+    pub steam_level: Option<u32>,
+}
+
 /// Idling natijasi
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -235,6 +251,62 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         .collect();
 
     Ok(games)
+}
+
+#[tauri::command]
+pub async fn get_steam_profile(steam_id: String) -> Result<SteamProfile, String> {
+    let api_key = crate::embedded_api_key::decode()
+        .ok_or_else(|| "Steam API key not found. Rebuild the program.".to_string())?;
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .user_agent("Yolnoma-App Steam Toolkit")
+        .build()
+        .map_err(|e| format!("HTTP client error: {e}"))?;
+
+    let summary = client
+        .get("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/")
+        .query(&[("key", api_key.as_str()), ("steamids", steam_id.as_str())])
+        .send()
+        .await
+        .map_err(|e| format!("Steam profile request failed: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("Steam profile API error: {e}"))?
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("Steam profile response error: {e}"))?;
+
+    let player = summary
+        .pointer("/response/players/0")
+        .ok_or_else(|| "Steam profile was not found or is unavailable.".to_string())?;
+    let level_response = client
+        .get("https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/")
+        .query(&[("key", api_key.as_str()), ("steamid", steam_id.as_str())])
+        .send()
+        .await
+        .ok();
+    let level = match level_response {
+        Some(response) => response
+            .json::<serde_json::Value>()
+            .await
+            .ok()
+            .and_then(|json| json.pointer("/response/player_level").and_then(|v| v.as_u64()))
+            .map(|value| value as u32),
+        None => None,
+    };
+
+    Ok(SteamProfile {
+        steam_id: player.get("steamid").and_then(|v| v.as_str()).unwrap_or(&steam_id).to_string(),
+        persona_name: player.get("personaname").and_then(|v| v.as_str()).unwrap_or("Steam User").to_string(),
+        profile_url: player.get("profileurl").and_then(|v| v.as_str()).map(str::to_string),
+        avatar: player.get("avatar").and_then(|v| v.as_str()).map(str::to_string),
+        avatar_medium: player.get("avatarmedium").and_then(|v| v.as_str()).map(str::to_string),
+        avatar_full: player.get("avatarfull").and_then(|v| v.as_str()).map(str::to_string),
+        persona_state: player.get("personastate").and_then(|v| v.as_u64()).unwrap_or(0) as u8,
+        real_name: player.get("realname").and_then(|v| v.as_str()).map(str::to_string),
+        country_code: player.get("loccountrycode").and_then(|v| v.as_str()).map(str::to_string),
+        time_created: player.get("timecreated").and_then(|v| v.as_u64()),
+        steam_level: level,
+    })
 }
 
 // ── O'yin(lar)ni idling boshlash ──────────────────────────────────────
