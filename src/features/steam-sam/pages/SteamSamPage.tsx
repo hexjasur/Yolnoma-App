@@ -11,6 +11,7 @@ import {
 } from '../../steam/api/steamApi';
 import Pagination from '@/shared/ui/Pagination';
 import Button from '@/shared/ui/Button';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import {
   Trophy, BarChart3, Search, RefreshCw, Lock, Unlock,
   CheckCircle2, AlertTriangle, Shield, Wifi, WifiOff,
@@ -119,6 +120,7 @@ export default function SteamSamPage() {
 
   const initialLoadedRef = useRef(false);
   const activeAccount = accounts.find((account) => account.mostRecent) ?? accounts[0];
+  const debouncedGameSearch = useDebouncedValue(gameSearch, 220);
 
   // Check Steam client status
   const checkSteam = useCallback(async () => {
@@ -425,7 +427,7 @@ export default function SteamSamPage() {
 
   // Filtered Game Library
   const filteredGames = games.filter((g) =>
-    g.name.toLowerCase().includes(gameSearch.toLowerCase()) || String(g.appId).includes(gameSearch)
+    g.name.toLowerCase().includes(debouncedGameSearch.toLowerCase()) || String(g.appId).includes(debouncedGameSearch)
   );
   const GAMES_PER_PAGE = 24;
   const totalGamePages = Math.max(1, Math.ceil(filteredGames.length / GAMES_PER_PAGE));
@@ -599,6 +601,8 @@ export default function SteamSamPage() {
                       <img
                         src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/capsule_231x87.jpg`}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.currentTarget as HTMLElement).style.display = 'none';
                         }}
@@ -1167,6 +1171,9 @@ export default function SteamSamPage() {
                                 opacity: ach.protectedAchievement ? 0.6 : 1,
                                 transition: 'all 0.15s ease',
                                 userSelect: 'none',
+                                contentVisibility: 'auto',
+                                contain: 'layout paint style',
+                                containIntrinsicSize: '320px 68px',
                               }}
                             >
                               {/* Checkbox */}
@@ -1192,6 +1199,8 @@ export default function SteamSamPage() {
                                 <img
                                   src={ach.achieved ? ach.iconNormal : (ach.iconLocked || ach.iconNormal)}
                                   alt=""
+                                  loading="lazy"
+                                  decoding="async"
                                   onError={(e) => {
                                     (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="%23222"><rect width="44" height="44"/></svg>';
                                   }}

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SteamStatusBadge } from '../components/SteamStatusBadge';
 import Pagination from '@/shared/ui/Pagination';
 import Button from '@/shared/ui/Button';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import {
   steamApi,
   readSteamGamesCache,
@@ -90,7 +91,7 @@ interface GameCardProps {
   onOpenSam: (id: number) => void;
 }
 
-function GameCard({
+const GameCard = memo(function GameCard({
   game,
   isIdling,
   isFavorite,
@@ -123,6 +124,9 @@ function GameCard({
         transition: 'all 0.2s ease',
         position: 'relative',
         boxShadow: isIdling ? '0 4px 16px rgba(217,119,87,0.14)' : 'none',
+        contentVisibility: 'auto',
+        contain: 'layout paint style',
+        containIntrinsicSize: '220px 190px',
       }}
     >
       {/* Idling Badge with Timer */}
@@ -252,13 +256,18 @@ function GameCard({
           background:
             'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%)',
           overflow: 'hidden',
-          position: 'relative',
-        }}
+        position: 'relative',
+        contentVisibility: 'auto',
+        contain: 'layout paint style',
+        containIntrinsicSize: '220px 190px',
+      }}
       >
         {!imgError ? (
           <img
             src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg`}
             alt={game.name}
+            loading="lazy"
+            decoding="async"
             onError={() => setImgError(true)}
             style={{
               width: '100%',
@@ -350,7 +359,7 @@ function GameCard({
       </div>
     </div>
   );
-}
+});
 
 // ────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -387,6 +396,7 @@ export default function SteamIdlerPage() {
   // ── Timers
   const [tick, setTick] = useState(0);
   const idleStartTimesRef = useRef<Map<number, number>>(new Map());
+  const debouncedSearch = useDebouncedValue(search, 220);
 
   const activeAccount = accounts.find((account) => account.mostRecent) ?? accounts[0];
   const openActiveProfile = async () => {
@@ -611,7 +621,7 @@ export default function SteamIdlerPage() {
 
   // Filter games based on current active tab & search query
   const filteredGames = games.filter((g) => {
-    const matchSearch = g.name.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = g.name.toLowerCase().includes(debouncedSearch.toLowerCase());
     if (tab === 'favorites') return matchSearch && favorites.has(g.appId);
     if (tab === 'idling') return matchSearch && idlingIds.has(g.appId);
     return matchSearch;
@@ -619,7 +629,7 @@ export default function SteamIdlerPage() {
 
   // Pagination for "All Games" tab without search
   const GAMES_PER_PAGE = 60;
-  const isPaginated = tab === 'all' && search.trim() === '';
+  const isPaginated = tab === 'all' && debouncedSearch.trim() === '';
   const totalPages = isPaginated
     ? Math.ceil(filteredGames.length / GAMES_PER_PAGE)
     : 1;
