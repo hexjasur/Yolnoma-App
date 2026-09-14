@@ -87,6 +87,7 @@ export default function SteamSamPage() {
   // ── Game Library
   const [games, setGames] = useState<SteamGame[]>([]);
   const [gamesLoading, setGamesLoading] = useState(false);
+  const [gamesRefreshing, setGamesRefreshing] = useState(false);
   const [gameSearch, setGameSearch] = useState('');
   const [gamePage, setGamePage] = useState(1);
   const [gameCacheAge, setGameCacheAge] = useState<number | null>(null);
@@ -115,6 +116,7 @@ export default function SteamSamPage() {
   const [achSort, setAchSort] = useState<AchSort>('rarity');
   const [achSearch, setAchSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionProgress, setActionProgress] = useState<{ action: 'unlock' | 'lock'; total: number; processed: number; success: number; failed: number } | null>(null);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(readAuditLog);
   const [showAuditLog, setShowAuditLog] = useState(false);
 
@@ -157,7 +159,7 @@ export default function SteamSamPage() {
     if (!selectedSteamId) return;
 
     if (!forceRefresh) {
-      const cached = readSteamGamesCache(selectedSteamId);
+      const cached = await readSteamGamesCache(selectedSteamId);
       if (cached) {
         setGames(cached.games);
         setGameCacheAge(cached.age);
@@ -168,26 +170,29 @@ export default function SteamSamPage() {
           setCanRefreshGames(true);
           setGameSecondsLeft(0);
         }
-        return;
+        if (cached.age < STEAM_GAMES_CACHE_TTL) return;
+        // Stale-while-revalidate: keep the current library visible.
       }
     }
 
-    setGamesLoading(true);
+    setGamesLoading(games.length === 0);
+    setGamesRefreshing(true);
     setCanRefreshGames(false);
     try {
       const list = await steamApi.getGames(selectedSteamId);
       list.sort((a, b) => b.playtimeForever - a.playtimeForever);
       setGames(list);
       setGameCacheAge(0);
-      writeSteamGamesCache(selectedSteamId, list);
+      await writeSteamGamesCache(selectedSteamId, list);
       setGameSecondsLeft(STEAM_GAMES_CACHE_TTL / 1000);
     } catch (e: unknown) {
       console.error(e);
       setCanRefreshGames(true);
     } finally {
       setGamesLoading(false);
+      setGamesRefreshing(false);
     }
-  }, [selectedSteamId]);
+  }, [games.length, selectedSteamId]);
 
   useEffect(() => {
     if (selectedSteamId) loadGames();
@@ -302,8 +307,10 @@ export default function SteamSamPage() {
 
     try {
       const requestedCount = mode === 'all' ? achievements.length : selectedAchIds.size;
+      setActionProgress({ action: 'unlock', total: requestedCount, processed: 0, success: 0, failed: 0 });
       if (mode === 'all') {
         await steamApi.unlockAllAchievements(selectedGame.appId);
+        setActionProgress({ action: 'unlock', total: requestedCount, processed: requestedCount, success: requestedCount, failed: 0 });
         setAchievements((prev) =>
           prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: true }))
         );
@@ -312,9 +319,9 @@ export default function SteamSamPage() {
         toast.success('All achievements unlocked in Steam!');
       } else {
         const targetIds = Array.from(selectedAchIds);
-        const { successCount, failedCount } = await setAchievementsBounded(selectedGame.appId, targetIds, true);
+        const { successCount, failedCount, failedIds } = await setAchievementsBounded(selectedGame.appId, targetIds, true, 6, (progress) => setActionProgress({ action: 'unlock', total: targetIds.length, processed: progress.processed, success: progress.successCount, failed: progress.failedCount }));
         setAchievements((prev) =>
-          prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: true } : a))
+          prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement && !failedIds.includes(a.id) ? { ...a, achieved: true } : a))
         );
         setSelectedAchIds(new Set());
         setAuditLog(appendAuditLog({ action: 'unlock', gameName: selectedGame.name, appId: selectedGame.appId, count: targetIds.length, success: successCount, failed: failedCount }));
@@ -334,8 +341,10 @@ export default function SteamSamPage() {
 
     try {
       const requestedCount = mode === 'all' ? achievements.length : selectedAchIds.size;
+      setActionProgress({ action: 'lock', total: requestedCount, processed: 0, success: 0, failed: 0 });
       if (mode === 'all') {
         await steamApi.lockAllAchievements(selectedGame.appId);
+        setActionProgress({ action: 'lock', total: requestedCount, processed: requestedCount, success: requestedCount, failed: 0 });
         setAchievements((prev) =>
           prev.map((a) => (a.protectedAchievement ? a : { ...a, achieved: false }))
         );
@@ -344,9 +353,9 @@ export default function SteamSamPage() {
         toast.success('All achievements locked!');
       } else {
         const targetIds = Array.from(selectedAchIds);
-        const { successCount, failedCount } = await setAchievementsBounded(selectedGame.appId, targetIds, false);
+        const { successCount, failedCount, failedIds } = await setAchievementsBounded(selectedGame.appId, targetIds, false, 6, (progress) => setActionProgress({ action: 'lock', total: targetIds.length, processed: progress.processed, success: progress.successCount, failed: progress.failedCount }));
         setAchievements((prev) =>
-          prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement ? { ...a, achieved: false } : a))
+          prev.map((a) => (selectedAchIds.has(a.id) && !a.protectedAchievement && !failedIds.includes(a.id) ? { ...a, achieved: false } : a))
         );
         setSelectedAchIds(new Set());
         setAuditLog(appendAuditLog({ action: 'lock', gameName: selectedGame.name, appId: selectedGame.appId, count: targetIds.length, success: successCount, failed: failedCount }));
@@ -490,9 +499,9 @@ export default function SteamSamPage() {
               {gameSecondsLeft > 0 && ` · refresh in ${Math.floor(gameSecondsLeft / 60)}:${String(gameSecondsLeft % 60).padStart(2, '0')}`}
             </span>
           )}
-          <Button type="button" onClick={() => loadGames(true)} disabled={gamesLoading || !selectedSteamId || gameSecondsLeft > 0} variant="secondary" size="sm" loading={gamesLoading} className={`gap-2 ${canRefreshGames ? 'text-[#D97757]' : ''}`}>
-            {!gamesLoading && <RefreshCw size={14} />}
-            {gamesLoading ? 'Refreshing Library...' : 'Refresh Library'}
+          <Button type="button" onClick={() => loadGames(true)} disabled={gamesLoading || gamesRefreshing || !selectedSteamId || gameSecondsLeft > 0} variant="secondary" size="sm" loading={gamesRefreshing} className={`gap-2 ${canRefreshGames ? 'text-[#D97757]' : ''}`}>
+            {!gamesRefreshing && <RefreshCw size={14} />}
+            {gamesRefreshing ? 'Refreshing Library...' : 'Refresh Library'}
           </Button>
         </div>
       </div>
@@ -1126,6 +1135,18 @@ export default function SteamSamPage() {
                     </div>
                   </div>
 
+                  {actionProgress && (
+                    <div aria-live="polite" style={{ margin: '0 20px 12px', padding: '10px 12px', borderRadius: 9, background: 'rgba(217,119,87,0.08)', border: '1px solid rgba(217,119,87,0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 7 }}>
+                        <strong>{actionProgress.action === 'unlock' ? 'Unlocking' : 'Locking'}: {actionProgress.processed} / {actionProgress.total}</strong>
+                        <span style={{ color: '#86efac' }}>Success {actionProgress.success}</span>
+                        <span style={{ color: '#fca5a5' }}>Failed {actionProgress.failed}</span>
+                      </div>
+                      <div role="progressbar" aria-label={`${actionProgress.action} achievement progress`} aria-valuemin={0} aria-valuemax={actionProgress.total} aria-valuenow={actionProgress.processed} style={{ height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                        <div style={{ width: `${actionProgress.total ? (actionProgress.processed / actionProgress.total) * 100 : 0}%`, height: '100%', background: actionProgress.failed ? '#f59e0b' : '#22c55e', transition: 'width 120ms ease' }} />
+                      </div>
+                    </div>
+                  )}
                   {/* Achievements Grid / List */}
                   <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                     {filteredAchievements.length === 0 ? (
