@@ -4,6 +4,7 @@ import SplashScreen from './components/SplashScreen';
 import { isStandaloneWindow } from '@/shared/lib/window';
 import { UpdateModal } from '@/shared/ui';
 import { useUpdaterStore } from '@/shared/stores/updaterStore';
+import CommandCenter from './components/CommandCenter';
 
 const SPLASH_KEY = 'yolnoma_splash_shown';
 
@@ -52,6 +53,7 @@ function App() {
       {appReady && (
         <>
           <AppRoutes />
+          <CommandCenter />
           <UpdateModal />
         </>
       )}
