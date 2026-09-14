@@ -29,3 +29,9 @@ libs/
 resources
 
 secret
+*.key
+*.key.pub
+*.pem
+*.p12
+*.pfx
+docs/Tauri_Signer.txt
