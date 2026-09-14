@@ -428,15 +428,15 @@ jobs:
           # 6. Prepare the isolated updates branch in this repository.
           # Do not use the source checkout as the artifact worktree.
           $repoUrl = "https://github.com/$repoSlug.git"
-          $authHeader = "AUTHORIZATION: bearer $($env:GITHUB_TOKEN)"
+          $pushUrl = "https://x-access-token:$($env:GITHUB_TOKEN)@github.com/$repoSlug.git"
           if (Test-Path "updates-repo") {
             Remove-Item -Recurse -Force "updates-repo"
           }
           New-Item -ItemType Directory -Force -Path "updates-repo" | Out-Null
           Set-Location updates-repo
           git init -b $updatesBranch
-          git remote add origin $repoUrl
-          git -c http.extraheader=$authHeader fetch origin $updatesBranch 2>$null
+          git remote add origin $pushUrl
+          git fetch origin $updatesBranch 2>$null
           if ($LASTEXITCODE -eq 0) {
             git checkout -B $updatesBranch FETCH_HEAD
           }
@@ -476,6 +476,9 @@ jobs:
             git commit -m "release: v$version"
 
             Write-Host "Pushing updates branch to $repoSlug..."
-            git -c http.extraheader=$authHeader push -u origin $updatesBranch --force
+            git push -u origin $updatesBranch --force
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to push updater artifacts to $repoSlug/$updatesBranch."
+            }
             Write-Host "Successfully published v$version to $repoSlug/$updatesBranch!"
           }
