@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Blocks, Command, GitBranch, History, Search, Sparkles, Wrench, X } from 'lucide-react';
+import { ArrowRight, Blocks, Clock3, Command, GitBranch, History, Search, Sparkles, Wrench, X } from 'lucide-react';
 import { ROUTE_CONFIG } from '@/app/routes.config';
 import type { LucideIcon } from 'lucide-react';
 
@@ -65,26 +65,56 @@ const ROUTE_ITEMS: CommandItem[] = ROUTE_CONFIG
   }));
 
 const COMMAND_ITEMS = [...WORKSPACE_ITEMS, ...ROUTE_ITEMS];
+const RECENT_COMMANDS_KEY = 'yolnoma_command_center_recent';
+const MAX_RECENT_COMMANDS = 8;
 
 function goTo(path: string) {
   window.location.hash = `#${path}`;
+}
+
+function readRecentIds(): string[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_COMMANDS_KEY) ?? '[]');
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberCommand(id: string) {
+  const next = [id, ...readRecentIds().filter((item) => item !== id)].slice(0, MAX_RECENT_COMMANDS);
+  localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(next));
 }
 
 export default function CommandCenter() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [recentIds, setRecentIds] = useState<string[]>(readRecentIds);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const results = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return COMMAND_ITEMS;
+    if (!normalized) {
+      const recent = recentIds
+        .map((id) => COMMAND_ITEMS.find((item) => item.id === id))
+        .filter((item): item is CommandItem => Boolean(item));
+      const recentSet = new Set(recent.map((item) => item.id));
+      return [...recent, ...COMMAND_ITEMS.filter((item) => !recentSet.has(item.id))];
+    }
     return COMMAND_ITEMS
       .map((item) => ({ item, score: item.keywords.toLowerCase().includes(normalized) ? (item.label.toLowerCase().startsWith(normalized) ? 2 : 1) : 0 }))
       .filter(({ score }) => score > 0)
       .sort((left, right) => right.score - left.score)
       .map(({ item }) => item);
-  }, [query]);
+  }, [query, recentIds]);
+
+  const openCommand = (item: CommandItem) => {
+    rememberCommand(item.id);
+    setRecentIds(readRecentIds());
+    goTo(item.path);
+    setOpen(false);
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -105,8 +135,7 @@ export default function CommandCenter() {
         setActiveIndex((index) => Math.max(index - 1, 0));
       } else if (event.key === 'Enter' && results[activeIndex]) {
         event.preventDefault();
-        goTo(results[activeIndex].path);
-        setOpen(false);
+        openCommand(results[activeIndex]);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -135,7 +164,7 @@ export default function CommandCenter() {
           <button type="button" onClick={() => setOpen(false)} className="rounded-md p-1.5 text-white/35 transition hover:bg-white/[0.07] hover:text-white" aria-label="Close command center"><X size={17} /></button>
         </div>
         <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
-          <span>Command Center</span>
+          <span>{query.trim() ? 'Search results' : 'Recently opened'}</span>
           <span className="flex items-center gap-1 normal-case tracking-normal text-white/25"><Command size={11} /> K to toggle</span>
         </div>
         <div className="max-h-[58vh] overflow-y-auto p-2">
@@ -145,10 +174,10 @@ export default function CommandCenter() {
             results.map((item, index) => {
               const Icon = item.icon;
               return (
-                <button key={item.id} type="button" onClick={() => { goTo(item.path); setOpen(false); }} className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition ${index === activeIndex ? 'bg-[var(--accent-dim)] text-white' : 'text-white/70 hover:bg-white/[0.05]'}`}>
+                <button key={item.id} type="button" onClick={() => openCommand(item)} className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition ${index === activeIndex ? 'bg-[var(--accent-dim)] text-white' : 'text-white/70 hover:bg-white/[0.05]'}`}>
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${index === activeIndex ? 'border-[var(--accent-border)] bg-[var(--accent)]/15 text-[var(--accent)]' : 'border-white/[0.08] bg-white/[0.03] text-white/40'}`}><Icon size={17} /></span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{item.label}</span><span className="mt-0.5 block truncate text-xs text-white/35">{item.description}</span></span>
-                  <span className="flex shrink-0 items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-white/25"><span className="hidden sm:inline">{item.group}</span><ArrowRight size={14} className={index === activeIndex ? 'text-[var(--accent)]' : 'opacity-0 transition group-hover:opacity-100'} /></span>
+                  <span className="flex shrink-0 items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-white/25"><span className="hidden sm:inline">{!query.trim() && recentIds.includes(item.id) ? <Clock3 size={12} /> : item.group}</span><ArrowRight size={14} className={index === activeIndex ? 'text-[var(--accent)]' : 'opacity-0 transition group-hover:opacity-100'} /></span>
                 </button>
               );
             })
