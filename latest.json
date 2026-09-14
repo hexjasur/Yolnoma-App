@@ -1,11 +1,11 @@
 {
-  "version": "1.0.13",
-  "notes": "🐛 Bug Fixes\n\n• Authenticate updater branch push",
-  "pub_date": "2026-09-14T17:15:41Z",
+  "version": "1.0.14",
+  "notes": "✨ What's New\n\n• Remember recent command center workspaces\n• Add global command center",
+  "pub_date": "2026-09-14T17:58:37Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSHZjUENvOWU5Z2ZhaXB2d2Z1NlpaQjRGNEFFSjNYeGVQL0Z0TnpCTW5yQ0ZhQ0Z3ajVlL0NTSloxRkZiWnQxYURpd2hlM29DYVdEYm5hMWZCQ1duWHdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDA2MTE1CWZpbGU6WW9sbm9tYV8xLjAuMTNfeDY0LXNldHVwLmV4ZQpiTnBINTRtbkZ5RzhnRXp1cVc5YzlCZExYSHNvSVVrUVBXNW9neWZQOStZRFVQckl2Ym5wckd6NWJGLzJrdG9uZkZKTGttVkVlZzl5QkNJSmRaWWFEZz09Cg==",
-      "url": "https://raw.githubusercontent.com/hexjasur/Yolnoma-App/updates/Yolnoma_1.0.13_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSGg5TFlTckpBYmJmQ3ZEa052YkpiS0xJNGY2NUYzOHBOT0Nad3RyQjNNTU1GRFdWZ1FaRW03c3BCZjlGdE12T3BVL1hYQUhUenZkZlUxMGpOdW5Gd2c4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDA4NjM5CWZpbGU6WW9sbm9tYV8xLjAuMTRfeDY0LXNldHVwLmV4ZQpKS2RrNzdrS3dkMVNPNGlHWVFIL24ySGZTeWR3dXZUa2kvSS9xc1ZxVTQyRkJjRExFY0E0NEI3MkdsQWJmR1FjbnN0RDNTdlM2eVRwQWZRdW9MQS9Bdz09Cg==",
+      "url": "https://raw.githubusercontent.com/hexjasur/Yolnoma-App/updates/Yolnoma_1.0.14_x64-setup.exe"
     }
   }
 }
