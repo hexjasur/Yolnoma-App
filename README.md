@@ -1,4 +1,16 @@
-# Yolnoma-App
+<div>
+<img align='left' width="40px" src=".github/images/logo.png" alt="logo">
+<h1 align="right">Yolnoma App</h1>
+</div>
+
+<img src=".github/images/brand.jpg" alt="yolnoma app brand wallpaper">
+
+| Tool Name | Description | Image |
+|---|---|---|
+| **Dashboard** | Dashboard. | <img src=".github/images/app/dashboard.png" alt="dashboard" width="100"> |
+| **Dev Tools** | Developer Tools(JWT, JSON, MARKDOWN, TOOLS). | <img src=".github/images/app/workspace.png" alt="workspace" width="100"> |
+| **BG REMOVER** | Background remover. | <img src=".github/images/app/bg_remover.png" alt="bg remover" width="100">
+
 
 Yolnoma-App is an independent Windows desktop utility built with React,
 TypeScript, Rust, and Tauri. It brings Steam-related tools and practical
@@ -9,12 +21,22 @@ developer utilities together in one desktop application.
 
 ## Features
 
-- Steam library, profile, achievement, and playtime utilities
-- Steam idling and achievement-management integrations
-- Local desktop utilities for everyday developer workflows
-- Image, media, and file tools
-- Tauri-based Windows desktop distribution with signed updates
-- Secure local account-storage mechanisms for supported workflows
+- AI Chat: Chat with an AI assistant for general questions, coding help, and more.
+- Cleaner: 
+- CSS Tools: 
+- JSON EDIT/VIEW: 
+- STEAM IDLER/SAM:
+- YT VIDEO DOWNLOADER:
+- PORT Scanner
+
+- Developer Tools:
+  - JSON FORMATTER 
+  - JWT DECODER
+  - UUID Generator
+  - Markdown Studio
+  - IP Lookup
+  - QR GENERATOR
+  - & more
 
 The exact feature set may change between releases. Consult the source code and
 release notes for the version you are using.
@@ -36,7 +58,7 @@ Install dependencies and start the development server:
 
 ```bash
 npm install
-npm run dev
+npm run tauri dev
 ```
 
 Build the frontend:
