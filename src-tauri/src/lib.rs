@@ -216,7 +216,9 @@ pub fn run() {
             domains::archive::extract_single_entry,
             domains::archive::extract_archive,
         ])
-        .run(tauri::generate_context!(), |app, event| {
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
             // Last-resort cleanup for OS shutdowns and exits that bypass the tray menu.
             // The tray quit action and exit_app command also clean up eagerly; this
             // callback protects against the remaining Tauri lifecycle paths.
@@ -228,4 +230,5 @@ pub fn run() {
             }
         })
         .expect("error while running tauri application");
+
 }
