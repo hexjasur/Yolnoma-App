@@ -4,10 +4,13 @@ import {
   steamApi,
   readSteamGamesCache,
   writeSteamGamesCache,
+  STEAM_GAMES_CACHE_TTL,
   setAchievementsBounded,
   type SteamGame,
   type SteamUser,
 } from '../../steam/api/steamApi';
+import Pagination from '@/shared/ui/Pagination';
+import Button from '@/shared/ui/Button';
 import {
   Trophy, BarChart3, Search, RefreshCw, Lock, Unlock,
   CheckCircle2, AlertTriangle, Shield, Wifi, WifiOff,
@@ -84,6 +87,10 @@ export default function SteamSamPage() {
   const [games, setGames] = useState<SteamGame[]>([]);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [gameSearch, setGameSearch] = useState('');
+  const [gamePage, setGamePage] = useState(1);
+  const [gameCacheAge, setGameCacheAge] = useState<number | null>(null);
+  const [gameSecondsLeft, setGameSecondsLeft] = useState(0);
+  const [canRefreshGames, setCanRefreshGames] = useState(false);
   const [selectedGame, setSelectedGame] = useState<SteamGame | null>(null);
 
   // ── SAM Data for selected game
@@ -143,23 +150,37 @@ export default function SteamSamPage() {
   }, []);
 
   // Load games for selected account
-  const loadGames = useCallback(async () => {
+  const loadGames = useCallback(async (forceRefresh = false) => {
     if (!selectedSteamId) return;
 
-    const cached = readSteamGamesCache(selectedSteamId);
-    if (cached) {
-      setGames(cached.games);
-      return;
+    if (!forceRefresh) {
+      const cached = readSteamGamesCache(selectedSteamId);
+      if (cached) {
+        setGames(cached.games);
+        setGameCacheAge(cached.age);
+        if (cached.age < STEAM_GAMES_CACHE_TTL) {
+          setCanRefreshGames(false);
+          setGameSecondsLeft(Math.ceil((STEAM_GAMES_CACHE_TTL - cached.age) / 1000));
+        } else {
+          setCanRefreshGames(true);
+          setGameSecondsLeft(0);
+        }
+        return;
+      }
     }
 
     setGamesLoading(true);
+    setCanRefreshGames(false);
     try {
       const list = await steamApi.getGames(selectedSteamId);
       list.sort((a, b) => b.playtimeForever - a.playtimeForever);
       setGames(list);
+      setGameCacheAge(0);
       writeSteamGamesCache(selectedSteamId, list);
+      setGameSecondsLeft(STEAM_GAMES_CACHE_TTL / 1000);
     } catch (e: unknown) {
       console.error(e);
+      setCanRefreshGames(true);
     } finally {
       setGamesLoading(false);
     }
@@ -168,6 +189,24 @@ export default function SteamSamPage() {
   useEffect(() => {
     if (selectedSteamId) loadGames();
   }, [selectedSteamId, loadGames]);
+
+  useEffect(() => {
+    if (gameSecondsLeft <= 0) return;
+    const interval = setInterval(() => {
+      setGameSecondsLeft((previous) => {
+        if (previous <= 1) {
+          setCanRefreshGames(true);
+          return 0;
+        }
+        return previous - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [gameSecondsLeft]);
+
+  useEffect(() => {
+    setGamePage(1);
+  }, [gameSearch, selectedSteamId]);
 
   // Load SAM data for a specific game
   const loadSamData = useCallback(async (appId: number) => {
@@ -387,6 +426,14 @@ export default function SteamSamPage() {
   const filteredGames = games.filter((g) =>
     g.name.toLowerCase().includes(gameSearch.toLowerCase()) || String(g.appId).includes(gameSearch)
   );
+  const GAMES_PER_PAGE = 24;
+  const totalGamePages = Math.max(1, Math.ceil(filteredGames.length / GAMES_PER_PAGE));
+  const safeGamePage = Math.min(gamePage, totalGamePages);
+  const displayedGames = filteredGames.slice(
+    (safeGamePage - 1) * GAMES_PER_PAGE,
+    safeGamePage * GAMES_PER_PAGE,
+  );
+  const gameCacheAgeMin = gameCacheAge !== null ? Math.floor(gameCacheAge / 60000) : null;
 
   return (
     <div
@@ -400,39 +447,50 @@ export default function SteamSamPage() {
         overflow: 'hidden',
       }}
     >
-      {/* ── TOP BANNER: STEAM STATUS ── */}
+      {/* ── HEADER ── */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 20px',
-          background: '#14110E',
-          borderBottom: '1px solid rgba(242,237,230,0.06)',
-          fontSize: 12,
+          margin: '0 16px 0',
+          padding: '18px 20px',
+          borderRadius: 16,
+          background: 'linear-gradient(120deg, rgba(217,119,87,0.10), rgba(24,20,16,0.88) 48%)',
+          border: '1px solid rgba(217,119,87,0.18)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.14)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Trophy size={16} color="#D97757" />
-          <span style={{ fontWeight: 600, letterSpacing: '0.04em' }}>
-            STEAM ACHIEVEMENT MANAGER (SAM)
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ margin: '0 0 6px', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#D97757', fontWeight: 700 }}>
+              Steam Toolkit
+            </p>
+            <h1 style={{ margin: 0, fontFamily: '"Georgia", serif', fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em' }}>
+              Achievement Manager
+            </h1>
+            <p style={{ margin: '5px 0 0', fontSize: 13, color: 'rgba(242,237,230,0.45)' }}>
+              Inspect, unlock, and manage Steam achievements safely.
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 11px', borderRadius: 11, background: 'rgba(0,0,0,0.20)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 11 }}>
+              <Trophy size={15} color="#D97757" /> SAM Workspace
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: steamRunning === null ? 'rgba(242,237,230,0.4)' : steamRunning ? '#4ade80' : '#f87171', fontSize: 12 }}>
+              {steamRunning ? <Wifi size={14} /> : <WifiOff size={14} />}
+              {steamRunning === null ? 'Checking Steam...' : steamRunning ? 'Steam Connected' : 'Steam Offline'}
+            </div>
+          </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {steamRunning === null ? (
-            <span style={{ color: 'rgba(242,237,230,0.4)' }}>Checking Steam status...</span>
-          ) : steamRunning ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4ade80' }}>
-              <Wifi size={14} />
-              <span>Steam Connected</span>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#f87171' }}>
-              <WifiOff size={14} />
-              <span>Steam is not running</span>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 9, marginTop: 14, flexWrap: 'wrap' }}>
+          {gameCacheAgeMin !== null && games.length > 0 && (
+            <span style={{ fontSize: 11, color: 'rgba(242,237,230,0.4)' }}>
+              {gameCacheAgeMin === 0 ? 'Library updated just now' : `Library updated ${gameCacheAgeMin} min ago`}
+              {gameSecondsLeft > 0 && ` · refresh in ${Math.floor(gameSecondsLeft / 60)}:${String(gameSecondsLeft % 60).padStart(2, '0')}`}
+            </span>
           )}
+          <Button type="button" onClick={() => loadGames(true)} disabled={gamesLoading || !selectedSteamId || gameSecondsLeft > 0} variant="secondary" size="sm" loading={gamesLoading} className={`gap-2 ${canRefreshGames ? 'text-[#D97757]' : ''}`}>
+            {!gamesLoading && <RefreshCw size={14} />}
+            {gamesLoading ? 'Refreshing Library...' : 'Refresh Library'}
+          </Button>
         </div>
       </div>
 
@@ -525,8 +583,9 @@ export default function SteamSamPage() {
                 No games found
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {filteredGames.map((game) => {
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {displayedGames.map((game) => {
                   const isSelected = selectedGame?.appId === game.appId;
                   return (
                     <button
@@ -583,7 +642,19 @@ export default function SteamSamPage() {
                     </button>
                   );
                 })}
-              </div>
+                </div>
+                {totalGamePages > 1 && (
+                  <Pagination
+                    page={safeGamePage}
+                    totalPages={totalGamePages}
+                    total={filteredGames.length}
+                    limit={GAMES_PER_PAGE}
+                    onPageChange={setGamePage}
+                    itemLabel="games"
+                    limitOptions={[GAMES_PER_PAGE]}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
