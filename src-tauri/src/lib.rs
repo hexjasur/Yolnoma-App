@@ -228,7 +228,6 @@ pub fn run() {
                     app_commands::stop_idling_processes(&state).await;
                 });
             }
-        })
-        .expect("error while running tauri application");
+        });
 
 }
