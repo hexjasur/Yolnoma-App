@@ -1,9 +1,9 @@
 # Steam Performance Profile
 
-**Measurement date:** 2026-09-14  
-**Branch:** `BIG-Score-3`  
-**Baseline:** `c64f1c6`  
-**Implementation commit:** `a911d4a`  
+**Measurement date:** 2026-09-14<br>
+**Branch:** `BIG-Score-3`<br>
+**Baseline:** `c64f1c6`<br>
+**Implementation commit:** `a911d4a`<br>
 **Platform:** Ubuntu 24.04, Node.js 22, Vite 7, Chromium-compatible browser target.
 
 ## Commands and build result
