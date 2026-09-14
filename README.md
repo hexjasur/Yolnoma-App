@@ -5,48 +5,66 @@
 
 <img src=".github/images/brand.jpg" alt="yolnoma app brand wallpaper">
 
-| Tool Name | Description | Image |
-|---|---|---|
-| **Dashboard** | Dashboard. | <img src=".github/images/app/dashboard.png" alt="dashboard" width="100"> |
-| **Dev Tools** | Developer Tools(JWT, JSON, MARKDOWN, TOOLS). | <img src=".github/images/app/workspace.png" alt="workspace" width="100"> |
-| **BG REMOVER** | Background remover. | <img src=".github/images/app/bg_remover.png" alt="bg remover" width="100">
-
-
-Yolnoma-App is an independent Windows desktop utility built with React,
-TypeScript, Rust, and Tauri. It brings Steam-related tools and practical
-developer utilities together in one desktop application.
+Yolnoma-App is an independent Windows desktop utility created and maintained
+by **Jasurbek Haydarov** under **JK Software**. The project combines practical
+developer tools, media utilities, and Steam-related workflows in one Tauri
+desktop application.
 
 > Yolnoma-App is not affiliated with, endorsed by, or sponsored by Valve
 > Corporation or Steam.
 
-## Features
+## Project identity
 
-- AI Chat: Chat with an AI assistant for general questions, coding help, and more.
-- Cleaner: 
-- CSS Tools: 
-- JSON EDIT/VIEW: 
-- STEAM IDLER/SAM:
-- YT VIDEO DOWNLOADER:
-- PORT Scanner
+Yolnoma-App is not a republished copy of another project. The application,
+product direction, user interface, desktop shell, developer-tool collection,
+media utilities, account-storage work, and integrations in this repository are
+part of the Yolnoma project and are maintained by its own author and
+contributors.
 
-- Developer Tools:
-  - JSON FORMATTER 
-  - JWT DECODER
-  - UUID Generator
-  - Markdown Studio
-  - IP Lookup
-  - QR GENERATOR
-  - & more
+The repository also contains a clearly identified Steam integration derived from
+or based on [Steam Game Idler](https://github.com/zevnda/steam-game-idler) by
+**zevnda**. That upstream attribution is preserved because it is required for
+those derived portions; it does not mean that Yolnoma-App is an official Steam
+Game Idler release. See [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) for
+the detailed license and attribution information.
+
+## About the author
+
+**Jasurbek Haydarov** is the founder and developer of JK Software and the
+creator of Yolnoma-App. He develops practical desktop software for developers,
+creators, and everyday users, with a focus on bringing useful workflows into a
+single fast and accessible application.
+
+Yolnoma-App is an actively evolving project. Contributions, responsible bug
+reports, and constructive feedback are welcome through the repository.
+
+## Tools and features
+
+| Tool Name | Description | Image |
+|---|---|---|
+| **Dashboard** | Yolnoma workspace and quick access to application tools. | <img src=".github/images/app/dashboard.png" alt="dashboard" width="100"> |
+| **Developer Tools** | JWT, JSON, Markdown, UUID, IP lookup, QR, and related utilities. | <img src=".github/images/app/workspace.png" alt="workspace" width="100"> |
+| **Background Remover** | Image background-removal workflow. | <img src=".github/images/app/bg_remover.png" alt="background remover" width="100"> |
+
+Additional features include:
+
+- AI Chat for general questions, coding help, and related workflows.
+- Cleaner and CSS tools.
+- JSON editing and viewing.
+- Steam Idler and Steam achievement-management integrations.
+- YouTube video downloader utilities.
+- Port Scanner.
+- Image, media, file, and everyday developer utilities.
 
 The exact feature set may change between releases. Consult the source code and
 release notes for the version you are using.
 
 ## Requirements
 
-- Windows 10 or later for the full desktop feature set
-- Node.js and npm for frontend development
-- Rust and the Tauri prerequisites for desktop builds
-- A Steam account for Steam-related features
+- Windows 10 or later for the full desktop feature set.
+- Node.js and npm for frontend development.
+- Rust and the Tauri prerequisites for desktop builds.
+- A Steam account for Steam-related features.
 
 Some integrations require their own API credentials. Never commit real keys,
 passwords, session tokens, signing keys, or other secrets to this repository.
@@ -54,7 +72,7 @@ Use local environment variables or GitHub Actions secrets instead.
 
 ## Development
 
-Install dependencies and start the development server:
+Install dependencies and start the development application:
 
 ```bash
 npm install
@@ -88,17 +106,6 @@ application; they must not be treated as server-side secrets.
 Steam credentials and session data must be handled only through the supported
 application flows. Users are responsible for complying with Steam's terms and
 for protecting their accounts.
-
-## Relationship to Steam Game Idler
-
-Yolnoma-App contains the `libs/SteamUtility` integration and related work
-derived from or based on [Steam Game Idler](https://github.com/zevnda/steam-game-idler)
-by **zevnda**. The project also maintains a public fork for development and
-reference at [hexjasur/steam-game-idler](https://github.com/hexjasur/steam-game-idler).
-
-This is an independent project, not an official Steam Game Idler release and
-not an endorsement by its authors. Original copyright and license notices for
-derived portions are preserved in [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).
 
 ## License
 
