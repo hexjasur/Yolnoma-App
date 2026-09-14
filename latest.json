@@ -1,10 +1,10 @@
 {
   "version": "1.0.13",
-  "notes": "Yolnoma v1.0.13",
-  "pub_date": "2026-09-14T17:01:13Z",
+  "notes": "🐛 Bug Fixes\n\n• Authenticate updater branch push",
+  "pub_date": "2026-09-14T17:15:41Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSHJEUkxBdVNrSjNHUHIwV2JHMHBJenh1azJteWU5VmNWVUdXSkdjVlhZUFBZQllBOXk0T0c4L2gyU0NOWVMzOTR4U3hOcnVyZ2JUVHJBYWZzUXZJRHdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDA1MTkyCWZpbGU6WW9sbm9tYV8xLjAuMTNfeDY0LXNldHVwLmV4ZQpjWHR5K1FIVDlQOElNdUxncXRXNk14VGsxUk5kRmIxWUJWOHVaNWRDTFYwa0pteU1XMkxxa3laNHZaQzNxdXZEL1VlajB4RFM5MUwvRE5VYmFEYmpBZz09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSHZjUENvOWU5Z2ZhaXB2d2Z1NlpaQjRGNEFFSjNYeGVQL0Z0TnpCTW5yQ0ZhQ0Z3ajVlL0NTSloxRkZiWnQxYURpd2hlM29DYVdEYm5hMWZCQ1duWHdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDA2MTE1CWZpbGU6WW9sbm9tYV8xLjAuMTNfeDY0LXNldHVwLmV4ZQpiTnBINTRtbkZ5RzhnRXp1cVc5YzlCZExYSHNvSVVrUVBXNW9neWZQOStZRFVQckl2Ym5wckd6NWJGLzJrdG9uZkZKTGttVkVlZzl5QkNJSmRaWWFEZz09Cg==",
       "url": "https://raw.githubusercontent.com/hexjasur/Yolnoma-App/updates/Yolnoma_1.0.13_x64-setup.exe"
     }
   }
