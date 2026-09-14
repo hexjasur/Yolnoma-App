@@ -197,6 +197,7 @@ pub fn run() {
             domains::steam::steam_is_running,
             domains::steam::get_steam_accounts,
             domains::steam::get_steam_games,
+            domains::steam::get_steam_profile,
             domains::steam::start_idling,
             domains::steam::stop_idling,
             domains::steam::stop_all_idling,
