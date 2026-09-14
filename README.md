@@ -30,7 +30,7 @@ the detailed license and attribution information.
 
 ## About the author
 
-**Jasurbek Haydarov** is the founder and developer of JK Software and the
+**Jasurbek Haydarov** is the founder and developer and the
 creator of Yolnoma-App. He develops practical desktop software for developers,
 creators, and everyday users, with a focus on bringing useful workflows into a
 single fast and accessible application.
