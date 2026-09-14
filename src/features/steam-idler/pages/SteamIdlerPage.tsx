@@ -383,6 +383,7 @@ export default function SteamIdlerPage() {
   // ── Loading
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [gamesLoading, setGamesLoading] = useState(false);
+  const [gamesRefreshing, setGamesRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [profile, setProfile] = useState<SteamProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -514,7 +515,7 @@ export default function SteamIdlerPage() {
       if (!selectedSteamId) return;
 
       if (!forceRefresh) {
-        const cached = readSteamGamesCache(selectedSteamId);
+        const cached = await readSteamGamesCache(selectedSteamId);
         if (cached) {
           setGames(cached.games);
           setCacheAge(cached.age);
@@ -526,11 +527,13 @@ export default function SteamIdlerPage() {
             setCanRefresh(true);
             setSecondsLeft(0);
           }
-          return;
+          if (ageMs < STEAM_GAMES_CACHE_TTL) return;
+          // Stale-while-revalidate: leave the cached list visible.
         }
       }
 
-      setGamesLoading(true);
+      setGamesLoading(games.length === 0);
+      setGamesRefreshing(true);
       setError(null);
       setCanRefresh(false);
       try {
@@ -538,16 +541,17 @@ export default function SteamIdlerPage() {
         list.sort((a, b) => b.playtimeForever - a.playtimeForever);
         setGames(list);
         setCacheAge(0);
-        writeSteamGamesCache(selectedSteamId, list);
+        await writeSteamGamesCache(selectedSteamId, list);
         setSecondsLeft(300);
       } catch (e: unknown) {
         setError(String(e));
         setCanRefresh(true);
       } finally {
         setGamesLoading(false);
+        setGamesRefreshing(false);
       }
     },
-    [selectedSteamId],
+    [games.length, selectedSteamId],
   );
 
   useEffect(() => {
@@ -854,12 +858,12 @@ export default function SteamIdlerPage() {
         <Button
           type="button"
           onClick={() => loadGames(true)}
-          disabled={gamesLoading || !selectedSteamId || secondsLeft > 0}
+          disabled={gamesLoading || gamesRefreshing || !selectedSteamId || secondsLeft > 0}
           variant="secondary"
           size="sm"
           className={`gap-2 ${canRefresh && secondsLeft === 0 ? 'text-[#D97757]' : ''}`}
         >
-          {gamesLoading ? (
+          {gamesRefreshing ? (
             <Loader2
               size={14}
               style={{ animation: 'spin 1s linear infinite' }}
@@ -867,7 +871,7 @@ export default function SteamIdlerPage() {
           ) : (
             <RefreshCw size={14} />
           )}
-          {gamesLoading ? 'Loading Library...' : 'Refresh'}
+          {gamesRefreshing ? 'Refreshing Library...' : 'Refresh'}
         </Button>
       </div>
 

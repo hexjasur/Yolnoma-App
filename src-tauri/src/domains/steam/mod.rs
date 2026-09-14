@@ -28,6 +28,24 @@ pub struct SteamGame {
     pub playtime_forever: u64, // daqiqada
 }
 
+#[derive(Debug, Deserialize)]
+struct OwnedGamesResponse {
+    response: OwnedGamesPayload,
+}
+
+#[derive(Debug, Deserialize)]
+struct OwnedGamesPayload {
+    game_count: Option<u32>,
+    games: Option<Vec<RawSteamGame>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawSteamGame {
+    appid: Option<u64>,
+    name: Option<String>,
+    playtime_forever: Option<u64>,
+}
+
 /// loginusers.vdf dan o'qilgan akkaunt ma'lumoti
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -214,13 +232,13 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         return Err(format!("Steam API error: HTTP {}", resp.status()));
     }
 
-    let json: serde_json::Value = resp
+    let payload: OwnedGamesResponse = resp
         .json()
         .await
         .map_err(|e| format!("JSON parse error: {e}"))?;
 
-    // game_count yo'q = profil yopiq
-    if json.pointer("/response/game_count").is_none() {
+    // game_count yo'q = profil yopiq; game_count=0 esa normal bo'sh library.
+    if payload.response.game_count.is_none() {
         return Err(
             "Steam profile is private. Steam → Profile → Privacy Settings → \
              Game data: Make visible to everyone."
@@ -228,27 +246,25 @@ pub async fn get_steam_games(steam_id: String) -> Result<Vec<SteamGame>, String>
         );
     }
 
-    let games_arr = json
-        .pointer("/response/games")
-        .and_then(|g| g.as_array())
-        .ok_or_else(|| "O'yinlar ro'yxati bo'sh.".to_string())?;
-
-    let games: Vec<SteamGame> = games_arr
-        .iter()
-        .filter_map(|g| {
-            let app_id = g.get("appid")?.as_u64()? as u32;
-            let name = g.get("name")?.as_str()?.to_string();
-            let playtime = g
-                .get("playtime_forever")
-                .and_then(|p| p.as_u64())
-                .unwrap_or(0);
+    let mut games: Vec<SteamGame> = payload
+        .response
+        .games
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|raw| {
+            let app_id = u32::try_from(raw.appid?).ok()?;
+            let name = raw.name?.trim().to_string();
+            if name.is_empty() {
+                return None;
+            }
             Some(SteamGame {
                 app_id,
                 name,
-                playtime_forever: playtime,
+                playtime_forever: raw.playtime_forever.unwrap_or(0),
             })
         })
         .collect();
+    games.sort_by(|a, b| b.playtime_forever.cmp(&a.playtime_forever));
 
     Ok(games)
 }
