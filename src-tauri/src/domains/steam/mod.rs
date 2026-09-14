@@ -532,7 +532,51 @@ async fn run_steam_utility(args: &[&str]) -> Result<serde_json::Value, String> {
 pub async fn get_achievement_data(app_id: u32) -> Result<serde_json::Value, String> {
     let id = app_id.to_string();
     let json = run_steam_utility(&["get_achievement_data", &id]).await?;
-    Ok(json.get("result").cloned().unwrap_or(json))
+    let mut result = json.get("result").cloned().unwrap_or(json);
+
+    // SteamUtility can return achievement metadata without the CDN icon hashes.
+    // Fill those fields from Steam's public game schema so the SAM UI can render
+    // the normal and locked artwork without making a request per achievement.
+    if let Some(api_key) = crate::embedded_api_key::decode() {
+        let schema_url = format!(
+            "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={api_key}&appid={app_id}&format=json"
+        );
+        if let Ok(response) = reqwest::Client::new().get(schema_url).send().await {
+            if let Ok(schema) = response.json::<serde_json::Value>().await {
+                let schema_achievements = schema
+                    .pointer("/game/availableGameStats/achievements")
+                    .and_then(|value| value.as_array());
+                if let (Some(items), Some(schema_items)) = (
+                    result.get_mut("achievements").and_then(|value| value.as_array_mut()),
+                    schema_achievements,
+                ) {
+                    let icons: HashMap<&str, (&str, &str)> = schema_items
+                        .iter()
+                        .filter_map(|item| {
+                            Some((
+                                item.get("name")?.as_str()?,
+                                (item.get("icon")?.as_str()?, item.get("icongray")?.as_str()?),
+                            ))
+                        })
+                        .collect();
+                    for item in items {
+                        if let Some(name) = item.get("id").and_then(|value| value.as_str()) {
+                            if let Some((normal, locked)) = icons.get(name) {
+                                if item.get("iconNormal").and_then(|value| value.as_str()).unwrap_or("").is_empty() {
+                                    item["iconNormal"] = serde_json::Value::String((*normal).to_string());
+                                }
+                                if item.get("iconLocked").and_then(|value| value.as_str()).unwrap_or("").is_empty() {
+                                    item["iconLocked"] = serde_json::Value::String((*locked).to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(result)
 }
 
 // ── Unlock or lock a single achievement ──────────────────────────────
