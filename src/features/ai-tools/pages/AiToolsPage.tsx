@@ -1,5 +1,6 @@
 import { WandSparkles } from 'lucide-react';
 import ReadmeGeneratorTool from '../components/ReadmeGeneratorTool';
+import DatabaseGenWorkspace from '../components/DatabaseGenWorkspace';
 
 export default function AiToolsPage() {
   return (
@@ -25,7 +26,10 @@ export default function AiToolsPage() {
       </header>
 
       <main className="mt-8 min-w-0">
+        <DatabaseGenWorkspace />
+        <div className="mt-8">
         <ReadmeGeneratorTool />
+        </div>
       </main>
     </div>
   );
