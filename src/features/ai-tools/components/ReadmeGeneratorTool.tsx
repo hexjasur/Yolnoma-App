@@ -99,7 +99,7 @@ async function requestReadme(apiKey: string, model: string, context: string, cus
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://yolnoma.app',
+      'HTTP-Referer': 'https://app.yolnoma.uz',
       'X-Title': 'Yolnoma AI README Generator',
     },
     body: { model, max_tokens: 5000, temperature: 0.25, messages: [{ role: 'system', content: system }, { role: 'user', content: [{ type: 'text', text: `${context}\n\nCUSTOM USER INSTRUCTIONS:\n${customPrompt || 'No additional instructions. Use your best documentation judgment.'}` }, ...imageParts] }] },

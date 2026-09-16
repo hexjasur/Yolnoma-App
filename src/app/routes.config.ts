@@ -110,7 +110,7 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   { id: 'marketplace', path: '/marketplace', component: MarketplacePage, mobile: true, status: 'dev', label: 'Marketplace', icon: Coins, navGroup: 'workspace' },
   { id: 'feedback', path: '/feedback', component: FeedbackPage, mobile: true, label: 'Ideas & Bugs', icon: Bot, navGroup: 'workspace' },
   { id: 'currency', path: '/tools/currency', component: CurrencyConverterPage, mobile: true, label: 'Currency Converter', description: '160+ currencies & charts', icon: Coins, navGroup: 'tools', pinnable: true },
-  { id: 'bg-remover', path: '/tools/bg-remover', component: BackgroundRemoverPage, mobile: true, label: 'Remove background', description: 'Through AI', icon: Sparkles, navGroup: 'tools', pinnable: true },
+  { id: 'bg-remover', path: '/tools/bg-remover', component: BackgroundRemoverPage, mobile: true, label: 'Background Remover', description: 'Through AI', icon: Sparkles, navGroup: 'tools', pinnable: true },
   { id: 'steam-idler', path: '/tools/steam/steam-idler', component: SteamIdlerPage, label: 'Steam / Idler', description: 'Automated idling', icon: Gamepad2, navGroup: 'tools', pinnable: true },
   { id: 'image', path: '/tools/image', component: ImagePage, label: 'Image', description: 'Convert, compress & optimize images', icon: ImageIcon, navGroup: 'tools', pinnable: true },
   { id: 'video-downloader', path: '/tools/video-downloader', component: VideoDownloader, label: 'YT Video Downloader', description: 'Download videos locally', icon: Download, navGroup: 'tools', pinnable: true },

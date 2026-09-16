@@ -63,7 +63,7 @@ const WRITE_FILE_TOOL = { type: 'function', function: { name: 'write_file', desc
 async function requestAgent(apiKey: string, model: string, messages: ChatMessage[]) {
   return invoke<ProxyResponse>('proxy_request', {
     method: 'POST', url: 'https://openrouter.ai/api/v1/chat/completions',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://yolnoma.app', 'X-Title': 'Yolnoma Agent' },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://app.yolnoma.uz', 'X-Title': 'Yolnoma Agent' },
     body: { model, max_tokens: 3000, messages, tools: [READ_FILE_TOOL, WRITE_FILE_TOOL], tool_choice: 'auto' },
   });
 }

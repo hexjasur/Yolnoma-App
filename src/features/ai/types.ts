@@ -62,4 +62,5 @@ export const DEFAULT_MODELS: OpenRouterModel[] = [
   { id: 'google/gemma-3-27b-it', name: 'Gemma 3 27B IT' },
   { id: 'qwen/qwen3-8b', name: 'Qwen 3 8B' },
   { id: 'meta-llama/llama-3.3-8b-instruct', name: 'Llama 3.3 8B Instruct' },
+  { id: 'laguna-s-2.1', name: 'Poolside: Laguna S 2.1' },
 ];
