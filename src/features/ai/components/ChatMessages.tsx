@@ -1,4 +1,4 @@
-import { Loader2, MessageSquare } from 'lucide-react';
+import { Loader2, MessageSquare, Pencil, RotateCcw } from 'lucide-react';
 import type { ChatMessage, OpenRouterModel } from '../types';
 import MarkdownContent from './MarkdownContent';
 
@@ -8,6 +8,9 @@ interface ChatMessagesProps {
   loading: boolean;
   activeModel: string;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  onEditUserMessage: (message: ChatMessage) => void;
+  onRegenerateAssistantMessage: (message: ChatMessage) => void;
+  regeneratingMessageId: string | null;
 }
 
 export default function ChatMessages({
@@ -16,6 +19,9 @@ export default function ChatMessages({
   loading,
   activeModel,
   messagesEndRef,
+  onEditUserMessage,
+  onRegenerateAssistantMessage,
+  regeneratingMessageId,
 }: ChatMessagesProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
@@ -41,8 +47,8 @@ export default function ChatMessages({
               <div
                 className={
                   message.role === 'user'
-                    ? 'max-w-[85%] rounded-lg bg-[var(--accent-dim)] px-4 py-3 text-sm leading-relaxed text-white'
-                    : 'max-w-[85%] px-1 py-3 text-sm leading-relaxed text-white/80'
+                    ? 'group max-w-[85%] rounded-lg bg-[var(--accent-dim)] px-4 py-3 text-sm leading-relaxed text-white'
+                    : 'group max-w-[85%] px-1 py-3 text-sm leading-relaxed text-white/80'
                 }
               >
                 <MarkdownContent content={message.content} />
@@ -52,6 +58,30 @@ export default function ChatMessages({
                       message.model}
                   </p>
                 )}
+                <div className={`mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {message.role === 'user' ? (
+                    <button
+                      type="button"
+                      title="Edit and resend"
+                      aria-label="Edit and resend message"
+                      onClick={() => onEditUserMessage(message)}
+                      className="rounded-md p-1.5 text-white/35 hover:bg-white/[0.08] hover:text-white"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      title="Regenerate response"
+                      aria-label="Regenerate response"
+                      disabled={Boolean(regeneratingMessageId)}
+                      onClick={() => onRegenerateAssistantMessage(message)}
+                      className="rounded-md p-1.5 text-white/35 hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
+                    >
+                      <RotateCcw size={13} className={regeneratingMessageId === message.id ? 'animate-spin' : ''} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
