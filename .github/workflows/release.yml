@@ -46,12 +46,14 @@ jobs:
           VITE_ABC_KEY: ${{ secrets.VITE_ABC_KEY }}
           VITE_REMOVE_BG_API_KEY: ${{ secrets.VITE_REMOVE_BG_API_KEY }}
           VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
+          VITE_FORMSPREE_ID: ${{ secrets.VITE_FORMSPREE_ID }}
         run: |
           $required = @(
             "STEAM_API_KEY",
             "VITE_ABC_KEY",
             "VITE_REMOVE_BG_API_KEY",
-            "VITE_IMGBB_API_KEY"
+            "VITE_IMGBB_API_KEY",
+            "VITE_FORMSPREE_ID"
           )
 
           $missing = @($required | Where-Object { [string]::IsNullOrWhiteSpace((Get-Item "env:$_").Value) })
@@ -69,6 +71,7 @@ jobs:
           VITE_ABC_KEY: ${{ secrets.VITE_ABC_KEY }}
           VITE_REMOVE_BG_API_KEY: ${{ secrets.VITE_REMOVE_BG_API_KEY }}
           VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
+          VITE_FORMSPREE_ID: ${{ secrets.VITE_FORMSPREE_ID }}
         with:
           tagName: v__VERSION__
           releaseName: "Yolnoma v__VERSION__"
