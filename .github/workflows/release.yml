@@ -441,25 +441,17 @@ jobs:
             git checkout -B $updatesBranch FETCH_HEAD
           }
 
+          # The updates branch is a deployment snapshot, not a source-code branch.
+          # Drop its old commit history so repeated releases do not make clones grow
+          # with every large Windows installer. The raw URLs remain unchanged.
+          git checkout --orphan updates-clean
+          git rm -rf . 2>$null
+          git branch -D $updatesBranch 2>$null
+          git branch -m $updatesBranch
+
           # Configure Git user identity for commit
           git config user.name "Yolnoma Release Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # ----------------------------------------------------------------
-          # Remove stale installer/signature files from previous releases.
-          # Only the current version's files should exist in the public repo.
-          # latest.json is NOT deleted here — it will be overwritten below.
-          # ----------------------------------------------------------------
-          $oldExe = Get-ChildItem -Path "." -Filter "*.exe" -ErrorAction SilentlyContinue
-          foreach ($f in $oldExe) {
-            Write-Host "Removing old installer: $($f.Name)"
-            Remove-Item $f.FullName -Force
-          }
-          $oldSig = Get-ChildItem -Path "." -Filter "*.sig" -ErrorAction SilentlyContinue
-          foreach ($f in $oldSig) {
-            Write-Host "Removing old signature: $($f.Name)"
-            Remove-Item $f.FullName -Force
-          }
 
           # Copy update files into repository root
           Copy-Item "../updater-files/$($exe.Name)" "./$($exe.Name)" -Force
