@@ -1,11 +1,11 @@
 {
-  "version": "1.0.15",
-  "notes": "🐛 Bug Fixes\n\n• Allow Formspree feedback in production\n\n📚 Documentation\n\n• Document local chat storage and security policy\n\n🔧 Maintenance\n\n• Release v1.0.15",
-  "pub_date": "2026-09-16T07:05:00Z",
+  "version": "1.0.16",
+  "notes": "Yolnoma v1.0.16 is available. This update fixes the legacy updater endpoint and includes the latest application improvements.",
+  "pub_date": "2026-09-16T18:54:40Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSG1LaHZwWVMrblpTZ0ptckQ4VXV1YUkxVGozbTduZ215MTJKRmYzNjZjZlBtK2hWM2xQWGIxWGw1Zk9ONHVYSUFUV0lscHVNWGNXdGhmQ2lkdkg1blFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NTQyMjM4CWZpbGU6WW9sbm9tYV8xLjAuMTVfeDY0LXNldHVwLmV4ZQpuSGdpZXlDV091Y0laeTBMMEFkcDRscFJhWFZqc2oyYkVyZVF0U3BTRTJwbk9BcS9MS1EzTENDUWdyRUhGbjFkNHFhelhNVG1NWjA3SXlBbnUyZnREZz09Cg==",
-      "url": "https://raw.githubusercontent.com/hexjasur/Yolnoma-App/updates/Yolnoma_1.0.15_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSGx5N2psQ01lSmM5M2MwTFR2c2g5dlI4VkdNZ2YwYWd6YU0reERyU3BIVEUxOFl5MFBGTzMzMWI5NCtGSEFodUFhQTJKbGlZaUtMaHgvbGJOenc2Z1FJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NTg0ODc5CWZpbGU6WW9sbm9tYV8xLjAuMTZfeDY0LXNldHVwLmV4ZQpxV1dMczFZSWVPZHBydTF5SFJVUzN4R2xMaGUwc0p0MHE1STJXanFvY2lwam4rVlErNVNIRDVTSFJxTlprRnVPZElZazBzSzBOSXRrSkNpRjFGK0dDQT09Cg==",
+      "url": "https://github.com/hexjasur/Yolnoma-App/releases/download/v1.0.16/Yolnoma_1.0.16_x64-setup.exe"
     }
   }
 }
