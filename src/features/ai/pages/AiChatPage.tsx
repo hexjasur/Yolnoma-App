@@ -36,7 +36,7 @@ export default function AiChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<'models' | 'sessions'>('models');
+  const [sidebarTab, setSidebarTab] = useState<'models' | 'sessions'>('sessions');
   const [sessionSearch, setSessionSearch] = useState('');
   const [openSessionMenu, setOpenSessionMenu] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -51,14 +51,11 @@ export default function AiChatPage() {
   const [modelsLoading, setModelsLoading] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [activeModel, setActiveModel] = useState('');
   const [limitCheckedAt, setLimitCheckedAt] = useState('');
-  const [showKeyModal, setShowKeyModal] = useState(
-    () =>
-      !apiKey &&
-      sessionStorage.getItem('yolnoma.ai-key-guide-dismissed') !== 'true',
-  );
+  const [showKeyModal, setShowKeyModal] = useState(false);
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -83,16 +80,10 @@ export default function AiChatPage() {
       const migrated = await migrateLegacyChat(user);
       if (migrated) loaded = await loadChatSessions(user);
       setSessions(loaded);
-      if (loaded[0]) {
-        const session = await loadChatSession(user, loaded[0].id);
-        setActiveSession(session);
-        setMessages(session.messages);
-      } else {
-        const session = await createSession(user);
-        setActiveSession(session);
-        setSessions([{ ...session, messageCount: 0 }]);
-        setMessages([]);
-      }
+      // Start every visit in a clean draft. Users can explicitly choose a saved
+      // session from the Sessions tab instead of reopening history automatically.
+      setActiveSession(null);
+      setMessages([]);
       setStorageReady(true);
     })().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load chat sessions.'));
   }, [user?.id, user?.email]);
@@ -150,6 +141,10 @@ export default function AiChatPage() {
   useEffect(() => {
     let cancelled = false;
     setModelsLoading(true);
+    if (!storageReady || !apiKey.trim()) {
+      setModelsLoading(false);
+      return () => { cancelled = true; };
+    }
     fetchOpenRouterModels(apiKey)
       .then(({ response, models: fetchedModels }) => {
         if (
@@ -273,9 +268,7 @@ export default function AiChatPage() {
     setOpenSessionMenu(null);
   };
 
-  const sendMessage = async (event: React.SyntheticEvent) => {
-    event.preventDefault();
-    const text = prompt.trim();
+  const sendPrompt = async (text: string, conversationMessages = messages) => {
     if (!text || loading) return;
     if (!apiKey) {
       setError('Enter and save your OpenRouter API key first.');
@@ -289,7 +282,7 @@ export default function AiChatPage() {
       setSessions((current) => [{ ...session!, messageCount: 0 }, ...current]);
     }
     const userMessage: ChatMessage = { role: 'user', content: text, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    const nextMessages = [...messages, userMessage];
+    const nextMessages = [...conversationMessages, userMessage];
     setMessages(nextMessages);
     setPrompt('');
     if (promptInputRef.current) promptInputRef.current.style.height = '';
@@ -354,7 +347,7 @@ export default function AiChatPage() {
         `All selected models reached their limit. Last checked at ${checkedAt}.`,
       );
     } catch (requestError) {
-      setMessages(messages);
+      setMessages(conversationMessages);
       setPrompt(text);
       requestAnimationFrame(() => promptInputRef.current?.focus());
       setError(
@@ -366,6 +359,31 @@ export default function AiChatPage() {
       setLoading(false);
       setActiveModel('');
     }
+  };
+
+  const sendMessage = (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    const text = prompt.trim();
+    if (!text || loading) return;
+    void sendPrompt(text);
+  };
+
+  const editUserMessage = (message: ChatMessage) => {
+    const index = messages.findIndex((item) => item.id === message.id);
+    if (index < 0) return;
+    setMessages(messages.slice(0, index));
+    setPrompt(message.content);
+    requestAnimationFrame(() => promptInputRef.current?.focus());
+  };
+
+  const regenerateAssistantMessage = (message: ChatMessage) => {
+    const index = messages.findIndex((item) => item.id === message.id);
+    if (index < 0) return;
+    const previousUser = [...messages.slice(0, index)].reverse().find((item) => item.role === 'user');
+    if (!previousUser || loading) return;
+    setMessages(messages.slice(0, index));
+    setRegeneratingMessageId(message.id ?? null);
+    void sendPrompt(previousUser.content, messages.slice(0, index)).finally(() => setRegeneratingMessageId(null));
   };
 
   return (
@@ -409,6 +427,9 @@ export default function AiChatPage() {
           loading={loading}
           activeModel={activeModel}
           messagesEndRef={messagesEndRef}
+          onEditUserMessage={editUserMessage}
+          onRegenerateAssistantMessage={regenerateAssistantMessage}
+          regeneratingMessageId={regeneratingMessageId}
         />
 
         {error && (
@@ -431,8 +452,8 @@ export default function AiChatPage() {
       <aside className="order-2 flex h-[calc(100vh-150px)] min-h-0 flex-col gap-4 overflow-hidden lg:order-2">
         <section className="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/[0.08] bg-[#111109] p-4">
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
-            <button type="button" onClick={() => setSidebarTab('models')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'models' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><Settings2 size={13} /> Models</button>
             <button type="button" onClick={() => setSidebarTab('sessions')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'sessions' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><MessageSquare size={13} /> Sessions</button>
+            <button type="button" onClick={() => setSidebarTab('models')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'models' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><Settings2 size={13} /> Models</button>
           </div>
           {sidebarTab === 'models' ? <>
           <div className="mb-3 flex items-center justify-between gap-3">
