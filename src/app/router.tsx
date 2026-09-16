@@ -6,6 +6,7 @@ import ProtectedLayout from '@/app/layout/ProtectedLayout';
 import RouteLoadingFallback from '@/app/components/RouteLoadingFallback';
 import RouteLoadErrorFallback from '@/app/components/RouteLoadErrorFallback';
 import RouteStatusGuard from '@/app/components/RouteStatusGuard';
+import MobileAccessGuard from '@/app/components/MobileAccessGuard';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import SessionManagementPage from '@/features/auth/pages/SessionManagementPage';
@@ -26,11 +27,13 @@ function RouteContent({ children }: { children: ReactNode }) {
 function createConfiguredRoute(route: RouteDefinition): ReactElement {
   const Page = route.component;
   let content = (
-    <RouteStatusGuard status={route.status} featureName={route.id}>
-      <RouteContent>
-        <Page />
-      </RouteContent>
-    </RouteStatusGuard>
+      <RouteStatusGuard status={route.status} featureName={route.id}>
+        <MobileAccessGuard allowed={route.mobile === true} featureName={route.label ?? route.id}>
+          <RouteContent>
+            <Page />
+          </RouteContent>
+        </MobileAccessGuard>
+      </RouteStatusGuard>
   );
 
   if (route.guard?.kind === 'role') {
@@ -74,9 +77,11 @@ export default function AppRoutes() {
         <Route
           path="/crosshair-overlay-window"
           element={
-            <RouteContent>
-              <CrosshairOverlayWindow />
-            </RouteContent>
+            <MobileAccessGuard allowed={false} featureName="Crosshair Overlay">
+              <RouteContent>
+                <CrosshairOverlayWindow />
+              </RouteContent>
+            </MobileAccessGuard>
           }
         />
 
@@ -86,11 +91,13 @@ export default function AppRoutes() {
               path={agentRoute.path}
               element={
                 <RouteStatusGuard status={agentRoute.status} featureName={agentRoute.id}>
-                  {AgentPage && (
-                    <RouteContent>
-                      <AgentPage />
-                    </RouteContent>
-                  )}
+                  <MobileAccessGuard allowed={false} featureName={agentRoute.label ?? agentRoute.id}>
+                    {AgentPage && (
+                      <RouteContent>
+                        <AgentPage />
+                      </RouteContent>
+                    )}
+                  </MobileAccessGuard>
                 </RouteStatusGuard>
               }
             />

@@ -1,17 +1,27 @@
+#[cfg(not(target_os = "android"))]
 use tauri::Manager;
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_deep_link::DeepLinkExt;
 
+#[cfg(not(target_os = "android"))]
 mod app_commands;
 mod app_state;
+#[cfg(not(target_os = "android"))]
 mod commands;
+#[cfg(not(target_os = "android"))]
 mod deep_link;
+#[cfg(not(target_os = "android"))]
 mod domains;
+#[cfg(target_os = "android")]
+mod mobile_backend;
+#[cfg(not(target_os = "android"))]
 mod embedded_api_key;
 
 // Kept public for feature modules that use the shared authentication state.
 pub use app_state::AuthState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[cfg(not(target_os = "android"))]
 pub fn run() {
     tauri::Builder::default()
         .manage(app_state::AuthState::new())
@@ -231,4 +241,24 @@ pub fn run() {
             }
         });
 
+}
+
+#[cfg(target_os = "android")]
+#[tauri::mobile_entry_point]
+pub fn run() {
+    tauri::Builder::default()
+        .manage(app_state::AuthState::new())
+        .manage(mobile_backend::MobileStorage::new())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .invoke_handler(tauri::generate_handler![
+            mobile_backend::set_current_user,
+            mobile_backend::get_account_config,
+            mobile_backend::save_account_config,
+            mobile_backend::get_api_key,
+            mobile_backend::set_api_key,
+            mobile_backend::clear_api_key,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running Android application");
 }

@@ -19,6 +19,7 @@ import {
   Trees,
 } from 'lucide-react';
 import ViIcon from '@/assets/VI.svg';
+import { isAndroidApp } from '@/shared/lib/platform';
 
 export type RouteStatus = 'stable' | 'dev' | 'test';
 export type RouteComponent = ComponentType;
@@ -43,6 +44,8 @@ export type RouteDefinition = {
   id: string;
   path: string;
   component: RouteComponent | LazyRouteComponent;
+  /** Temporary allow-list for the Android testing build. */
+  mobile?: boolean;
   status?: RouteStatus;
   guard?: RouteRoleGuard;
   label?: string;
@@ -94,7 +97,7 @@ const JsonViewerPage = lazyPage(() => import('@/features/json-viewer/pages/JsonV
 const roleGuard = (page: string, message: string): RouteRoleGuard => ({ kind: 'role', page, message });
 
 export const ROUTE_CONFIG: readonly RouteDefinition[] = [
-  { id: 'dashboard', path: '/', component: DashboardPage, label: 'Dashboard', navGroup: 'home' },
+  { id: 'dashboard', path: '/', component: DashboardPage, mobile: true, label: 'Dashboard', navGroup: 'home' },
   { id: 'agent', path: '/agent', component: AiAgentPage, status: 'dev', label: 'Yolnoma Agent', icon: Bot, navGroup: 'home' },
   { id: 'codebase-agent', path: '/codebase-agent', component: CodebaseAgentPage, status: 'dev', label: 'Codebase Agent', icon: Bot, navGroup: 'home' },
   { id: 'performances', path: '/performances', component: PerformancePage, guard: roleGuard('performances', 'Access restricted: Performances section is available to Owner only.'), label: 'Performance', icon: Gamepad, navGroup: 'workspace' },
@@ -102,32 +105,36 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   { id: 'videos', path: '/videos', component: VideosPage, guard: roleGuard('videos', 'Access restricted: Stream section is available to Owner only.'), label: 'Stream', icon: Download, navGroup: 'workspace' },
   { id: 'video-detail', path: '/videos/:videoId', component: VideoDetailPage, guard: roleGuard('videos', 'Access restricted: Stream section is available to Owner only.') },
   { id: 'users', path: '/users', component: UsersPage, guard: roleGuard('users', 'You do not have permission to access the Users management page.'), label: 'Users', icon: Bot, navGroup: 'workspace' },
-  { id: 'profile', path: '/profile', component: ProfilePage, label: 'Profile', icon: Bot, navGroup: 'workspace' },
-  { id: 'settings', path: '/settings', component: SettingsPage },
-  { id: 'marketplace', path: '/marketplace', component: MarketplacePage, status: 'dev', label: 'Marketplace', icon: Coins, navGroup: 'workspace' },
-  { id: 'feedback', path: '/feedback', component: FeedbackPage, label: 'Ideas & Bugs', icon: Bot, navGroup: 'workspace' },
-  { id: 'currency', path: '/tools/currency', component: CurrencyConverterPage, label: 'Currency Converter', description: '160+ currencies & charts', icon: Coins, navGroup: 'tools', pinnable: true },
-  { id: 'bg-remover', path: '/tools/bg-remover', component: BackgroundRemoverPage, label: 'Remove background', description: 'Through AI', icon: Sparkles, navGroup: 'tools', pinnable: true },
+  { id: 'profile', path: '/profile', component: ProfilePage, mobile: true, label: 'Profile', icon: Bot, navGroup: 'workspace' },
+  { id: 'settings', path: '/settings', component: SettingsPage, mobile: true },
+  { id: 'marketplace', path: '/marketplace', component: MarketplacePage, mobile: true, status: 'dev', label: 'Marketplace', icon: Coins, navGroup: 'workspace' },
+  { id: 'feedback', path: '/feedback', component: FeedbackPage, mobile: true, label: 'Ideas & Bugs', icon: Bot, navGroup: 'workspace' },
+  { id: 'currency', path: '/tools/currency', component: CurrencyConverterPage, mobile: true, label: 'Currency Converter', description: '160+ currencies & charts', icon: Coins, navGroup: 'tools', pinnable: true },
+  { id: 'bg-remover', path: '/tools/bg-remover', component: BackgroundRemoverPage, mobile: true, label: 'Remove background', description: 'Through AI', icon: Sparkles, navGroup: 'tools', pinnable: true },
   { id: 'steam-idler', path: '/tools/steam/steam-idler', component: SteamIdlerPage, label: 'Steam / Idler', description: 'Automated idling', icon: Gamepad2, navGroup: 'tools', pinnable: true },
   { id: 'image', path: '/tools/image', component: ImagePage, label: 'Image', description: 'Convert, compress & optimize images', icon: ImageIcon, navGroup: 'tools', pinnable: true },
   { id: 'video-downloader', path: '/tools/video-downloader', component: VideoDownloader, label: 'YT Video Downloader', description: 'Download videos locally', icon: Download, navGroup: 'tools', pinnable: true },
   { id: 'port-scanner', path: '/tools/port-scanner', component: PortScannerPage, label: 'Port Scanner', description: 'Inspect local network ports', icon: Radar, navGroup: 'tools', pinnable: true },
   { id: 'archive-explorer', path: '/tools/archive-explorer', component: ArchiveExplorerPage, label: 'Archive Explorer', description: 'Browse compressed files', icon: Archive, navGroup: 'tools', pinnable: true },
-  { id: 'ai-chat', path: '/tools/ai-chat', component: AiChatPage, label: 'AI Chat', description: 'Chat with OpenRouter models', icon: Bot, navGroup: 'tools', pinnable: true },
+  { id: 'ai-chat', path: '/tools/ai-chat', component: AiChatPage, mobile: true, label: 'AI Chat', description: 'Chat with OpenRouter models', icon: Bot, navGroup: 'tools', pinnable: true },
   { id: 'cleaner', path: '/tools/cleaner', component: CleanerPage, label: 'Cleaner', description: 'Clean unwanted files', icon: BrushCleaning, navGroup: 'tools', pinnable: true },
   { id: 'crosshair-overlay', path: '/tools/crosshair-overlay', component: CrosshairPage, label: 'Crosshair Overlay', description: 'Custom desktop crosshair', icon: Crosshair, navGroup: 'tools', pinnable: true },
   { id: 'vi', path: '/vi', component: ViCountdown, label: 'VI COUNTDOWN', description: 'Countdown GTA VI', icon: ViIcon, navGroup: 'tools', pinnable: true },
   { id: 'steam-sam', path: '/tools/steam/sam', component: SteamSamPage, label: 'Steam / SAM', description: 'Manage Steam achievements', icon: Gamepad, navGroup: 'tools', pinnable: true },
   { id: 'steam-review', path: '/tools/steam/review', component: SteamReviewPage, label: 'Steam / Review', description: 'Review Steam games', icon: Gamepad2, navGroup: 'tools', pinnable: true },
-  { id: 'developer-tools', path: '/tools/developer-tools', component: DeveloperToolsPage, label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', icon: Wrench, navGroup: 'workspace', pinnable: true },
-  { id: 'ai-tools', path: '/tools/ai-tools', component: AiToolsPage, label: 'AI Tools', description: 'AI-powered project workspaces', icon: WandSparkles, navGroup: 'workspace', pinnable: true },
-  { id: 'json-viewer', path: '/tools/json', component: JsonViewerPage, label: 'JSON EDIT/VIEW', description: 'Edit JSON and transform it into cards', icon: Wrench, navGroup: 'tools', pinnable: true },
-  { id: 'css-tools', path: '/tools/css-tools', component: CssToolsPage, label: 'CSS Tools', description: 'Gradients, scrollbars & minify', icon: Palette, navGroup: 'tools', pinnable: true },
+  { id: 'developer-tools', path: '/tools/developer-tools', component: DeveloperToolsPage, mobile: true, label: 'Developer Tools', description: 'JSON, JWT, Markdown & more', icon: Wrench, navGroup: 'workspace', pinnable: true },
+  { id: 'ai-tools', path: '/tools/ai-tools', component: AiToolsPage, mobile: true, label: 'AI Tools', description: 'AI-powered project workspaces', icon: WandSparkles, navGroup: 'workspace', pinnable: true },
+  { id: 'json-viewer', path: '/tools/json', component: JsonViewerPage, mobile: true, label: 'JSON EDIT/VIEW', description: 'Edit JSON and transform it into cards', icon: Wrench, navGroup: 'tools', pinnable: true },
+  { id: 'css-tools', path: '/tools/css-tools', component: CssToolsPage, mobile: true, label: 'CSS Tools', description: 'Gradients, scrollbars & minify', icon: Palette, navGroup: 'tools', pinnable: true },
   { id: 'git', path: '/tools/git', component: GitPage, label: 'Git', description: 'Generate best-practice commits', icon: GitBranch, navGroup: 'tools', pinnable: true },
   { id: 'world-3d', path: '/tools/world-3d', component: World3DPage, label: 'Yolnoma World', description: 'Explore the living 3D desktop', icon: Trees, navGroup: 'tools', pinnable: true },
 ];
 
 export const getRouteById = (id: string) => ROUTE_CONFIG.find((route) => route.id === id);
 export const getRouteStatus = (id: string): RouteStatus => getRouteById(id)?.status ?? 'stable';
-export const getNavigationRoutes = () => ROUTE_CONFIG.filter((route) => route.label && route.navGroup);
-export const getToolRoutes = () => ROUTE_CONFIG.filter((route) => route.navGroup === 'tools' && route.description);
+const visibleOnCurrentPlatform = (route: RouteDefinition) => !isAndroidApp() || route.mobile === true;
+
+export const getNavigationRoutes = () =>
+  ROUTE_CONFIG.filter((route) => visibleOnCurrentPlatform(route) && route.label && route.navGroup);
+export const getToolRoutes = () =>
+  ROUTE_CONFIG.filter((route) => visibleOnCurrentPlatform(route) && route.navGroup === 'tools' && route.description);
