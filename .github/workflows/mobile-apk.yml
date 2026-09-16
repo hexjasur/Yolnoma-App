@@ -3,8 +3,8 @@ name: Mobile Android APK Test
 on:
   workflow_dispatch:
   push:
-    branches:
-      - mobile-app-testing
+    tags:
+      - 'mobile-v*'
 
 permissions:
   contents: write
