@@ -3,7 +3,7 @@ import { Braces, Copy, Eye, RotateCcw } from 'lucide-react';
 import { ToolCard, ToolTitle } from './ToolShell';
 
 const INITIAL_PATTERN = '(?<user>[a-z0-9._%+-]+)@(?<domain>[a-z0-9.-]+\\.[a-z]{2,})';
-const INITIAL_TEXT = 'Contact team@yolnoma.app or support@example.com for help.\nIgnore invalid@ address.';
+const INITIAL_TEXT = 'Contact team@app.yolnoma.uz or support@example.com for help.\nIgnore invalid@ address.';
 const INITIAL_FLAGS = 'gi';
 
 function highlight(text: string, regex: RegExp) {

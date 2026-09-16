@@ -4,7 +4,7 @@ import { ToolCard, ToolTitle } from './ToolShell';
 
 type Mode = 'encode' | 'decode';
 
-const EXAMPLE = 'https://yolnoma.app/search?q=hello world&lang=en';
+const EXAMPLE = 'https://app.yolnoma.uz/search?q=hello world&lang=en';
 
 export default function UrlEncoderTool() {
   const [mode, setMode] = useState<Mode>('encode');

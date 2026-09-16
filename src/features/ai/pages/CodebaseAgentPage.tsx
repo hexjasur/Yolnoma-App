@@ -127,7 +127,7 @@ async function requestAgentCompletion(apiKey: string, model: string, messages: A
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://yolnoma.app',
+      'HTTP-Referer': 'https://app.yolnoma.uz',
       'X-Title': 'Yolnoma Codebase Agent',
     },
     body: {
