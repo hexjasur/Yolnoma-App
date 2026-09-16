@@ -61,6 +61,7 @@ export default function AiChatPage() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hydratedMessagesRef = useRef<string | null>(null);
 
   useEffect(() => {
     setStorageReady(false);
@@ -86,6 +87,7 @@ export default function AiChatPage() {
       if (requestedSessionId && loaded.some((session) => session.id === requestedSessionId)) {
         const selected = await loadChatSession(user, requestedSessionId);
         setActiveSession(selected);
+        hydratedMessagesRef.current = JSON.stringify(selected.messages);
         setMessages(selected.messages);
       } else {
         // Start every visit in a clean draft unless the URL explicitly names a
@@ -100,11 +102,21 @@ export default function AiChatPage() {
 
   useEffect(() => {
     if (!storageReady || !activeSession || !user) return;
-    const session = { ...activeSession, messages };
-    void persistChatSession(user, session).then(() => {
-      setActiveSession(session);
-      setSessions((current) => current.map((item) => item.id === session.id ? { ...item, title: session.title, updatedAt: session.updatedAt, messageCount: messages.length, model: session.model } : item).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
-    });
+    const messageSignature = JSON.stringify(messages);
+    if (hydratedMessagesRef.current === messageSignature) {
+      hydratedMessagesRef.current = null;
+      return;
+    }
+    const session = { ...activeSession, messages, updatedAt: Date.now().toString() };
+    // Optimistically move the active conversation to the top immediately. The
+    // native writer also refreshes updatedAt, but the list must not wait for it.
+    setActiveSession(session);
+    setSessions((current) => current
+      .map((item) => item.id === session.id
+        ? { ...item, title: session.title, updatedAt: session.updatedAt, messageCount: messages.length, model: session.model }
+        : item)
+      .sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt)));
+    void persistChatSession(user, session);
   }, [messages]);
 
 
@@ -241,6 +253,7 @@ export default function AiChatPage() {
     if (!user || id === activeSession?.id) return;
     const session = await loadChatSession(user, id);
     setActiveSession(session);
+    hydratedMessagesRef.current = JSON.stringify(session.messages);
     setMessages(session.messages);
     setSearchParams({ sessionId: id });
     setOpenSessionMenu(null);
@@ -281,6 +294,7 @@ export default function AiChatPage() {
       session = await createSession(user);
       setActiveSession(session);
       setSessions((current) => [{ ...session!, messageCount: 0 }, ...current]);
+      setSearchParams({ sessionId: session.id });
     }
     const userMessage: ChatMessage = { role: 'user', content: text, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const nextMessages = [...conversationMessages, userMessage];

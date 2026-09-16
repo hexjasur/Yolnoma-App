@@ -47,8 +47,8 @@ export default function ChatMessages({
               <div
                 className={
                   message.role === 'user'
-                    ? 'group max-w-[85%] rounded-lg bg-[var(--accent-dim)] px-4 py-3 text-sm leading-relaxed text-white'
-                    : 'group max-w-[85%] px-1 py-3 text-sm leading-relaxed text-white/80'
+                    ? 'group w-fit max-w-[72%] rounded-2xl bg-[var(--accent-dim)] px-3.5 py-2.5 text-sm leading-relaxed text-white [&_p]:m-0 [&_p]:break-words'
+                    : 'group max-w-[85%] px-1 py-2 text-sm leading-relaxed text-white/80'
                 }
               >
                 <MarkdownContent content={message.content} />
