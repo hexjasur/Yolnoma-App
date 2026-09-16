@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Bot, KeyRound, Settings2, ShieldCheck, Trash2, MessageSquare, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
 import { Button } from '@/shared/ui';
@@ -31,6 +32,8 @@ import { createSession, loadChatSession, loadChatSessions, migrateLegacyChat, pe
 
 export default function AiChatPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSessionId = searchParams.get('sessionId');
   const [apiKey, setApiKey] = useState('');
   const [draftKey, setDraftKey] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -80,13 +83,20 @@ export default function AiChatPage() {
       const migrated = await migrateLegacyChat(user);
       if (migrated) loaded = await loadChatSessions(user);
       setSessions(loaded);
-      // Start every visit in a clean draft. Users can explicitly choose a saved
-      // session from the Sessions tab instead of reopening history automatically.
-      setActiveSession(null);
-      setMessages([]);
+      if (requestedSessionId && loaded.some((session) => session.id === requestedSessionId)) {
+        const selected = await loadChatSession(user, requestedSessionId);
+        setActiveSession(selected);
+        setMessages(selected.messages);
+      } else {
+        // Start every visit in a clean draft unless the URL explicitly names a
+        // session. This keeps refreshes deterministic and avoids stale history.
+        setActiveSession(null);
+        setMessages([]);
+        if (requestedSessionId) setSearchParams({}, { replace: true });
+      }
       setStorageReady(true);
     })().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load chat sessions.'));
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, requestedSessionId, setSearchParams]);
 
   useEffect(() => {
     if (!storageReady || !activeSession || !user) return;
@@ -104,12 +114,6 @@ export default function AiChatPage() {
       block: 'end',
     });
   }, [loading, messages]);
-
-  useEffect(() => {
-    if (apiKey && !showKeyModal && !loading) {
-      requestAnimationFrame(() => promptInputRef.current?.focus());
-    }
-  }, [apiKey, loading, showKeyModal]);
 
   useEffect(() => {
     const handleGlobalTyping = (event: KeyboardEvent) => {
@@ -230,6 +234,7 @@ export default function AiChatPage() {
     setActiveSession(null);
     setMessages([]);
     setSidebarTab('sessions');
+    setSearchParams({}, { replace: false });
   };
 
   const selectSession = async (id: string) => {
@@ -237,6 +242,7 @@ export default function AiChatPage() {
     const session = await loadChatSession(user, id);
     setActiveSession(session);
     setMessages(session.messages);
+    setSearchParams({ sessionId: id });
     setOpenSessionMenu(null);
   };
 
@@ -255,14 +261,9 @@ export default function AiChatPage() {
     await invoke('delete_ai_chat_session', { userId: user.id, sessionId: id });
     const remaining = sessions.filter((session) => session.id !== id);
     if (activeSession?.id === id) {
-      if (remaining[0]) {
-        const replacement = await loadChatSession(user, remaining[0].id);
-        setActiveSession(replacement);
-        setMessages(replacement.messages);
-      } else {
-        setActiveSession(null);
-        setMessages([]);
-      }
+      setActiveSession(null);
+      setMessages([]);
+      setSearchParams({}, { replace: false });
       setSessions(remaining);
     } else setSessions(remaining);
     setOpenSessionMenu(null);
@@ -286,7 +287,6 @@ export default function AiChatPage() {
     setMessages(nextMessages);
     setPrompt('');
     if (promptInputRef.current) promptInputRef.current.style.height = '';
-    requestAnimationFrame(() => promptInputRef.current?.focus());
     setError('');
     setLimitCheckedAt('');
     setLoading(true);
@@ -349,7 +349,6 @@ export default function AiChatPage() {
     } catch (requestError) {
       setMessages(conversationMessages);
       setPrompt(text);
-      requestAnimationFrame(() => promptInputRef.current?.focus());
       setError(
         requestError instanceof Error
           ? requestError.message
