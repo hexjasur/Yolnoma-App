@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Bot, KeyRound, Settings2, ShieldCheck, Trash2, MessageSquare, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
 import { Button } from '@/shared/ui';
@@ -31,12 +32,14 @@ import { createSession, loadChatSession, loadChatSessions, migrateLegacyChat, pe
 
 export default function AiChatPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSessionId = searchParams.get('sessionId');
   const [apiKey, setApiKey] = useState('');
   const [draftKey, setDraftKey] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<'models' | 'sessions'>('models');
+  const [sidebarTab, setSidebarTab] = useState<'models' | 'sessions'>('sessions');
   const [sessionSearch, setSessionSearch] = useState('');
   const [openSessionMenu, setOpenSessionMenu] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -51,16 +54,14 @@ export default function AiChatPage() {
   const [modelsLoading, setModelsLoading] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [activeModel, setActiveModel] = useState('');
   const [limitCheckedAt, setLimitCheckedAt] = useState('');
-  const [showKeyModal, setShowKeyModal] = useState(
-    () =>
-      !apiKey &&
-      sessionStorage.getItem('yolnoma.ai-key-guide-dismissed') !== 'true',
-  );
+  const [showKeyModal, setShowKeyModal] = useState(false);
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hydratedMessagesRef = useRef<string | null>(null);
 
   useEffect(() => {
     setStorageReady(false);
@@ -83,27 +84,39 @@ export default function AiChatPage() {
       const migrated = await migrateLegacyChat(user);
       if (migrated) loaded = await loadChatSessions(user);
       setSessions(loaded);
-      if (loaded[0]) {
-        const session = await loadChatSession(user, loaded[0].id);
-        setActiveSession(session);
-        setMessages(session.messages);
+      if (requestedSessionId && loaded.some((session) => session.id === requestedSessionId)) {
+        const selected = await loadChatSession(user, requestedSessionId);
+        setActiveSession(selected);
+        hydratedMessagesRef.current = JSON.stringify(selected.messages);
+        setMessages(selected.messages);
       } else {
-        const session = await createSession(user);
-        setActiveSession(session);
-        setSessions([{ ...session, messageCount: 0 }]);
+        // Start every visit in a clean draft unless the URL explicitly names a
+        // session. This keeps refreshes deterministic and avoids stale history.
+        setActiveSession(null);
         setMessages([]);
+        if (requestedSessionId) setSearchParams({}, { replace: true });
       }
       setStorageReady(true);
     })().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load chat sessions.'));
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, requestedSessionId, setSearchParams]);
 
   useEffect(() => {
     if (!storageReady || !activeSession || !user) return;
-    const session = { ...activeSession, messages };
-    void persistChatSession(user, session).then(() => {
-      setActiveSession(session);
-      setSessions((current) => current.map((item) => item.id === session.id ? { ...item, title: session.title, updatedAt: session.updatedAt, messageCount: messages.length, model: session.model } : item).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
-    });
+    const messageSignature = JSON.stringify(messages);
+    if (hydratedMessagesRef.current === messageSignature) {
+      hydratedMessagesRef.current = null;
+      return;
+    }
+    const session = { ...activeSession, messages, updatedAt: Date.now().toString() };
+    // Optimistically move the active conversation to the top immediately. The
+    // native writer also refreshes updatedAt, but the list must not wait for it.
+    setActiveSession(session);
+    setSessions((current) => current
+      .map((item) => item.id === session.id
+        ? { ...item, title: session.title, updatedAt: session.updatedAt, messageCount: messages.length, model: session.model }
+        : item)
+      .sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt)));
+    void persistChatSession(user, session);
   }, [messages]);
 
 
@@ -113,12 +126,6 @@ export default function AiChatPage() {
       block: 'end',
     });
   }, [loading, messages]);
-
-  useEffect(() => {
-    if (apiKey && !showKeyModal && !loading) {
-      requestAnimationFrame(() => promptInputRef.current?.focus());
-    }
-  }, [apiKey, loading, showKeyModal]);
 
   useEffect(() => {
     const handleGlobalTyping = (event: KeyboardEvent) => {
@@ -150,6 +157,10 @@ export default function AiChatPage() {
   useEffect(() => {
     let cancelled = false;
     setModelsLoading(true);
+    if (!storageReady || !apiKey.trim()) {
+      setModelsLoading(false);
+      return () => { cancelled = true; };
+    }
     fetchOpenRouterModels(apiKey)
       .then(({ response, models: fetchedModels }) => {
         if (
@@ -235,13 +246,16 @@ export default function AiChatPage() {
     setActiveSession(null);
     setMessages([]);
     setSidebarTab('sessions');
+    setSearchParams({}, { replace: false });
   };
 
   const selectSession = async (id: string) => {
     if (!user || id === activeSession?.id) return;
     const session = await loadChatSession(user, id);
     setActiveSession(session);
+    hydratedMessagesRef.current = JSON.stringify(session.messages);
     setMessages(session.messages);
+    setSearchParams({ sessionId: id });
     setOpenSessionMenu(null);
   };
 
@@ -260,22 +274,15 @@ export default function AiChatPage() {
     await invoke('delete_ai_chat_session', { userId: user.id, sessionId: id });
     const remaining = sessions.filter((session) => session.id !== id);
     if (activeSession?.id === id) {
-      if (remaining[0]) {
-        const replacement = await loadChatSession(user, remaining[0].id);
-        setActiveSession(replacement);
-        setMessages(replacement.messages);
-      } else {
-        setActiveSession(null);
-        setMessages([]);
-      }
+      setActiveSession(null);
+      setMessages([]);
+      setSearchParams({}, { replace: false });
       setSessions(remaining);
     } else setSessions(remaining);
     setOpenSessionMenu(null);
   };
 
-  const sendMessage = async (event: React.SyntheticEvent) => {
-    event.preventDefault();
-    const text = prompt.trim();
+  const sendPrompt = async (text: string, conversationMessages = messages) => {
     if (!text || loading) return;
     if (!apiKey) {
       setError('Enter and save your OpenRouter API key first.');
@@ -287,13 +294,13 @@ export default function AiChatPage() {
       session = await createSession(user);
       setActiveSession(session);
       setSessions((current) => [{ ...session!, messageCount: 0 }, ...current]);
+      setSearchParams({ sessionId: session.id });
     }
     const userMessage: ChatMessage = { role: 'user', content: text, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    const nextMessages = [...messages, userMessage];
+    const nextMessages = [...conversationMessages, userMessage];
     setMessages(nextMessages);
     setPrompt('');
     if (promptInputRef.current) promptInputRef.current.style.height = '';
-    requestAnimationFrame(() => promptInputRef.current?.focus());
     setError('');
     setLimitCheckedAt('');
     setLoading(true);
@@ -354,9 +361,8 @@ export default function AiChatPage() {
         `All selected models reached their limit. Last checked at ${checkedAt}.`,
       );
     } catch (requestError) {
-      setMessages(messages);
+      setMessages(conversationMessages);
       setPrompt(text);
-      requestAnimationFrame(() => promptInputRef.current?.focus());
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -366,6 +372,31 @@ export default function AiChatPage() {
       setLoading(false);
       setActiveModel('');
     }
+  };
+
+  const sendMessage = (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    const text = prompt.trim();
+    if (!text || loading) return;
+    void sendPrompt(text);
+  };
+
+  const editUserMessage = (message: ChatMessage) => {
+    const index = messages.findIndex((item) => item.id === message.id);
+    if (index < 0) return;
+    setMessages(messages.slice(0, index));
+    setPrompt(message.content);
+    requestAnimationFrame(() => promptInputRef.current?.focus());
+  };
+
+  const regenerateAssistantMessage = (message: ChatMessage) => {
+    const index = messages.findIndex((item) => item.id === message.id);
+    if (index < 0) return;
+    const previousUser = [...messages.slice(0, index)].reverse().find((item) => item.role === 'user');
+    if (!previousUser || loading) return;
+    setMessages(messages.slice(0, index));
+    setRegeneratingMessageId(message.id ?? null);
+    void sendPrompt(previousUser.content, messages.slice(0, index)).finally(() => setRegeneratingMessageId(null));
   };
 
   return (
@@ -409,6 +440,9 @@ export default function AiChatPage() {
           loading={loading}
           activeModel={activeModel}
           messagesEndRef={messagesEndRef}
+          onEditUserMessage={editUserMessage}
+          onRegenerateAssistantMessage={regenerateAssistantMessage}
+          regeneratingMessageId={regeneratingMessageId}
         />
 
         {error && (
@@ -431,8 +465,8 @@ export default function AiChatPage() {
       <aside className="order-2 flex h-[calc(100vh-150px)] min-h-0 flex-col gap-4 overflow-hidden lg:order-2">
         <section className="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/[0.08] bg-[#111109] p-4">
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
-            <button type="button" onClick={() => setSidebarTab('models')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'models' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><Settings2 size={13} /> Models</button>
             <button type="button" onClick={() => setSidebarTab('sessions')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'sessions' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><MessageSquare size={13} /> Sessions</button>
+            <button type="button" onClick={() => setSidebarTab('models')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'models' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><Settings2 size={13} /> Models</button>
           </div>
           {sidebarTab === 'models' ? <>
           <div className="mb-3 flex items-center justify-between gap-3">

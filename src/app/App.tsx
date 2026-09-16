@@ -30,7 +30,7 @@ function App() {
 
   // Automatic background update check once on application startup (non-blocking)
   useEffect(() => {
-    if (!appReady || hasCheckedStartupRef.current) return;
+    if (import.meta.env.DEV || !appReady || hasCheckedStartupRef.current) return;
     hasCheckedStartupRef.current = true;
 
     // Small initial delay so app UI mounts and renders without any initial contention

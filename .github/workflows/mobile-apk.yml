@@ -1,0 +1,84 @@
+name: Mobile Android APK Test
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'mobile-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-android-apk:
+    name: Build Android test APK
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+          yes | sdkmanager --licenses >/dev/null || true
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Initialize Tauri Android project
+        run: npm run tauri -- android init --ci --skip-targets-install
+
+      - name: Build debug APK
+        run: npm run tauri -- android build --debug --apk --target aarch64 --ci
+
+      - name: Locate APK
+        id: apk
+        shell: bash
+        run: |
+          apk_path=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$apk_path"
+          echo "path=$apk_path" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $apk_path"
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yolnoma-mobile-debug-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Publish APK to GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-test-${{ github.run_number }}
+          name: Yolnoma Mobile Test ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            Temporary Android test build from the `mobile-app-testing` branch.
+
+            This is a debug APK for testing only. Desktop-only pages are intentionally hidden in this build.
+          files: ${{ steps.apk.outputs.path }}

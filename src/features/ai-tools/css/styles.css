@@ -1,0 +1,29 @@
+@keyframes shine-sweep {
+  0%   { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(220%) skewX(-20deg); }
+}
+@keyframes aura-drift {
+  0%, 100% { opacity: .55; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: .85; transform: translate(-50%, -50%) scale(1.15); }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes orb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(209,154,106,.45); }
+  70%      { box-shadow: 0 0 0 10px rgba(209,154,106,0); }
+}
+
+.anim-shine::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 45%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  animation: shine-sweep 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.anim-aura  { animation: aura-drift 7s ease-in-out infinite; }
+.anim-rise  { animation: rise-in .25s ease-out both; }
+.anim-orb   { animation: orb-pulse 2.4s ease-out infinite; }

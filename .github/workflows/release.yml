@@ -46,12 +46,14 @@ jobs:
           VITE_ABC_KEY: ${{ secrets.VITE_ABC_KEY }}
           VITE_REMOVE_BG_API_KEY: ${{ secrets.VITE_REMOVE_BG_API_KEY }}
           VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
+          VITE_FORMSPREE_ID: ${{ secrets.VITE_FORMSPREE_ID }}
         run: |
           $required = @(
             "STEAM_API_KEY",
             "VITE_ABC_KEY",
             "VITE_REMOVE_BG_API_KEY",
-            "VITE_IMGBB_API_KEY"
+            "VITE_IMGBB_API_KEY",
+            "VITE_FORMSPREE_ID"
           )
 
           $missing = @($required | Where-Object { [string]::IsNullOrWhiteSpace((Get-Item "env:$_").Value) })
@@ -69,6 +71,7 @@ jobs:
           VITE_ABC_KEY: ${{ secrets.VITE_ABC_KEY }}
           VITE_REMOVE_BG_API_KEY: ${{ secrets.VITE_REMOVE_BG_API_KEY }}
           VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
+          VITE_FORMSPREE_ID: ${{ secrets.VITE_FORMSPREE_ID }}
         with:
           tagName: v__VERSION__
           releaseName: "Yolnoma v__VERSION__"
@@ -85,7 +88,7 @@ jobs:
       # Validate: actual built NSIS installer artifact version matches the Git tag
       # Prevents the infinite-updater-loop failure (e.g. tag v0.9.102 on 0.9.101 artifact)
       # This step inspects the actual generated installer output before any artifact
-      # is uploaded so publish-updates cannot proceed on a mismatch.
+      # is uploaded so release publication cannot proceed on a mismatch.
       # ------------------------------------------------------------------------
       - name: Validate built installer matches Git tag
         shell: pwsh
@@ -225,13 +228,12 @@ jobs:
           retention-days: 7
 
   # ============================================================================
-  # Job 2: Publish updater artifacts to this repository's isolated updates branch.
-  # The source branch remains untouched; only the updates branch contains the
-  # installer, signature, and latest.json consumed by the updater and website.
+  # Job 2: Attach updater artifacts directly to the GitHub Release.
+  # No separate updates branch is needed; GitHub retains release assets.
   # Independent job: If publishing fails, retrying will NOT rebuild Tauri app.
   # ============================================================================
-  publish-updates:
-    name: Publish Updater to Yolnoma-App updates branch
+  publish-release-assets:
+    name: Publish Updater Assets to GitHub Release
     needs: build
     runs-on: windows-latest
 
@@ -247,7 +249,7 @@ jobs:
           name: updater-artifacts
           path: updater-files
 
-      - name: Generate Release Notes and Publish to updates branch
+      - name: Generate Release Notes and Upload Release Assets
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -402,9 +404,8 @@ jobs:
           # ----------------------------------------------------------------
           # 5. Construct latest.json according to Tauri 2 updater manifest schema
           # ----------------------------------------------------------------
-          $updatesBranch = "updates"
           $repoSlug = "${{ github.repository }}"
-          $baseUrl = "https://raw.githubusercontent.com/$repoSlug/$updatesBranch"
+          $releaseUrl = "https://github.com/$repoSlug/releases/download/$tag"
 
           $manifest = [ordered]@{
             version = $version
@@ -413,7 +414,7 @@ jobs:
             platforms = [ordered]@{
               "windows-x86_64" = [ordered]@{
                 signature = $signature
-                url = "$baseUrl/$($exe.Name)"
+                url = "$releaseUrl/$($exe.Name)"
               }
             }
           }
@@ -425,60 +426,16 @@ jobs:
           Write-Host "Generated latest.json:"
           Write-Host $jsonContent
 
-          # 6. Prepare the isolated updates branch in this repository.
-          # Do not use the source checkout as the artifact worktree.
-          $repoUrl = "https://github.com/$repoSlug.git"
-          $pushUrl = "https://x-access-token:$($env:GITHUB_TOKEN)@github.com/$repoSlug.git"
-          if (Test-Path "updates-repo") {
-            Remove-Item -Recurse -Force "updates-repo"
-          }
-          New-Item -ItemType Directory -Force -Path "updates-repo" | Out-Null
-          Set-Location updates-repo
-          git init -b $updatesBranch
-          git remote add origin $pushUrl
-          git fetch origin $updatesBranch 2>$null
-          if ($LASTEXITCODE -eq 0) {
-            git checkout -B $updatesBranch FETCH_HEAD
+          # 6. Upload the manifest and updater assets directly to this release.
+          gh release upload $tag `
+            "updater-files/$($exe.Name)" `
+            "updater-files/$($sig.Name)" `
+            "updater-files/latest.json" `
+            --repo $repoSlug `
+            --clobber
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to upload updater assets to release $tag."
           }
 
-          # Configure Git user identity for commit
-          git config user.name "Yolnoma Release Bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # ----------------------------------------------------------------
-          # Remove stale installer/signature files from previous releases.
-          # Only the current version's files should exist in the public repo.
-          # latest.json is NOT deleted here — it will be overwritten below.
-          # ----------------------------------------------------------------
-          $oldExe = Get-ChildItem -Path "." -Filter "*.exe" -ErrorAction SilentlyContinue
-          foreach ($f in $oldExe) {
-            Write-Host "Removing old installer: $($f.Name)"
-            Remove-Item $f.FullName -Force
-          }
-          $oldSig = Get-ChildItem -Path "." -Filter "*.sig" -ErrorAction SilentlyContinue
-          foreach ($f in $oldSig) {
-            Write-Host "Removing old signature: $($f.Name)"
-            Remove-Item $f.FullName -Force
-          }
-
-          # Copy update files into repository root
-          Copy-Item "../updater-files/$($exe.Name)" "./$($exe.Name)" -Force
-          Copy-Item "../updater-files/$($sig.Name)" "./$($sig.Name)" -Force
-          Copy-Item "../updater-files/latest.json" "./latest.json" -Force
-
-          # Stage and commit
-          git add -A
-          $status = git status --porcelain
-          if (-not $status) {
-            Write-Host "No changes detected. Repository is already up to date."
-          } else {
-            Write-Host "Committing update files for v$version..."
-            git commit -m "release: v$version"
-
-            Write-Host "Pushing updates branch to $repoSlug..."
-            git push -u origin $updatesBranch --force
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to push updater artifacts to $repoSlug/$updatesBranch."
-            }
-            Write-Host "Successfully published v$version to $repoSlug/$updatesBranch!"
-          }
+          Write-Host "Successfully published updater assets to GitHub Release $tag!"

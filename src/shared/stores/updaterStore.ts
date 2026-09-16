@@ -121,6 +121,12 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
 
   checkForUpdates: async (options = { silent: false }) => {
     const { silent } = options;
+    if (import.meta.env.DEV) {
+      activeUpdate = null;
+      set({ status: 'up-to-date', updateInfo: null, error: null, lastChecked: new Date() });
+      if (!silent) toast.info('Updates are checked in the installed production build.');
+      return false;
+    }
     const currentStatus = get().status;
 
     // Prevent duplicate or overlapping checks / installs
@@ -348,4 +354,3 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     });
   },
 }));
-
