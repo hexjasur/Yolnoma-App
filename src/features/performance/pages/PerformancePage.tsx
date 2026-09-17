@@ -6,11 +6,15 @@ import PerformanceCard from '@/features/performance/components/PerformanceCard';
 import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
 import EditPerformanceModal from '@/features/performance/components/EditPerformanceModal';
 import DeleteConfirmModal from '@/features/performance/components/DeleteConfirmModal';
+import EditAvPerformanceModal from '@/features/performance/components/EditAvPerformanceModal';
+import DeleteAvPerformanceModal from '@/features/performance/components/DeleteAvPerformanceModal';
+import AvPerformanceCatalog from '@/features/performance/pages/AvPerformanceCatalog';
 import { usePerformanceList } from '@/features/performance/hooks/usePerformanceQueries';
+import { useAvPerformanceList } from '@/features/performance/hooks/useAvPerformanceQueries';
 import { useModal } from '@/features/performance/hooks/usePerformanceModal';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button, CardGridSkeleton, Pagination, SearchInput } from '@/shared/ui';
-import type { PaginationMeta } from '@/types';
+import type { AvPerformance, PaginationMeta, Performance } from '@/types';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 export default function PerformancePage() {
@@ -23,6 +27,7 @@ export default function PerformancePage() {
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
   const limitParam = parseInt(searchParams.get('limit') || '15', 10);
   const searchParam = searchParams.get('search') || searchParams.get('query') || '';
+  const isAvMode = searchParams.get('type') === 'av';
 
   const currentPage = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
   const currentLimit = isNaN(limitParam) || limitParam < 1 ? 15 : limitParam;
@@ -35,16 +40,23 @@ export default function PerformancePage() {
     hasNextPage: false,
     hasPrevPage: false,
   };
-  const performanceQuery = usePerformanceList(currentPage, currentLimit, searchParam, isOwner);
+  const performanceQuery = usePerformanceList(currentPage, currentLimit, searchParam, isOwner && !isAvMode);
+  const avPerformanceQuery = useAvPerformanceList(currentPage, currentLimit, searchParam, isOwner && isAvMode);
   const items = performanceQuery.data?.data ?? [];
   const pagination = performanceQuery.data?.pagination ?? emptyPagination;
   const loading = performanceQuery.isLoading;
   const error = performanceQuery.error;
+  const avItems = avPerformanceQuery.data?.data ?? [];
+  const avPagination = avPerformanceQuery.data?.pagination ?? emptyPagination;
+  const avLoading = avPerformanceQuery.isLoading;
+  const avError = avPerformanceQuery.error;
   const [searchInput, setSearchInput] = useState(searchParam);
 
   const addModal    = useModal();
-  const editModal   = useModal();
-  const deleteModal = useModal();
+  const editModal   = useModal<Performance>();
+  const deleteModal = useModal<Performance>();
+  const avEditModal = useModal<AvPerformance>();
+  const avDeleteModal = useModal<AvPerformance>();
 
   // Keep local search input in sync if URL search param changes externally
   useEffect(() => {
@@ -136,6 +148,37 @@ export default function PerformancePage() {
     );
   }
 
+  if (isAvMode) {
+    return (
+      <>
+      <AvPerformanceCatalog
+        setSearchParams={setSearchParams}
+        searchParam={searchParam}
+        currentPage={currentPage}
+        currentLimit={currentLimit}
+        items={avItems}
+        pagination={avPagination}
+        loading={avLoading}
+        error={avError}
+        searchInput={searchInput}
+        setSearchInput={setSearchInput}
+        onSearchSubmit={handleSearchSubmit}
+        onClearSearch={handleClearSearch}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+        onRefresh={() => avPerformanceQuery.refetch()}
+        onAdd={() => addModal.open()}
+        addModalOpen={addModal.isOpen}
+        onAddClose={addModal.close}
+        onEdit={avEditModal.open}
+        onDelete={avDeleteModal.open}
+      />
+      <EditAvPerformanceModal open={avEditModal.isOpen} item={avEditModal.target} onClose={avEditModal.close} />
+      <DeleteAvPerformanceModal open={avDeleteModal.isOpen} item={avDeleteModal.target} onClose={avDeleteModal.close} />
+      </>
+    );
+  }
+
 
   return (
     <div
@@ -189,6 +232,9 @@ export default function PerformancePage() {
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
+          <Button variant="ghost" onClick={() => setSearchParams({ type: 'av', page: '1', limit: String(currentLimit) })}>
+            AV Performances
+          </Button>
           <Button
             variant="ghost"
             onClick={() => performanceQuery.refetch()}
@@ -380,6 +426,7 @@ export default function PerformancePage() {
       <AddPerformanceModal
         open={addModal.isOpen}
         onClose={addModal.close}
+        defaultType="performance"
       />
 
       <EditPerformanceModal
