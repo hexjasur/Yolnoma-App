@@ -6,13 +6,15 @@ import PerformanceCard from '@/features/performance/components/PerformanceCard';
 import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
 import EditPerformanceModal from '@/features/performance/components/EditPerformanceModal';
 import DeleteConfirmModal from '@/features/performance/components/DeleteConfirmModal';
+import EditAvPerformanceModal from '@/features/performance/components/EditAvPerformanceModal';
+import DeleteAvPerformanceModal from '@/features/performance/components/DeleteAvPerformanceModal';
 import AvPerformanceCatalog from '@/features/performance/pages/AvPerformanceCatalog';
 import { usePerformanceList } from '@/features/performance/hooks/usePerformanceQueries';
 import { useAvPerformanceList } from '@/features/performance/hooks/useAvPerformanceQueries';
 import { useModal } from '@/features/performance/hooks/usePerformanceModal';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button, CardGridSkeleton, Pagination, SearchInput } from '@/shared/ui';
-import type { PaginationMeta } from '@/types';
+import type { AvPerformance, PaginationMeta, Performance } from '@/types';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 export default function PerformancePage() {
@@ -51,8 +53,10 @@ export default function PerformancePage() {
   const [searchInput, setSearchInput] = useState(searchParam);
 
   const addModal    = useModal();
-  const editModal   = useModal();
-  const deleteModal = useModal();
+  const editModal   = useModal<Performance>();
+  const deleteModal = useModal<Performance>();
+  const avEditModal = useModal<AvPerformance>();
+  const avDeleteModal = useModal<AvPerformance>();
 
   // Keep local search input in sync if URL search param changes externally
   useEffect(() => {
@@ -146,6 +150,7 @@ export default function PerformancePage() {
 
   if (isAvMode) {
     return (
+      <>
       <AvPerformanceCatalog
         setSearchParams={setSearchParams}
         searchParam={searchParam}
@@ -165,7 +170,12 @@ export default function PerformancePage() {
         onAdd={() => addModal.open()}
         addModalOpen={addModal.isOpen}
         onAddClose={addModal.close}
+        onEdit={avEditModal.open}
+        onDelete={avDeleteModal.open}
       />
+      <EditAvPerformanceModal open={avEditModal.isOpen} item={avEditModal.target} onClose={avEditModal.close} />
+      <DeleteAvPerformanceModal open={avDeleteModal.isOpen} item={avDeleteModal.target} onClose={avDeleteModal.close} />
+      </>
     );
   }
 

@@ -15,14 +15,14 @@ interface AddPerformanceModalProps {
 }
 
 interface FormState {
-  full_name: string; title: string; code: string; performer_id: string;
-  image_url: string; thumbnail_url: string; source_url: string; bio: string;
+  full_name: string; title: string;
+  image_url: string; thumbnail_url: string; bio: string;
   birth_date: string; nationality: string; profession: string; description: string;
   release_date: string; country: string;
 }
 
 const EMPTY: FormState = {
-  full_name: '', title: '', code: '', performer_id: '', image_url: '', thumbnail_url: '', source_url: '',
+  full_name: '', title: '', image_url: '', thumbnail_url: '',
   bio: '', birth_date: '', nationality: '', profession: '', description: '', release_date: '', country: 'Japan',
 };
 
@@ -45,11 +45,10 @@ export default function AddPerformanceModal({ open, onClose, defaultType = 'perf
     if (!form.image_url.trim()) return;
     try {
       if (isAv) {
-        if (!form.title.trim() || !form.code.trim()) return;
+        if (!form.title.trim()) return;
         const created = await createAvPerformance.mutateAsync({
-          performer_id: form.performer_id.trim() || null,
-          title: form.title.trim(), code: form.code.trim(), image_url: form.image_url.trim(),
-          thumbnail_url: form.thumbnail_url.trim() || undefined, source_url: form.source_url.trim() || undefined,
+          title: form.title.trim(), image_url: form.image_url.trim(),
+          thumbnail_url: form.thumbnail_url.trim() || undefined,
           description: form.description.trim() || undefined, release_date: form.release_date.trim() || undefined,
           duration_seconds: undefined, country: form.country.trim() || 'Japan',
         });
@@ -100,16 +99,13 @@ export default function AddPerformanceModal({ open, onClose, defaultType = 'perf
         {isAv ? <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <Input id="add-av-title" label="Title *" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Lily Hart 3" required autoFocus />
-            <Input id="add-av-code" label="Product code *" value={form.code} onChange={(e) => set('code', e.target.value)} placeholder="JUL00703" required />
           </div>
-          <Input id="add-av-performer-id" label="Performer ID (optional)" value={form.performer_id} onChange={(e) => set('performer_id', e.target.value)} placeholder="Existing performance UUID" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <Input id="add-av-country" label="Country" value={form.country} onChange={(e) => set('country', e.target.value)} placeholder="Japan" />
             <Input id="add-av-release-date" label="Release date" type="date" value={form.release_date} onChange={(e) => set('release_date', e.target.value)} />
           </div>
           <ImageUpload label="Primary image *" value={form.image_url} onChange={(url) => set('image_url', url)} placeholder="Image URL or choose a file" />
           <ImageUpload label="Thumbnail (optional)" value={form.thumbnail_url} onChange={(url) => set('thumbnail_url', url)} placeholder="Thumbnail URL or choose a file" />
-          <Input id="add-av-source" label="Source URL (optional)" type="url" value={form.source_url} onChange={(e) => set('source_url', e.target.value)} placeholder="https://…" />
           <Textarea id="add-av-description" label="Description (optional)" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Short description…" rows={3} />
         </> : <>
           <Input id="add-full-name" label="Full name *" value={form.full_name} onChange={(e) => set('full_name', e.target.value)} placeholder="For example: John Doe" required autoFocus />
