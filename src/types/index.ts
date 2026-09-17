@@ -63,6 +63,8 @@ export interface AvPerformanceListResponse {
   pagination: PaginationMeta;
 }
 
+export type AvPerformanceCreateInput = Omit<AvPerformance, 'id' | 'slug' | 'created_at' | 'updated_at'>;
+
 // ─── UI State ─────────────────────────────────────────────────
 export type SortKey = 'name_asc' | 'name_desc' | 'newest' | 'oldest';
 
