@@ -11,6 +11,7 @@ import {
   WandSparkles,
 } from 'lucide-react';
 import { toast } from '@/shared/ui/Toast';
+import { downloadText } from '@/shared/lib/files';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
@@ -53,16 +54,6 @@ function getCards(value: JsonValue): JsonObject[] {
     return [value];
   }
   return [];
-}
-
-function download(content: string, filename: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
 }
 
 function escapeHtml(value: unknown): string {
@@ -139,14 +130,14 @@ export default function JsonViewerPage() {
   const exportJson = () => {
     if (transformed === null) return toast.warning('Load valid JSON first');
     const baseName = fileName.replace(/\.json$/i, '') || 'json-export';
-    download(JSON.stringify(transformed, null, 2), `${baseName}-transformed.json`, 'application/json');
+    downloadText(JSON.stringify(transformed, null, 2), `${baseName}-transformed.json`, 'application/json');
     toast.success('Transformed JSON exported');
   };
 
   const exportHtml = () => {
     if (transformed === null) return toast.warning('Load valid JSON first');
     const baseName = fileName.replace(/\.json$/i, '') || 'json-export';
-    download(createHtmlExport(transformed, title), `${baseName}-cards.html`, 'text/html');
+    downloadText(createHtmlExport(transformed, title), `${baseName}-cards.html`, 'text/html');
     toast.success('Card HTML exported');
   };
 

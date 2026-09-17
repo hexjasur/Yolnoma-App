@@ -23,6 +23,7 @@ import {
   X,
   Plus,
 } from 'lucide-react';
+import { formatBytes } from '@/shared/lib/files';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,14 +88,6 @@ const ALL_FORMATS: FormatMeta[] = [
 ];
 
 const CATEGORIES = ['All', 'Raster', 'Web', 'Icon / Special'] as const;
-
-function formatBytes(bytes: number): string {
-  if (!bytes || bytes <= 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
 
 function detectFormatFromExtension(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase() || '';

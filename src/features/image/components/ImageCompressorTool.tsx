@@ -3,11 +3,10 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { CheckCircle, FileImage, FolderOpen, Loader2, Minimize2, Trash2, Upload } from 'lucide-react';
 import { ToolCard, ToolTitle } from '@/features/developer-tools/components/ToolShell';
+import { formatBytes } from '@/shared/lib/files';
 
 type CompressionResult = { input_path: string; output_path: string; success: boolean; error?: string; file_size?: number };
 type FileEntry = { path: string; name: string; size?: number; status: 'ready' | 'compressing' | 'done' | 'error'; result?: CompressionResult };
-
-function formatBytes(value = 0) { if (!value) return '0 B'; const units = ['B', 'KB', 'MB', 'GB']; const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1); return `${(value / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`; }
 
 export default function ImageCompressorTool() {
   const [files, setFiles] = useState<FileEntry[]>([]);

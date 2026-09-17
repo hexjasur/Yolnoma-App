@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import { Code2, Download, FileCode2, FileText, Printer, RotateCcw, Save } from 'lucide-react';
 import MarkdownContent from '@/features/ai/components/MarkdownContent';
 import { toast } from '@/shared/ui/Toast';
+import { downloadText } from '@/shared/lib/files';
 import { ToolCard, ToolTitle } from './ToolShell';
 
 const initialMarkdown = `# Markdown workspace
@@ -35,17 +36,6 @@ function loadDraft() {
   } catch {
     return initialMarkdown;
   }
-}
-
-function downloadFile(filename: string, content: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function getHtmlDocument(markdown: string) {
@@ -85,11 +75,11 @@ export default function MarkdownStudioTool() {
   };
 
   const exportMarkdown = () => {
-    downloadFile('markdown-studio.md', markdown, 'text/markdown;charset=utf-8');
+    downloadText('markdown-studio.md', markdown, 'text/markdown;charset=utf-8');
     toast.success('Downloaded to Downloads folder');
   };
   const exportHtml = () => {
-    downloadFile('markdown-studio.html', getHtmlDocument(markdown), 'text/html;charset=utf-8');
+    downloadText('markdown-studio.html', getHtmlDocument(markdown), 'text/html;charset=utf-8');
     toast.success('Downloaded to Downloads folder');
   };
   const exportPdf = () => {

@@ -19,7 +19,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { requestOpenRouter } from '@/features/ai/api/openRouterApi';
 import SelectMenu from '@/shared/ui/SelectMenu';
 import '../css/styles.css';
-import { toast } from '@/shared/ui/Toast';
+import { downloadBlob, downloadText } from '@/shared/lib/files';
 
 type Column = {
   name: string;
@@ -117,27 +117,6 @@ function schemaToSql(schema: DatabaseSchema) {
 
 function schemaToJson(schema: DatabaseSchema) {
   return JSON.stringify(schema, null, 2);
-}
-
-function downloadText(filename: string, content: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  toast.success(`File downloaded as ${filename}`);
-}
-
-function downloadBlob(filename: string, blob: Blob) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  toast.success(`File downloaded as ${filename}`);
 }
 
 /* ── Right-angle connector lines ─────────────── */
