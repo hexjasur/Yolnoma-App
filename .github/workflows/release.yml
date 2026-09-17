@@ -92,10 +92,9 @@ jobs:
             throw "Missing GitHub Actions secrets: $($missing -join ', '). Add them in Settings > Secrets and variables > Actions."
           }
 
-      - name: Build and Release
-        uses: tauri-apps/tauri-action@action-v1.0.0
+      - name: Build Tauri application
+        run: npm run tauri build
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
@@ -103,17 +102,6 @@ jobs:
           VITE_REMOVE_BG_API_KEY: ${{ secrets.VITE_REMOVE_BG_API_KEY }}
           VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
           VITE_FORMSPREE_ID: ${{ secrets.VITE_FORMSPREE_ID }}
-        with:
-          tagName: v__VERSION__
-          releaseName: "Yolnoma v__VERSION__"
-          releaseBody: |
-            ## Yolnoma v__VERSION__
-
-            Bug fixes and improvements.
-          releaseDraft: false
-          prerelease: false
-          generateReleaseNotes: true
-          uploadUpdaterJson: false
 
       # ------------------------------------------------------------------------
       # Validate: actual built NSIS installer artifact version matches the Git tag
