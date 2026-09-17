@@ -5,13 +5,12 @@ import { readDir, readFile } from '@tauri-apps/plugin-fs';
 import { Check, Code2, Eye, FileText, FolderOpen, Loader2, Sparkles, WandSparkles } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getApiKey } from '@/features/ai/storage';
-import { fetchOpenRouterModels, getShortModelName, isLimitError } from '@/features/ai/api/openRouterApi';
-import { DEFAULT_MODELS, type OpenRouterModel } from '@/features/ai/types';
+import { fetchOpenRouterModels, getShortModelName, isLimitError, requestOpenRouter } from '@/features/ai/api/openRouterApi';
+import { DEFAULT_MODELS, type OpenRouterModel, type ProxyResponse } from '@/features/ai/types';
 import MarkdownContent from '@/features/ai/components/MarkdownContent';
 import { toast } from '@/shared/ui/Toast';
 import { ToolCard, ToolTitle } from '@/features/developer-tools/components/ToolShell';
 
-type ProxyResponse = { status: number; body: { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } } };
 type FileEntry = { path: string; kind: 'file' | 'directory' };
 type AssetCandidate = { path: string; details: string; dataUrl?: string };
 
@@ -93,16 +92,14 @@ async function requestReadme(apiKey: string, model: string, context: string, cus
     { type: 'text', text: `Image candidate: ${asset.path} (${asset.details})` },
     { type: 'image_url', image_url: { url: asset.dataUrl } },
   ]);
-  return invoke<ProxyResponse>('proxy_request', {
-    method: 'POST',
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://app.yolnoma.uz',
-      'X-Title': 'Yolnoma AI README Generator',
-    },
-    body: { model, max_tokens: 5000, temperature: 0.25, messages: [{ role: 'system', content: system }, { role: 'user', content: [{ type: 'text', text: `${context}\n\nCUSTOM USER INSTRUCTIONS:\n${customPrompt || 'No additional instructions. Use your best documentation judgment.'}` }, ...imageParts] }] },
+  return requestOpenRouter({
+    apiKey,
+    model,
+    maxTokens: 5000,
+    temperature: 0.25,
+    title: 'Yolnoma AI README Generator',
+    messages: [{ role: 'user', content: [{ type: 'text', text: `${context}\n\nCUSTOM USER INSTRUCTIONS:\n${customPrompt || 'No additional instructions. Use your best documentation judgment.'}` }, ...imageParts] }],
+    systemContext: system,
   });
 }
 

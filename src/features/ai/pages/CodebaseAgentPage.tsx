@@ -6,9 +6,9 @@ import { Check, FolderOpen, Loader2, FileText, Sparkles, KeyRound, RotateCcw, X 
 import { Button } from '@/shared/ui';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getApiKey, saveApiKey } from '../storage';
-import { fetchOpenRouterModels, getShortModelName } from '../api/openRouterApi';
+import { fetchOpenRouterModels, getShortModelName, requestOpenRouter } from '../api/openRouterApi';
 import { DEFAULT_MODELS, type OpenRouterModel } from '../types';
-import type { ProxyResponse, ToolCall } from '../types';
+import type { ToolCall } from '../types';
 import ApiKeyModal from '../components/ApiKeyModal';
 import ChatComposer from '../components/ChatComposer';
 import MarkdownContent from '../components/MarkdownContent';
@@ -121,22 +121,14 @@ async function readProjectFile(rootPath: string, relativePath: string): Promise<
 // ---------- OpenRouter call ----------
 
 async function requestAgentCompletion(apiKey: string, model: string, messages: AgentMessage[]) {
-  return invoke<ProxyResponse>('proxy_request', {
-    method: 'POST',
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://app.yolnoma.uz',
-      'X-Title': 'Yolnoma Codebase Agent',
-    },
-    body: {
-      model,
-      max_tokens: 2000,
-      messages,
-      tools: [READ_FILE_TOOL],
-      tool_choice: 'auto',
-    },
+  return requestOpenRouter({
+    apiKey,
+    model,
+    maxTokens: 2000,
+    messages,
+    tools: [READ_FILE_TOOL],
+    toolChoice: 'auto',
+    title: 'Yolnoma Codebase Agent',
   });
 }
 

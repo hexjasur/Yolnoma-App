@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import {
   Download,
   FileJson,
@@ -15,8 +14,9 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { getApiKey } from '@/shared/hooks/useAccountStorage';
-import { DEFAULT_MODELS, type ProxyResponse } from '@/features/ai/types';
+import { DEFAULT_MODELS } from '@/features/ai/types';
 import { useAuth } from '@/features/auth/AuthContext';
+import { requestOpenRouter } from '@/features/ai/api/openRouterApi';
 import SelectMenu from '@/shared/ui/SelectMenu';
 import '../css/styles.css';
 import { toast } from '@/shared/ui/Toast';
@@ -336,25 +336,15 @@ export default function DatabaseGenWorkspace() {
         throw new Error(
           'OpenRouter API key not found. Add it in AI Chat first.',
         );
-      const response = await invoke<ProxyResponse>('proxy_request', {
-        method: 'POST',
-        url: 'https://openrouter.ai/api/v1/chat/completions',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://app.yolnoma.uz',
-          'X-Title': 'Yolnoma Database Generator',
-        },
-        body: {
-          model,
-          temperature: 0.2,
-          max_tokens: 5000,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: cleanPrompt },
-          ],
-        },
+      const response = await requestOpenRouter({
+        apiKey,
+        model,
+        temperature: 0.2,
+        maxTokens: 5000,
+        responseFormat: { type: 'json_object' },
+        title: 'Yolnoma Database Generator',
+        systemContext: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: cleanPrompt }],
       });
       const content = response.body.choices?.[0]?.message?.content;
       if (response.status < 200 || response.status >= 300 || !content)

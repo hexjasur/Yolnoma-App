@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeftRight, Binary, Braces, Code2, FileText, Globe2, Hash, Link2, LockKeyhole, QrCode, ShieldCheck, Terminal, Regex } from 'lucide-react';
 import ToolNavigation from '../components/ToolNavigation';
+import { useHashTab } from '@/shared/hooks/useHashTab';
 import JsonFormatterTool from '../components/JsonFormatterTool';
 import JwtDecoderTool from '../components/JwtDecoderTool';
 import UuidGeneratorTool from '../components/UuidGeneratorTool';
@@ -35,32 +35,8 @@ const tabs: TabDefinition[] = [
   ['url-encoder', 'URL Encoder / Decoder', Link2],
 ];
 
-const tabIds = new Set<Tab>(tabs.map(([id]) => id));
-
-function readTabFromUrl(): Tab {
-  const hash = window.location.hash;
-  const hashParts = hash.split('#');
-  const nestedHash = hashParts[hashParts.length - 1];
-  if (nestedHash && tabIds.has(nestedHash as Tab)) return nestedHash as Tab;
-  const query = hash.split('?')[1];
-  const value = query ? new URLSearchParams(query).get('tab') : null;
-  return value && tabIds.has(value as Tab) ? value as Tab : 'json-formatter';
-}
-
 export default function DeveloperToolsPage() {
-  const [tab, setTab] = useState<Tab>(readTabFromUrl);
-
-  useEffect(() => {
-    const onHashChange = () => setTab(readTabFromUrl());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-
-  const selectTab = (next: Tab) => {
-    setTab(next);
-    const routeHash = window.location.hash.split('?')[0].split('#')[0] || '#/tools/developer-tools';
-    window.location.hash = `${routeHash}?tab=${next}`;
-  };
+  const [tab, selectTab] = useHashTab(tabs.map(([id]) => id), 'json-formatter', '#/tools/developer-tools');
 
   return (
     <div className="mx-auto min-h-full max-w-7xl pb-16 text-[var(--text-primary)]">

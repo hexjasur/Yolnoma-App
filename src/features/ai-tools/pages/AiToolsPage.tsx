@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Database, FileText, WandSparkles, type LucideIcon } from 'lucide-react';
 import ToolNavigation from '@/features/developer-tools/components/ToolNavigation';
+import { useHashTab } from '@/shared/hooks/useHashTab';
 import ReadmeGeneratorTool from '../components/ReadmeGeneratorTool';
 import DatabaseGenWorkspace from '../components/DatabaseGenWorkspace';
 
@@ -11,29 +11,8 @@ const tabs: TabDefinition[] = [
   ['database-gen', 'Database Generator', Database],
   ['readme-generator', 'README Generator', FileText],
 ];
-const tabIds = new Set<Tab>(tabs.map(([id]) => id));
-
-function readTabFromUrl(): Tab {
-  const hash = window.location.hash;
-  const query = hash.split('?')[1];
-  const value = query ? new URLSearchParams(query).get('tab') : null;
-  return value && tabIds.has(value as Tab) ? value as Tab : 'database-gen';
-}
-
 export default function AiToolsPage() {
-  const [tab, setTab] = useState<Tab>(readTabFromUrl);
-
-  useEffect(() => {
-    const onHashChange = () => setTab(readTabFromUrl());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-
-  const selectTab = (next: Tab) => {
-    setTab(next);
-    const routeHash = window.location.hash.split('?')[0].split('#')[0] || '#/tools/ai-tools';
-    window.location.hash = `${routeHash}?tab=${next}`;
-  };
+  const [tab, selectTab] = useHashTab(tabs.map(([id]) => id), 'database-gen', '#/tools/ai-tools');
 
   return (
     <div className="mx-auto min-h-full max-w-7xl pb-16 text-[var(--text-primary)]">
