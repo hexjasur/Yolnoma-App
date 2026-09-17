@@ -1,11 +1,11 @@
 {
-  "version": "1.0.16",
-  "notes": "Yolnoma v1.0.16 is available. This update fixes the legacy updater endpoint and includes the latest application improvements.",
-  "pub_date": "2026-09-16T18:54:40Z",
+  "version": "1.0.17",
+  "notes": "✨ What's New\n\n• Complete AV performance catalog and detail flow\n• Add unified performance catalog modal\n• Add AV performance catalog mode\n\n🐛 Bug Fixes\n\n• Match catalog selector and AV add button styling\n• Preserve JSON export filenames\n• Keep legacy updater manifest current\n\n🔧 Improvements\n\n• Improve README generation context building\n• Share feature file utilities\n• Consolidate repeated feature integrations",
+  "pub_date": "2026-09-17T17:43:03Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSGx5N2psQ01lSmM5M2MwTFR2c2g5dlI4VkdNZ2YwYWd6YU0reERyU3BIVEUxOFl5MFBGTzMzMWI5NCtGSEFodUFhQTJKbGlZaUtMaHgvbGJOenc2Z1FJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NTg0ODc5CWZpbGU6WW9sbm9tYV8xLjAuMTZfeDY0LXNldHVwLmV4ZQpxV1dMczFZSWVPZHBydTF5SFJVUzN4R2xMaGUwc0p0MHE1STJXanFvY2lwam4rVlErNVNIRDVTSFJxTlprRnVPZElZazBzSzBOSXRrSkNpRjFGK0dDQT09Cg==",
-      "url": "https://github.com/hexjasur/Yolnoma-App/releases/download/v1.0.16/Yolnoma_1.0.16_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSHFUM2hRdW1qYnFiNm1sOVZDUzFlZVl0cHhRWlRzaEg5SFJCeTAxNXRNclVJYy90UGtNenFxM0wrdENrZ3Via3N0VVc5SkVkQklTdzlyZnkySjFTM3dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NjY2ODY5CWZpbGU6WW9sbm9tYV8xLjAuMTdfeDY0LXNldHVwLmV4ZQpzM0dZV2lOVlRUZ1pUdDYxdFZNdkk4ck5FUEx3OFloVnFHWFhlSHFUV3ZTbW51dzlVaUk0QWV0WGpnMGlCN3pMWE5heFVpN1Y0ZWkrei9HaU1JeHhEUT09Cg==",
+      "url": "https://github.com/hexjasur/Yolnoma-App/releases/download/v1.0.17/Yolnoma_1.0.17_x64-setup.exe"
     }
   }
 }
