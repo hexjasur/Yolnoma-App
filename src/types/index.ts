@@ -41,6 +41,28 @@ export interface PerformanceListResponse {
   pagination: PaginationMeta;
 }
 
+export interface AvPerformance {
+  id: string;
+  title: string;
+  slug: string;
+  image_url: string;
+  thumbnail_url?: string | null;
+  description?: string | null;
+  release_date?: string | null;
+  duration_seconds?: number | null;
+  country: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AvPerformanceListResponse {
+  data: AvPerformance[];
+  pagination: PaginationMeta;
+}
+
+export type AvPerformanceCreateInput = Omit<AvPerformance, 'id' | 'slug' | 'created_at' | 'updated_at'>;
+export type AvPerformanceUpdateInput = Partial<AvPerformanceCreateInput>;
+
 // ─── UI State ─────────────────────────────────────────────────
 export type SortKey = 'name_asc' | 'name_desc' | 'newest' | 'oldest';
 
@@ -67,4 +89,3 @@ export interface ImgBBResponse {
 
 export * from '@/features/videos/types/video';
 export * from '@/features/users/types/user';
-
