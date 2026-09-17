@@ -8,7 +8,7 @@ type Tab = 'database-gen' | 'readme-generator';
 type TabDefinition = [Tab, string, LucideIcon];
 
 const tabs: TabDefinition[] = [
-  ['database-gen', 'Database Gen', Database],
+  ['database-gen', 'Database Generator', Database],
   ['readme-generator', 'README Generator', FileText],
 ];
 const tabIds = new Set<Tab>(tabs.map(([id]) => id));
