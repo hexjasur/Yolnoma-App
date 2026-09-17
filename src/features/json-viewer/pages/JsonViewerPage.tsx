@@ -130,14 +130,14 @@ export default function JsonViewerPage() {
   const exportJson = () => {
     if (transformed === null) return toast.warning('Load valid JSON first');
     const baseName = fileName.replace(/\.json$/i, '') || 'json-export';
-    downloadText(JSON.stringify(transformed, null, 2), `${baseName}-transformed.json`, 'application/json');
+    downloadText(`${baseName}-transformed.json`, JSON.stringify(transformed, null, 2), 'application/json');
     toast.success('Transformed JSON exported');
   };
 
   const exportHtml = () => {
     if (transformed === null) return toast.warning('Load valid JSON first');
     const baseName = fileName.replace(/\.json$/i, '') || 'json-export';
-    downloadText(createHtmlExport(transformed, title), `${baseName}-cards.html`, 'text/html');
+    downloadText(`${baseName}-cards.html`, createHtmlExport(transformed, title), 'text/html');
     toast.success('Card HTML exported');
   };
 
