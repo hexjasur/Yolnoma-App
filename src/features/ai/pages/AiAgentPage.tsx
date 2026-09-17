@@ -11,11 +11,10 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getApiKey, saveApiKey } from '../storage';
 import { DEFAULT_MODELS, type ToolCall } from '../types';
-import { fetchOpenRouterModels, getShortModelName } from '../api/openRouterApi';
+import { fetchOpenRouterModels, getShortModelName, requestOpenRouter } from '../api/openRouterApi';
 
 type ProjectEntry = { name: string; path: string; kind: 'file' | 'directory'; depth: number };
 type ChatMessage = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; tool_calls?: ToolCall[]; tool_call_id?: string };
-type ProxyResponse = { status: number; body: { choices?: Array<{ message?: { content?: string; tool_calls?: ToolCall[] } }>; error?: { message?: string } } };
 type PendingEdit = { call: ToolCall; path: string; content: string };
 
 const IGNORED_DIRECTORIES = new Set(['node_modules', '.git', 'dist', 'build', 'target', '.next', 'coverage', '.cache']);
@@ -61,11 +60,7 @@ const READ_FILE_TOOL = { type: 'function', function: { name: 'read_file', descri
 const WRITE_FILE_TOOL = { type: 'function', function: { name: 'write_file', description: 'Propose a complete replacement for a text file. The user must approve before writing.', parameters: { type: 'object', properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } } } as const;
 
 async function requestAgent(apiKey: string, model: string, messages: ChatMessage[]) {
-  return invoke<ProxyResponse>('proxy_request', {
-    method: 'POST', url: 'https://openrouter.ai/api/v1/chat/completions',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://app.yolnoma.uz', 'X-Title': 'Yolnoma Agent' },
-    body: { model, max_tokens: 3000, messages, tools: [READ_FILE_TOOL, WRITE_FILE_TOOL], tool_choice: 'auto' },
-  });
+  return requestOpenRouter({ apiKey, model, maxTokens: 3000, messages, tools: [READ_FILE_TOOL, WRITE_FILE_TOOL], toolChoice: 'auto', title: 'Yolnoma Agent' });
 }
 
 export default function AiAgentPage() {

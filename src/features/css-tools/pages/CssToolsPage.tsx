@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Code2, Minimize2, Palette, PanelRight, WandSparkles } from 'lucide-react';
 import ToolNavigation from '@/features/developer-tools/components/ToolNavigation';
+import { useHashTab } from '@/shared/hooks/useHashTab';
 import MinifyTool from '../components/MinifyTool';
 import GradientGeneratorTool from '../components/GradientGeneratorTool';
 import ScrollbarGeneratorTool from '../components/ScrollbarGeneratorTool';
@@ -15,25 +15,8 @@ const tabs: TabDefinition[] = [
   ['scrollbar-generator', 'Scrollbar CSS', PanelRight],
   ['color-picker', 'Color Picker', Palette],
 ];
-const tabIds = new Set<Tab>(tabs.map(([id]) => id));
-
-function readTabFromUrl(): Tab {
-  const query = window.location.hash.split('?')[1];
-  const value = query ? new URLSearchParams(query).get('tab') : null;
-  return value && tabIds.has(value as Tab) ? value as Tab : 'minify';
-}
-
 export default function CssToolsPage() {
-  const [tab, setTab] = useState<Tab>(readTabFromUrl);
-  useEffect(() => {
-    const onHashChange = () => setTab(readTabFromUrl());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-  const selectTab = (next: Tab) => {
-    setTab(next);
-    window.location.hash = `#/tools/css-tools?tab=${next}`;
-  };
+  const [tab, selectTab] = useHashTab(tabs.map(([id]) => id), 'minify', '#/tools/css-tools');
   return (
     <div className="mx-auto min-h-full max-w-7xl pb-16 text-[var(--text-primary)]">
       <header className="border-b border-white/[0.08] pb-8">

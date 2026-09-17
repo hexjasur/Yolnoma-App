@@ -1,29 +1,12 @@
-import { useEffect, useState } from 'react';
 import { Image as ImageIcon, Minimize2, RefreshCw } from 'lucide-react';
 import ImageConverterTool from '../components/ImageConverterTool';
 import ImageCompressorTool from '../components/ImageCompressorTool';
+import { useHashTab } from '@/shared/hooks/useHashTab';
 
 type ImageTab = 'converter' | 'compressor';
 
-function readTab(): ImageTab {
-  const value = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('tab');
-  return value === 'compressor' ? 'compressor' : 'converter';
-}
-
 export default function ImagePage() {
-  const [tab, setTab] = useState<ImageTab>(readTab);
-
-  useEffect(() => {
-    const onHashChange = () => setTab(readTab());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-
-  const selectTab = (next: ImageTab) => {
-    setTab(next);
-    const route = window.location.hash.split('?')[0] || '#/tools/image';
-    window.location.hash = `${route}?tab=${next}`;
-  };
+  const [tab, selectTab] = useHashTab<ImageTab>(['converter', 'compressor'], 'converter', '#/tools/image');
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-base)] text-[var(--text-primary)]">
