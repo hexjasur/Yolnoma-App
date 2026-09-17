@@ -1,11 +1,11 @@
 {
-  "version": "1.0.17",
-  "notes": "✨ What's New\n\n• Complete AV performance catalog and detail flow\n• Add unified performance catalog modal\n• Add AV performance catalog mode\n\n🐛 Bug Fixes\n\n• Match catalog selector and AV add button styling\n• Preserve JSON export filenames\n• Keep legacy updater manifest current\n\n🔧 Improvements\n\n• Improve README generation context building\n• Share feature file utilities\n• Consolidate repeated feature integrations",
-  "pub_date": "2026-09-17T17:43:03Z",
+  "version": "1.0.18",
+  "notes": "🐛 Bug Fixes\n\n• Publish SteamUtility before Tauri bundle\n\n🔧 Maintenance\n\n• Bump version to 1.0.18",
+  "pub_date": "2026-09-17T18:09:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSHFUM2hRdW1qYnFiNm1sOVZDUzFlZVl0cHhRWlRzaEg5SFJCeTAxNXRNclVJYy90UGtNenFxM0wrdENrZ3Via3N0VVc5SkVkQklTdzlyZnkySjFTM3dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NjY2ODY5CWZpbGU6WW9sbm9tYV8xLjAuMTdfeDY0LXNldHVwLmV4ZQpzM0dZV2lOVlRUZ1pUdDYxdFZNdkk4ck5FUEx3OFloVnFHWFhlSHFUV3ZTbW51dzlVaUk0QWV0WGpnMGlCN3pMWE5heFVpN1Y0ZWkrei9HaU1JeHhEUT09Cg==",
-      "url": "https://github.com/hexjasur/Yolnoma-App/releases/download/v1.0.17/Yolnoma_1.0.17_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRUWYwYkdPNTNjSHNpZU9XWTFFdm5OWGNja0NkVzdZeStUcFA1R0FqVEVOQmJVVm9kaDRNWVJGVGUwSmZBZ3h3LzgxM0UvaGNTVWJWWVJqV1FSWkZHTmhEVEVqMENCNFFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NjY4NDUzCWZpbGU6WW9sbm9tYV8xLjAuMThfeDY0LXNldHVwLmV4ZQp0aFhZcnRIdmIxQ01lNnU5ZTQzek5jNExzZEplb0NEQ3BTN3ZVTGFZY3NHaWJUSXhmY0JHbWNqQnk1RWFYYXRublRDeit3NVcwWE9uTEJUTS9mT2tDUT09Cg==",
+      "url": "https://github.com/hexjasur/Yolnoma-App/releases/download/v1.0.18/Yolnoma_1.0.18_x64-setup.exe"
     }
   }
 }
