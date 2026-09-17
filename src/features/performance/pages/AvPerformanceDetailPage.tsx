@@ -1,0 +1,19 @@
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Film, Lock, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { Button } from '@/shared/ui';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useAvPerformanceDetail } from '@/features/performance/hooks/useAvPerformanceQueries';
+import { useModal } from '@/features/performance/hooks/usePerformanceModal';
+import EditAvPerformanceModal from '@/features/performance/components/EditAvPerformanceModal';
+import DeleteAvPerformanceModal from '@/features/performance/components/DeleteAvPerformanceModal';
+import type { AvPerformance } from '@/types';
+import { getErrorMessage } from '@/shared/lib/errors';
+export default function AvPerformanceDetailPage() {
+  const { id } = useParams<{ id: string }>(); const navigate = useNavigate(); const { user } = useAuth();
+  const query = useAvPerformanceDetail(id); const item = query.data ?? null; const edit = useModal<AvPerformance>(); const remove = useModal<AvPerformance>();
+  const back = <Link to="/performances?type=av" className="mb-6 inline-flex items-center gap-2 text-sm text-white/45 hover:text-[#F2EDE6]"><ArrowLeft size={15} /> Back to AV performances</Link>;
+  if (user?.role !== 'owner') return <div className="max-w-2xl mx-auto">{back}<div className="rounded-2xl border border-dashed border-white/15 p-12 text-center"><Lock className="mx-auto mb-3 text-[#D97757]" /><p>Access denied. Owner role is required.</p></div></div>;
+  if (query.isLoading) return <div className="animate-pulse space-y-6">{back}<div className="h-80 rounded-3xl bg-white/[0.04]" /></div>;
+  if (query.isError || !item) return <div className="max-w-2xl mx-auto">{back}<div className="rounded-2xl border border-red-500/25 p-6"><p>{getErrorMessage(query.error, 'AV performance not found.')}</p><Button variant="ghost" onClick={() => query.refetch()}><RefreshCw size={14} /> Retry</Button></div></div>;
+  return <div className="relative mx-auto max-w-5xl space-y-8"><div className="flex items-center justify-between">{back}<div className="flex gap-2"><Link to={`/videos?query=${encodeURIComponent(item.title)}`}><Button variant="ghost" size="sm"><Film size={13} /> Streams</Button></Link><Button variant="ghost" size="sm" onClick={() => edit.open(item)}><Pencil size={13} /> Edit</Button><Button variant="danger" size="sm" onClick={() => remove.open(item)}><Trash2 size={13} /> Delete</Button></div></div><div className="overflow-hidden rounded-3xl border border-white/[0.06] bg-[#181410]"><img src={item.thumbnail_url || item.image_url} alt={item.title} className="max-h-[30rem] w-full object-cover opacity-90" /></div><div className="grid gap-10 lg:grid-cols-[380px_1fr]"><div className="overflow-hidden rounded-3xl border border-white/[0.06]"><img src={item.image_url} alt={item.title} className="aspect-[3/4] w-full object-cover" /></div><div><p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D97757]">AV Performance</p><h1 className="mb-4 font-serif text-5xl font-medium text-[#F2EDE6]">{item.title}</h1><div className="mb-6 flex flex-wrap gap-2"><span className="rounded-lg border border-[#D97757]/25 bg-[#D97757]/10 px-3 py-1 text-xs text-[#D97757]">{item.country}</span>{item.release_date && <span className="rounded-lg border border-white/10 px-3 py-1 text-xs text-white/60">{item.release_date}</span>}</div><p className="whitespace-pre-wrap text-sm leading-7 text-white/60">{item.description || 'No description.'}</p><div className="mt-8 border-t border-white/[0.08] pt-4 text-xs text-white/35">Created {new Date(item.created_at).toLocaleDateString()} · Updated {new Date(item.updated_at).toLocaleDateString()}</div></div></div><EditAvPerformanceModal open={edit.isOpen} item={edit.target} onClose={edit.close} /><DeleteAvPerformanceModal open={remove.isOpen} item={remove.target} onClose={remove.close} onDeleted={() => navigate('/performances?type=av')} /></div>;
+}

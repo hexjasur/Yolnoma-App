@@ -25,6 +25,8 @@ interface Props {
   onAdd: () => void;
   addModalOpen: boolean;
   onAddClose: () => void;
+  onEdit: (item: AvPerformance) => void;
+  onDelete: (item: AvPerformance) => void;
 }
 
 export default function AvPerformanceCatalog({
@@ -45,7 +47,7 @@ export default function AvPerformanceCatalog({
   onRefresh,
   onAdd,
   addModalOpen,
-  onAddClose,
+  onAddClose, onEdit, onDelete,
 }: Props) {
   return (
     <div style={{ minHeight: '100%', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
@@ -70,7 +72,7 @@ export default function AvPerformanceCatalog({
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
         <form onSubmit={onSearchSubmit} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 260 }}>
-          <SearchInput size="md" width="wide" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onClear={onClearSearch} placeholder="Search by title or code…" />
+          <SearchInput size="md" width="wide" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onClear={onClearSearch} placeholder="Search by title…" />
           <Button type="submit" variant="ghost">Search</Button>
           {searchParam && <Button type="button" variant="ghost" onClick={onClearSearch}>Clear</Button>}
         </form>
@@ -91,7 +93,7 @@ export default function AvPerformanceCatalog({
       {!loading && pagination.total > 0 && <Pagination page={currentPage} totalPages={pagination.totalPages} total={pagination.total} limit={currentLimit} onPageChange={onPageChange} onLimitChange={onLimitChange} limitOptions={[15, 20, 40]} loading={loading} itemLabel="AV performances" />}
       {loading && <CardGridSkeleton count={currentLimit} />}
       {!loading && !error && items.length === 0 && <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 16, marginBottom: 28 }}><p style={{ fontSize: 16, color: 'var(--text-primary)' }}>{searchParam ? `Nothing was found for… «${searchParam}»` : 'No AV performances have been added yet.'}</p></div>}
-      {!loading && items.length > 0 && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 24, marginTop: 28, marginBottom: 36 }}>{items.map((item) => <AvPerformanceCard key={item.id} item={item} />)}</div>}
+      {!loading && items.length > 0 && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 24, marginTop: 28, marginBottom: 36 }}>{items.map((item) => <AvPerformanceCard key={item.id} item={item} onEdit={onEdit} onDelete={onDelete} />)}</div>}
       {!loading && pagination.total > 0 && <div style={{ marginTop: 20 }}><Pagination page={currentPage} totalPages={pagination.totalPages} total={pagination.total} limit={currentLimit} onPageChange={onPageChange} onLimitChange={onLimitChange} limitOptions={[15, 20, 40]} loading={loading} itemLabel="AV performances" /></div>}
       <AddPerformanceModal open={addModalOpen} onClose={onAddClose} defaultType="av_performance" />
     </div>

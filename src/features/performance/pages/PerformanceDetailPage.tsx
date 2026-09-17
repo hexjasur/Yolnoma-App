@@ -7,6 +7,7 @@ import { useModal } from '@/features/performance/hooks/usePerformanceModal';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/shared/ui';
 import { AppError, getErrorMessage } from '@/shared/lib/errors';
+import type { Performance } from '@/types';
 
 export default function PerformanceDetailPage() {
   const { id }    = useParams<{ id: string }>();
@@ -20,8 +21,8 @@ export default function PerformanceDetailPage() {
   const error = performanceQuery.isError ? getErrorMessage(performanceQuery.error) : null;
   const notFound = performanceQuery.error instanceof AppError && performanceQuery.error.status === 404;
 
-  const editModal   = useModal();
-  const deleteModal = useModal();
+  const editModal   = useModal<Performance>();
+  const deleteModal = useModal<Performance>();
 
   const BackLink = () => (
     <Link

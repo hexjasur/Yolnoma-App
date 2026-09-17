@@ -65,6 +65,7 @@ const BackgroundRemoverPage = lazyPage(() => import('@/features/background-remov
 const MarketplacePage = lazyPage(() => import('@/features/marketplace/pages/MarketplacePage'));
 const CurrencyConverterPage = lazyPage(() => import('@/features/currency/pages/CurrencyConverterPage'));
 const PerformanceDetailPage = lazyPage(() => import('@/features/performance/pages/PerformanceDetailPage'));
+const AvPerformanceDetailPage = lazyPage(() => import('@/features/performance/pages/AvPerformanceDetailPage'));
 const PerformancePage = lazyPage(() => import('@/features/performance/pages/PerformancePage'));
 const SteamIdlerPage = lazyPage(() => import('@/features/steam-idler/pages/SteamIdlerPage'));
 const SteamSamPage = lazyPage(() => import('@/features/steam-sam/pages/SteamSamPage'));
@@ -101,6 +102,7 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   { id: 'agent', path: '/agent', component: AiAgentPage, status: 'dev', label: 'Yolnoma Agent', icon: Bot, navGroup: 'home' },
   { id: 'codebase-agent', path: '/codebase-agent', component: CodebaseAgentPage, status: 'dev', label: 'Codebase Agent', icon: Bot, navGroup: 'home' },
   { id: 'performances', path: '/performances', component: PerformancePage, guard: roleGuard('performances', 'Access restricted: Performances section is available to Owner only.'), label: 'Performance', icon: Gamepad, navGroup: 'workspace' },
+  { id: 'av-performance-detail', path: '/performances/av/:id', component: AvPerformanceDetailPage, guard: roleGuard('performances', 'Access restricted: Performances section is available to Owner only.') },
   { id: 'performance-detail', path: '/performances/:id', component: PerformanceDetailPage, guard: roleGuard('performances', 'Access restricted: Performances section is available to Owner only.') },
   { id: 'videos', path: '/videos', component: VideosPage, guard: roleGuard('videos', 'Access restricted: Stream section is available to Owner only.'), label: 'Stream', icon: Download, navGroup: 'workspace' },
   { id: 'video-detail', path: '/videos/:videoId', component: VideoDetailPage, guard: roleGuard('videos', 'Access restricted: Stream section is available to Owner only.') },
