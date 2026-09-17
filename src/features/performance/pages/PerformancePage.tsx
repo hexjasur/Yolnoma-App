@@ -162,6 +162,9 @@ export default function PerformancePage() {
         onPageChange={handlePageChange}
         onLimitChange={handleLimitChange}
         onRefresh={() => avPerformanceQuery.refetch()}
+        onAdd={() => addModal.open()}
+        addModalOpen={addModal.isOpen}
+        onAddClose={addModal.close}
       />
     );
   }
@@ -413,6 +416,7 @@ export default function PerformancePage() {
       <AddPerformanceModal
         open={addModal.isOpen}
         onClose={addModal.close}
+        defaultType="performance"
       />
 
       <EditPerformanceModal

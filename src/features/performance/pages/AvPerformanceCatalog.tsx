@@ -2,6 +2,7 @@ import type { FormEvent } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 import AvPerformanceCard from '@/features/performance/components/AvPerformanceCard';
+import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
 import { Button, CardGridSkeleton, Pagination, SearchInput } from '@/shared/ui';
 import type { AvPerformance, PaginationMeta } from '@/types';
 
@@ -21,6 +22,9 @@ interface Props {
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
   onRefresh: () => void;
+  onAdd: () => void;
+  addModalOpen: boolean;
+  onAddClose: () => void;
 }
 
 export default function AvPerformanceCatalog({
@@ -39,6 +43,9 @@ export default function AvPerformanceCatalog({
   onPageChange,
   onLimitChange,
   onRefresh,
+  onAdd,
+  addModalOpen,
+  onAddClose,
 }: Props) {
   return (
     <div style={{ minHeight: '100%', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
@@ -57,6 +64,7 @@ export default function AvPerformanceCatalog({
           <Button variant="ghost" onClick={onRefresh} disabled={loading} title="Refresh">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </Button>
+          <Button variant="primary" onClick={onAdd}>New</Button>
         </div>
       </header>
 
@@ -85,6 +93,7 @@ export default function AvPerformanceCatalog({
       {!loading && !error && items.length === 0 && <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 16, marginBottom: 28 }}><p style={{ fontSize: 16, color: 'var(--text-primary)' }}>{searchParam ? `Nothing was found for… «${searchParam}»` : 'No AV performances have been added yet.'}</p></div>}
       {!loading && items.length > 0 && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 24, marginTop: 28, marginBottom: 36 }}>{items.map((item) => <AvPerformanceCard key={item.id} item={item} />)}</div>}
       {!loading && pagination.total > 0 && <div style={{ marginTop: 20 }}><Pagination page={currentPage} totalPages={pagination.totalPages} total={pagination.total} limit={currentLimit} onPageChange={onPageChange} onLimitChange={onLimitChange} limitOptions={[15, 20, 40]} loading={loading} itemLabel="AV performances" /></div>}
+      <AddPerformanceModal open={addModalOpen} onClose={onAddClose} defaultType="av_performance" />
     </div>
   );
 }

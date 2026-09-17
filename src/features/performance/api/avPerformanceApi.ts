@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/http';
-import type { AvPerformance, AvPerformanceListResponse } from '@/types';
+import type { AvPerformance, AvPerformanceCreateInput, AvPerformanceListResponse } from '@/types';
 
 const BASE = '/api/v2/av-performance';
 
@@ -27,6 +27,11 @@ export const avPerformanceService = {
   },
   get: async (id: string): Promise<AvPerformance> => {
     const res = await api.get<{ data?: AvPerformance } | AvPerformance>(`${BASE}/${id}`);
+    if (res && typeof res === 'object' && 'data' in res && res.data) return res.data;
+    return res as AvPerformance;
+  },
+  add: async (data: AvPerformanceCreateInput): Promise<AvPerformance> => {
+    const res = await api.post<{ data?: AvPerformance } | AvPerformance>(BASE, data);
     if (res && typeof res === 'object' && 'data' in res && res.data) return res.data;
     return res as AvPerformance;
   },
