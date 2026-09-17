@@ -6,7 +6,9 @@ import PerformanceCard from '@/features/performance/components/PerformanceCard';
 import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
 import EditPerformanceModal from '@/features/performance/components/EditPerformanceModal';
 import DeleteConfirmModal from '@/features/performance/components/DeleteConfirmModal';
+import AvPerformanceCatalog from '@/features/performance/pages/AvPerformanceCatalog';
 import { usePerformanceList } from '@/features/performance/hooks/usePerformanceQueries';
+import { useAvPerformanceList } from '@/features/performance/hooks/useAvPerformanceQueries';
 import { useModal } from '@/features/performance/hooks/usePerformanceModal';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button, CardGridSkeleton, Pagination, SearchInput } from '@/shared/ui';
@@ -23,6 +25,7 @@ export default function PerformancePage() {
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
   const limitParam = parseInt(searchParams.get('limit') || '15', 10);
   const searchParam = searchParams.get('search') || searchParams.get('query') || '';
+  const isAvMode = searchParams.get('type') === 'av';
 
   const currentPage = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
   const currentLimit = isNaN(limitParam) || limitParam < 1 ? 15 : limitParam;
@@ -35,11 +38,16 @@ export default function PerformancePage() {
     hasNextPage: false,
     hasPrevPage: false,
   };
-  const performanceQuery = usePerformanceList(currentPage, currentLimit, searchParam, isOwner);
+  const performanceQuery = usePerformanceList(currentPage, currentLimit, searchParam, isOwner && !isAvMode);
+  const avPerformanceQuery = useAvPerformanceList(currentPage, currentLimit, searchParam, isOwner && isAvMode);
   const items = performanceQuery.data?.data ?? [];
   const pagination = performanceQuery.data?.pagination ?? emptyPagination;
   const loading = performanceQuery.isLoading;
   const error = performanceQuery.error;
+  const avItems = avPerformanceQuery.data?.data ?? [];
+  const avPagination = avPerformanceQuery.data?.pagination ?? emptyPagination;
+  const avLoading = avPerformanceQuery.isLoading;
+  const avError = avPerformanceQuery.error;
   const [searchInput, setSearchInput] = useState(searchParam);
 
   const addModal    = useModal();
@@ -136,6 +144,28 @@ export default function PerformancePage() {
     );
   }
 
+  if (isAvMode) {
+    return (
+      <AvPerformanceCatalog
+        setSearchParams={setSearchParams}
+        searchParam={searchParam}
+        currentPage={currentPage}
+        currentLimit={currentLimit}
+        items={avItems}
+        pagination={avPagination}
+        loading={avLoading}
+        error={avError}
+        searchInput={searchInput}
+        setSearchInput={setSearchInput}
+        onSearchSubmit={handleSearchSubmit}
+        onClearSearch={handleClearSearch}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+        onRefresh={() => avPerformanceQuery.refetch()}
+      />
+    );
+  }
+
 
   return (
     <div
@@ -189,6 +219,9 @@ export default function PerformancePage() {
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
+          <Button variant="ghost" onClick={() => setSearchParams({ type: 'av', page: '1', limit: String(currentLimit) })}>
+            AV Performances
+          </Button>
           <Button
             variant="ghost"
             onClick={() => performanceQuery.refetch()}
