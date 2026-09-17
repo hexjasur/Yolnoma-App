@@ -26,6 +26,7 @@ import {
   FileQuestion,
 } from 'lucide-react';
 import { Button } from '@/shared/ui';
+import { formatBytes } from '@/shared/lib/files';
 import { toast } from '@/shared/ui/Toast';
 
 interface ArchiveEntry {
@@ -55,13 +56,6 @@ interface ArchiveFileData {
   mime_type: string;
   text_content: string | null;
   data_url: string | null;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
 function getFileIcon(name: string, isDir: boolean) {
