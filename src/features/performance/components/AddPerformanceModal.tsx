@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AvPerformance, Performance } from '@/types';
 import { useCreatePerformance } from '@/features/performance/hooks/usePerformanceQueries';
 import { useCreateAvPerformance } from '@/features/performance/hooks/useAvPerformanceQueries';
-import { Button, ImageUpload, Input, Modal, Textarea } from '@/shared/ui';
+import { Button, ImageUpload, Input, Modal, SelectMenu, Textarea } from '@/shared/ui';
 
 type CatalogType = 'performance' | 'av_performance';
 type AddItem = Performance | AvPerformance;
@@ -85,10 +85,15 @@ export default function AddPerformanceModal({ open, onClose, defaultType = 'perf
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
           <label htmlFor="add-catalog-type" className="form-label">Catalog type *</label>
-          <select id="add-catalog-type" value={type} onChange={(event) => setType(event.target.value as CatalogType)} className="form-input">
-            <option value="performance">Performance</option>
-            <option value="av_performance">AV Performance</option>
-          </select>
+          <SelectMenu
+            value={type}
+            onChange={(value) => setType(value as CatalogType)}
+            ariaLabel="Catalog type"
+            options={[
+              { value: 'performance', label: 'Performance' },
+              { value: 'av_performance', label: 'AV Performance' },
+            ]}
+          />
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Default follows the current page. You can change it before saving.</p>
         </div>
 

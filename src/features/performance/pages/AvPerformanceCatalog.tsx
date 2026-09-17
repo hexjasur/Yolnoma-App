@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Plus, RefreshCw } from 'lucide-react';
 import AvPerformanceCard from '@/features/performance/components/AvPerformanceCard';
 import AddPerformanceModal from '@/features/performance/components/AddPerformanceModal';
 import { Button, CardGridSkeleton, Pagination, SearchInput } from '@/shared/ui';
@@ -64,7 +64,7 @@ export default function AvPerformanceCatalog({
           <Button variant="ghost" onClick={onRefresh} disabled={loading} title="Refresh">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </Button>
-          <Button variant="primary" onClick={onAdd}>New</Button>
+          <Button variant="primary" onClick={onAdd}><Plus size={15} strokeWidth={2} /> New</Button>
         </div>
       </header>
 
