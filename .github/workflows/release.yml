@@ -272,6 +272,7 @@ jobs:
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
 
@@ -445,7 +446,23 @@ jobs:
           Write-Host "Generated latest.json:"
           Write-Host $jsonContent
 
-          # 6. Upload the manifest and updater assets directly to this release.
+          # 6. Ensure the GitHub Release exists, then upload assets idempotently.
+          # gh CLI authenticates with GH_TOKEN; GITHUB_TOKEN alone is not enough.
+          gh release view $tag --repo $repoSlug *> $null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Release $tag not found; creating it before upload."
+            $notesPath = Join-Path $env:RUNNER_TEMP "release-notes-$version.md"
+            Set-Content -Path $notesPath -Value $releaseNotes -Encoding utf8
+            gh release create $tag `
+              --repo $repoSlug `
+              --title "Yolnoma v$version" `
+              --notes-file $notesPath
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to create GitHub Release $tag."
+            }
+          }
+
+          # Upload the manifest and updater assets directly to this release.
           gh release upload $tag `
             "updater-files/$($exe.Name)" `
             "updater-files/$($sig.Name)" `
