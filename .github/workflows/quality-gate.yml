@@ -32,10 +32,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.x'
-      - name: Build SteamUtility resource archive
-        shell: pwsh
-        run: ./scripts/build-steam-utility.ps1 -Configuration Release -Runtime win-x64
       - run: cargo test --manifest-path src-tauri/Cargo.toml
