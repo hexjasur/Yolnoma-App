@@ -48,7 +48,27 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          ./scripts/build-steam-utility.ps1 -Configuration Release -Runtime win-x64
+          $resourceDir = Join-Path $env:GITHUB_WORKSPACE 'src-tauri/resources/steam-utility'
+
+          if (Test-Path $resourceDir) {
+            Remove-Item $resourceDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
+
+          dotnet publish 'libs/SteamUtility/SteamUtility.csproj' `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $resourceDir `
+            -p:PublishSingleFile=false
+
+          $utility = Join-Path $resourceDir 'SteamUtility.exe'
+          if (-not (Test-Path $utility)) {
+            throw "SteamUtility publish did not produce $utility"
+          }
+
+          Write-Host "SteamUtility bundled: $utility"
+          Get-ChildItem $resourceDir | Select-Object Name, Length
 
       - name: Validate frontend build secrets
         shell: pwsh

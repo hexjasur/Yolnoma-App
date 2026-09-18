@@ -31,7 +31,7 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "resources": {
-      "resources/yolnoma_steamutility.dat": "./resources/yolnoma_steamutility.dat"
+      "resources/steam-utility/*": "./resources/steam-utility/"
     },
     "targets": [
       "nsis"

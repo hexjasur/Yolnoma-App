@@ -10,9 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-.build
 coverage
-src-tauri/resources/yolnoma_steamutility.dat
 *.local
 
 # Editor directories and files
