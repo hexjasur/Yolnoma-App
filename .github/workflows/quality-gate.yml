@@ -1,0 +1,35 @@
+name: GA Quality Gate
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master, 'hardening/**', 'release/**']
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend build and tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test -- --reporter=dot
+      - run: npm run validate:video-csp
+
+  rust:
+    name: Rust backend tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo test --manifest-path src-tauri/Cargo.toml

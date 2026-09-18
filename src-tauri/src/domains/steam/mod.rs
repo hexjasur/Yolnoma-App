@@ -100,38 +100,81 @@ impl IdlingState {
     }
 }
 
-// ── SteamUtility.exe joylashuvini topish ──────────────────────────────
+// ── SteamUtility archive extraction and resolution ───────────────────
+fn extract_steam_utility_archive(app: &AppHandle, archive: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    use sha2::{Digest, Sha256};
+    use zip::ZipArchive;
+
+    let bytes = std::fs::read(archive)
+        .map_err(|e| format!("STEAM-RESOURCE-READ-001: archive read failed: {e}"))?;
+    let digest = Sha256::digest(&bytes);
+    let version = digest.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
+    let root = app.path().app_data_dir()
+        .map_err(|e| format!("STEAM-RESOURCE-DIR-001: app data directory unavailable: {e}"))?
+        .join("steam-utility").join(version);
+    let executable = root.join("SteamUtility.exe");
+    if executable.is_file() && root.join("steam_api64.dll").is_file() { return Ok(executable); }
+    let temp = root.with_extension("extracting");
+    if temp.exists() { let _ = std::fs::remove_dir_all(&temp); }
+    std::fs::create_dir_all(&temp)
+        .map_err(|e| format!("STEAM-RESOURCE-EXTRACT-001: temp directory failed: {e}"))?;
+    let file = std::fs::File::open(archive)
+        .map_err(|e| format!("STEAM-RESOURCE-READ-002: archive open failed: {e}"))?;
+    let mut zip = ZipArchive::new(file)
+        .map_err(|e| format!("STEAM-RESOURCE-ARCHIVE-001: invalid archive: {e}"))?;
+    for index in 0..zip.len() {
+        let mut entry = zip.by_index(index)
+            .map_err(|e| format!("STEAM-RESOURCE-ARCHIVE-002: entry failed: {e}"))?;
+        let relative = entry.enclosed_name().ok_or_else(||
+            "STEAM-RESOURCE-ARCHIVE-003: unsafe archive path".to_string())?.to_path_buf();
+        let destination = temp.join(relative);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&destination)
+                .map_err(|e| format!("STEAM-RESOURCE-EXTRACT-002: directory failed: {e}"))?;
+        } else {
+            if let Some(parent) = destination.parent() { std::fs::create_dir_all(parent)
+                .map_err(|e| format!("STEAM-RESOURCE-EXTRACT-003: parent failed: {e}"))?; }
+            let mut output = std::fs::File::create(&destination)
+                .map_err(|e| format!("STEAM-RESOURCE-EXTRACT-004: file failed: {e}"))?;
+            std::io::copy(&mut entry, &mut output)
+                .map_err(|e| format!("STEAM-RESOURCE-EXTRACT-005: copy failed: {e}"))?;
+        }
+    }
+    if !temp.join("SteamUtility.exe").is_file() || !temp.join("steam_api64.dll").is_file() {
+        let _ = std::fs::remove_dir_all(&temp);
+        return Err("STEAM-RESOURCE-MISSING-001: archive lacks SteamUtility.exe or steam_api64.dll".to_string());
+    }
+    if root.exists() { let _ = std::fs::remove_dir_all(&root); }
+    std::fs::rename(&temp, &root)
+        .map_err(|e| format!("STEAM-RESOURCE-EXTRACT-006: finalize failed: {e}"))?;
+    Ok(executable)
+}
+
 fn locate_steam_utility(app: &AppHandle) -> Result<std::path::PathBuf, String> {
-    let current_dir = std::env::current_exe()
-        .map_err(|e| format!("current_exe error: {e}"))?
-        .parent()
-        .map(std::path::Path::to_path_buf)
+    let current_dir = std::env::current_exe().map_err(|e| format!("current_exe error: {e}"))?
+        .parent().map(std::path::Path::to_path_buf)
         .ok_or_else(|| "Could not determine application directory".to_string())?;
     let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let resource_dir = app.path().resource_dir().ok();
-
-    let mut candidates = vec![
-        resource_dir
-            .as_ref()
-            .map(|dir| dir.join("steam-utility").join("SteamUtility.exe")),
-        resource_dir
-            .as_ref()
-            .map(|dir| dir.join("SteamUtility.exe")),
+    let archives = [
+        resource_dir.as_ref().map(|dir| dir.join("yolnoma_steamutility.dat")),
+        Some(current_dir.join("resources").join("yolnoma_steamutility.dat")),
+        Some(manifest_dir.join("resources").join("yolnoma_steamutility.dat")),
+    ];
+    for archive in archives.into_iter().flatten() {
+        if archive.is_file() { return extract_steam_utility_archive(app, &archive); }
+    }
+    let candidates = [
+        resource_dir.as_ref().map(|dir| dir.join("steam-utility").join("SteamUtility.exe")),
+        resource_dir.as_ref().map(|dir| dir.join("SteamUtility.exe")),
         Some(current_dir.join("resources").join("steam-utility").join("SteamUtility.exe")),
         Some(current_dir.join("resources").join("SteamUtility.exe")),
         Some(manifest_dir.join("..").join("libs").join("SteamUtility").join("bin").join("Release").join("SteamUtility.exe")),
     ];
-
-    for candidate in candidates.drain(..).flatten() {
-        if candidate.exists() {
-            return Ok(candidate);
-        }
+    for candidate in candidates.into_iter().flatten() {
+        if candidate.is_file() { return Ok(candidate); }
     }
-
-    Err(format!(
-        "SteamUtility.exe not found. Checked bundled resources and {}.",
-        manifest_dir.display()
-    ))
+    Err(format!("STEAM-RESOURCE-MISSING-002: SteamUtility package not found. Reinstall Yolnoma or run repair. Checked {}.", manifest_dir.display()))
 }
 
 // ── Steam ishlayotganini tekshirish ───────────────────────────────────
