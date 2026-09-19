@@ -6,45 +6,16 @@ import {
   Monitor, Package, Image as ImageIcon, CheckCircle
 } from 'lucide-react';
 import { useAuth, UserProfile } from '@/features/auth/AuthContext';
-import ImageCropper from '@/shared/ui/ImageCropper';
+import ImageEditModal from '@/shared/ui/ImageEditModal';
 import { api } from '@/shared/api/http';
 import { toast } from '@/shared/ui/Toast';
-import IMGBB_UPLOAD_URL from '@/shared/api/imageUploadApi';
+import { uploadImage } from '@/shared/api/imageUploadApi';
+import type { UploadState } from '@/types';
 
 // ── Helpers ──────────────────────────────────────────────────
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY as string;
-
-async function uploadToImgBB(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1];
-      const form = new FormData();
-      if (IMGBB_API_KEY) {
-        form.append('key', IMGBB_API_KEY);
-      }
-      form.append('image', base64);
-
-      const xhr = new XMLHttpRequest();
-      const uploadUrl = IMGBB_API_KEY
-        ? `${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`
-        : IMGBB_UPLOAD_URL;
-
-      xhr.open('POST', uploadUrl);
-      xhr.onload = () => {
-        try {
-          const res = JSON.parse(xhr.responseText);
-          if (res.success) resolve(res.data.url);
-          else reject(new Error(res.error?.message || 'Image upload to ImgBB failed'));
-        } catch {
-          reject(new Error('Invalid response from image upload server'));
-        }
-      };
-      xhr.onerror = () => reject(new Error('Network error while uploading image'));
-      xhr.send(form);
-    };
-    reader.readAsDataURL(blob);
-  });
+async function uploadToImgBB(blob: Blob, filename: string, onProgress?: (state: UploadState) => void): Promise<string> {
+  const file = new File([blob], filename, { type: blob.type || 'image/webp' });
+  return uploadImage(file, onProgress);
 }
 
 function getRoleMeta(role: string) {
@@ -94,24 +65,17 @@ export default function ProfilePage() {
   const [profileSaving, setProfileSaving] = useState(false);
 
   // Image upload states
-  const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || user?.avatar_url || null);
-  const [thumbBlob, setThumbBlob] = useState<Blob | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(user?.thumbnailUrl || user?.thumbnail_url || null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [imageEditor, setImageEditor] = useState<'avatar' | 'thumbnail' | null>(null);
 
   // Synchronize local states whenever user changes (and not currently saving)
   useEffect(() => {
     if (user && !profileSaving) {
       setDisplayName(user.displayName || user.display_name || '');
       setIsPrivate(user.isPrivate ?? user.is_private ?? false);
-      if (!avatarBlob) {
-        setAvatarPreview(user.avatarUrl || user.avatar_url || null);
-      }
-      if (!thumbBlob) {
-        setThumbPreview(user.thumbnailUrl || user.thumbnail_url || null);
-      }
+      setAvatarPreview(user.avatarUrl || user.avatar_url || null);
+      setThumbPreview(user.thumbnailUrl || user.thumbnail_url || null);
     }
   }, [user, profileSaving]);
 
@@ -124,64 +88,21 @@ export default function ProfilePage() {
     else setOsInfo(navigator.platform);
   }, []);
 
-  // ── Avatar crop & upload ───────────────────────────────────
-  const handleAvatarCropped = (blob: Blob, dataUrl: string) => {
-    setAvatarBlob(blob);
-    setAvatarPreview(dataUrl);
-  };
-
-  const uploadAvatar = async () => {
-    if (!avatarBlob || !user) return;
-    setUploadingAvatar(true);
-    try {
-      const url = await uploadToImgBB(avatarBlob);
-      const res = await api.patch(`/api/v2/users/${user.id}`, { avatarUrl: url });
-      const rawUser = res?.data?.user || res?.data || res?.user || res;
-      const updatedUser: UserProfile = {
-        ...user,
-        ...rawUser,
-        avatarUrl: url,
-        avatar_url: url,
-      };
-      updateUser(updatedUser);
-      setAvatarBlob(null);
-      setAvatarPreview(url);
-      toast.success('Profile picture updated successfully!');
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to upload profile image');
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
-
-  // ── Thumbnail crop & upload ────────────────────────────────
-  const handleThumbCropped = (blob: Blob, dataUrl: string) => {
-    setThumbBlob(blob);
-    setThumbPreview(dataUrl);
-  };
-
-  const uploadThumb = async () => {
-    if (!thumbBlob || !user) return;
-    setUploadingThumb(true);
-    try {
-      const url = await uploadToImgBB(thumbBlob);
-      const res = await api.patch(`/api/v2/users/${user.id}`, { thumbnailUrl: url });
-      const rawUser = res?.data?.user || res?.data || res?.user || res;
-      const updatedUser: UserProfile = {
-        ...user,
-        ...rawUser,
-        thumbnailUrl: url,
-        thumbnail_url: url,
-      };
-      updateUser(updatedUser);
-      setThumbBlob(null);
-      setThumbPreview(url);
-      toast.success('Banner image updated successfully!');
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to upload banner image');
-    } finally {
-      setUploadingThumb(false);
-    }
+  const saveProfileImage = async (kind: 'avatar' | 'thumbnail', blob: Blob, onProgress: (state: UploadState) => void) => {
+    if (!user) return;
+    const isAvatar = kind === 'avatar';
+    const url = await uploadToImgBB(blob, isAvatar ? 'yolnoma-profile.webp' : 'yolnoma-banner.webp', onProgress);
+    const payload = isAvatar ? { avatarUrl: url } : { thumbnailUrl: url };
+    const res = await api.patch(`/api/v2/users/${user.id}`, payload);
+    const rawUser = res?.data?.user || res?.data || res?.user || res;
+    updateUser({
+      ...user,
+      ...rawUser,
+      ...(isAvatar ? { avatarUrl: url, avatar_url: url } : { thumbnailUrl: url, thumbnail_url: url }),
+    } as UserProfile);
+    if (isAvatar) setAvatarPreview(url);
+    else setThumbPreview(url);
+    toast.success(isAvatar ? 'Profile picture updated successfully!' : 'Banner image updated successfully!');
   };
 
   // ── Profile save (handles all details + pending images) ────
@@ -191,20 +112,6 @@ export default function ProfilePage() {
     try {
       let finalAvatarUrl = user.avatarUrl || user.avatar_url || undefined;
       let finalThumbUrl = user.thumbnailUrl || user.thumbnail_url || undefined;
-
-      // Upload avatar if a new image was cropped
-      if (avatarBlob) {
-        finalAvatarUrl = await uploadToImgBB(avatarBlob);
-        setAvatarBlob(null);
-        setAvatarPreview(finalAvatarUrl);
-      }
-
-      // Upload thumbnail if a new banner was cropped
-      if (thumbBlob) {
-        finalThumbUrl = await uploadToImgBB(thumbBlob);
-        setThumbBlob(null);
-        setThumbPreview(finalThumbUrl);
-      }
 
       const payload: Record<string, any> = {
         displayName: displayName.trim() || null,
@@ -248,7 +155,13 @@ export default function ProfilePage() {
   return (
     <div className="min-h-full pb-20" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
       {/* ── Thumbnail Banner ─────────────────────────── */}
-      <div className="relative w-full rounded-2xl overflow-hidden mb-0" style={{ height: 250 }}>
+      <button
+        type="button"
+        onClick={() => setImageEditor('thumbnail')}
+        className="group relative block w-full rounded-2xl overflow-hidden mb-0 text-left focus:outline-none focus:ring-2 focus:ring-[#D97757]/50"
+        style={{ height: 250 }}
+        aria-label="Edit banner image"
+      >
         {thumbPreview ? (
           <img src={thumbPreview} alt="Banner" className="w-full h-full object-cover" />
         ) : (
@@ -262,19 +175,26 @@ export default function ProfilePage() {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#14110E] via-transparent to-transparent" />
-      </div>
+        <span className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 text-sm font-semibold text-white opacity-0 transition group-hover:opacity-100">Click to edit banner</span>
+      </button>
 
       {/* ── Profile header (avatar + name floats over banner) ── */}
       <div className="relative px-8 -mt-16 flex items-end gap-6 mb-8">
         {/* Avatar circle */}
         <div className="relative flex-shrink-0">
-          <div className={`w-28 h-28 rounded-2xl border-4 border-[#14110E] overflow-hidden bg-gradient-to-br ${roleMeta.color} shadow-2xl flex items-center justify-center`}>
+          <button
+            type="button"
+            onClick={() => setImageEditor('avatar')}
+            className={`group relative w-28 h-28 rounded-2xl border-4 border-[#14110E] overflow-hidden bg-gradient-to-br ${roleMeta.color} shadow-2xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#D97757]/60`}
+            aria-label="Edit profile picture"
+          >
             {avatarPreview ? (
               <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <User size={40} className="text-white/70" />
             )}
-          </div>
+            <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">Edit</span>
+          </button>
           {/* Small camera edit badge */}
           <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-[#D97757] flex items-center justify-center shadow-lg">
             <Camera size={12} className="text-white" />
@@ -383,47 +303,33 @@ export default function ProfilePage() {
 
           {/* ── Avatar Crop ───────────────────────────── */}
           <SectionCard title="Profile Picture (Logo)" icon={Camera}>
-            <div className="pt-5 space-y-4 flex flex-col items-center">
-              <ImageCropper
-                aspectRatio={1}
-                label="Upload a logo image (1:1 square)"
-                currentUrl={user?.avatarUrl || user?.avatar_url || undefined}
-                onCropped={handleAvatarCropped}
-              />
-              {avatarBlob && (
-                <button
-                  type="button"
-                  onClick={uploadAvatar}
-                  disabled={uploadingAvatar}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-[#D97757] hover:bg-[#c96a48] text-white transition-colors disabled:opacity-60"
-                >
-                  {uploadingAvatar ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Save Profile Picture
-                </button>
-              )}
+            <div className="pt-5 space-y-4">
+              <button
+                type="button"
+                onClick={() => setImageEditor('avatar')}
+                className="group relative mx-auto block h-40 w-40 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-[#D97757]/70 focus:outline-none focus:ring-2 focus:ring-[#D97757]/50"
+                aria-label="Edit profile picture"
+              >
+                {avatarPreview ? <img src={avatarPreview} alt="Profile preview" className="h-full w-full object-cover" /> : <User size={46} className="absolute inset-0 m-auto text-white/30" />}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100">Click to edit</span>
+              </button>
+              <p className="text-center text-xs text-white/40">Square profile image · click the image to upload and crop</p>
             </div>
           </SectionCard>
 
           {/* ── Thumbnail Crop ────────────────────────── */}
           <SectionCard title="Banner Image" icon={ImageIcon as any}>
             <div className="pt-5 space-y-4">
-              <ImageCropper
-                aspectRatio={16 / 5}
-                label="Upload a banner image (landscape format)"
-                currentUrl={user?.thumbnailUrl || user?.thumbnail_url || undefined}
-                onCropped={handleThumbCropped}
-              />
-              {thumbBlob && (
-                <button
-                  type="button"
-                  onClick={uploadThumb}
-                  disabled={uploadingThumb}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-[#D97757] hover:bg-[#c96a48] text-white transition-colors disabled:opacity-60"
-                >
-                  {uploadingThumb ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Save Banner Image
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setImageEditor('thumbnail')}
+                className="group relative block h-40 w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-[#D97757]/70 focus:outline-none focus:ring-2 focus:ring-[#D97757]/50"
+                aria-label="Edit banner image"
+              >
+                {thumbPreview ? <img src={thumbPreview} alt="Banner preview" className="h-full w-full object-cover" /> : <ImageIcon size={42} className="absolute inset-0 m-auto text-white/25" />}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100">Click to edit</span>
+              </button>
+              <p className="text-center text-xs text-white/40">Wide banner image · click the image to upload and crop</p>
             </div>
           </SectionCard>
 
@@ -462,6 +368,25 @@ export default function ProfilePage() {
 
         </div>
       </div>
+
+      <ImageEditModal
+        open={imageEditor === 'avatar'}
+        onClose={() => setImageEditor(null)}
+        title="Edit profile picture"
+        label="Choose a profile image"
+        aspectRatio={1}
+        currentUrl={avatarPreview || undefined}
+        onSave={(blob, _previewUrl, onProgress) => saveProfileImage('avatar', blob, onProgress)}
+      />
+      <ImageEditModal
+        open={imageEditor === 'thumbnail'}
+        onClose={() => setImageEditor(null)}
+        title="Edit banner image"
+        label="Choose a banner image"
+        aspectRatio={16 / 5}
+        currentUrl={thumbPreview || undefined}
+        onSave={(blob, _previewUrl, onProgress) => saveProfileImage('thumbnail', blob, onProgress)}
+      />
     </div>
   );
 }
