@@ -400,68 +400,39 @@ export default function DatabaseGenWorkspace() {
 
   return (
     <section className="overflow-hidden rounded-3xl border border-white/[0.10] bg-[#100e0b] shadow-2xl">
-      <div className="relative border-b border-white/[0.12] bg-gradient-to-br from-[#2a1f17] via-[#1f1610] to-[#120d0a] px-7 py-8">
-        {/* ── Background layers ───────────────────────────────── */}
-        <div
-          className="anim-aura pointer-events-none absolute left-1/2 top-0 h-[420px] w-[820px] rounded-full blur-[90px]"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(209,154,106,.16) 0%, transparent 68%)',
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35]"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px)',
-            backgroundSize: '38px 38px',
-            maskImage:
-              'radial-gradient(ellipse 85% 70% at 50% 0%, #000 35%, transparent 100%)',
-            WebkitMaskImage:
-              'radial-gradient(ellipse 85% 70% at 50% 0%, #000 35%, transparent 100%)',
-          }}
-        />
+      {/* ── Compact header ───────────────────────────────── */}
+      <div className="relative border-b border-white/[0.12] bg-gradient-to-br from-[#221a13] via-[#1a130e] to-[#120d0a] px-5 py-4">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent)]/45 to-transparent" />
 
-        {/* ── Header section ───────────────────────────────── */}
-        <div className="relative flex flex-wrap items-start justify-between gap-6">
-          <div className="min-w-0 flex-1">
-            <div className="mb-4 flex items-center gap-2.5">
-              <span className="relative flex items-center gap-2 overflow-hidden rounded-full border border-[var(--accent)]/25 bg-[var(--accent-dim)] px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent)]">
-                <WandSparkles size={13} className="shrink-0" />
+        {/* Title row */}
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--accent-dim)] p-2 text-[var(--accent)]">
+              <WandSparkles size={16} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-bold leading-tight text-white">
                 Database Generator
-              </span>
-              <span className="h-px w-8 bg-gradient-to-r from-[var(--accent)]/40 to-transparent" />
+              </h2>
+              <p className="truncate text-[11px] text-white/40">
+                Describe your product, get a normalized schema you can drag
+                &amp; rearrange
+              </p>
             </div>
-
-            <h2 className="font-serif text-[2.6rem] font-bold leading-[1.1] tracking-tight text-white">
-              Design databases
-              <span className="ml-3 bg-gradient-to-r from-[var(--accent)] to-[#c98560] bg-clip-text text-transparent">
-                visually
-              </span>
-            </h2>
-
-            <p className="mt-4 max-w-xl text-[13.5px] leading-relaxed text-white/50">
-              Describe your product, let AI generate normalized tables and
-              relationships, then arrange the architecture like a whiteboard.
-            </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2.5 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-400/12 to-emerald-500/[0.06] px-4 py-2 text-[11px] font-medium text-emerald-200/90 backdrop-blur-sm">
+          <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/[0.08] px-2.5 py-1 text-[10px] font-medium text-emerald-200/90">
             <span
               className="anim-orb h-1.5 w-1.5 rounded-full bg-emerald-400"
               style={{ boxShadow: '0 0 0 0 rgba(52,211,153,.5)' }}
             />
-            OpenRouter powered
+            OpenRouter
           </div>
         </div>
 
-        {/* ── Input panel ──────────────────────────────── */}
-        <div className="group relative mt-8">
-          {/* external light that is on focus */}
-          <div className="pointer-events-none absolute -inset-px rounded-[20px] bg-gradient-to-r from-[var(--accent)]/0 via-[var(--accent)]/25 to-[var(--accent)]/0 opacity-0 blur-[2px] transition-opacity duration-300 group-focus-within:opacity-100" />
-
-          <div className="relative rounded-[20px] border border-white/[0.09] bg-[#15100c]/80 backdrop-blur-sm transition-colors duration-300 group-focus-within:border-[var(--accent)]/35">
+        {/* Input panel */}
+        <div className="group relative mt-3">
+          <div className="relative rounded-xl border border-white/[0.09] bg-[#15100c]/80 transition-colors duration-300 group-focus-within:border-[var(--accent)]/35">
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
@@ -471,41 +442,34 @@ export default function DatabaseGenWorkspace() {
                   void generate();
                 }
               }}
-              rows={3}
+              rows={2}
               maxLength={600}
               placeholder="Describe your product or system…"
-              className="form-textarea min-h-[104px] w-full resize-none rounded-t-[20px] border-0 bg-transparent px-5 pt-5 pb-2 text-[14px] leading-relaxed text-white/90 shadow-none outline-none focus:border-0 focus:bg-transparent focus:ring-0 placeholder:text-white/25"
+              className="form-textarea w-full resize-none rounded-t-xl border-0 bg-transparent px-4 pt-3 pb-1 text-[13.5px] leading-relaxed text-white/90 shadow-none outline-none focus:border-0 focus:bg-transparent focus:ring-0 placeholder:text-white/25"
             />
 
-            {/* preset chips */}
-            <div className="flex flex-wrap items-center gap-2 px-5 pb-4">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/25">
-                Try
-              </span>
-              {[
-                'Library Management System',
-                'E-commerce Store',
-                'Hospital Records',
-                'SaaS Billing',
-              ].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setPrompt(preset)}
-                  disabled={generating}
-                  className="rounded-full border border-white/[0.07] bg-white/[0.02] px-3 py-1 text-[11px] text-white/45 transition-all duration-150 hover:-translate-y-px hover:border-[var(--accent)]/30 hover:bg-[var(--accent-dim)] hover:text-[var(--accent)] disabled:opacity-30"
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
+            {/* preset chips + bottom controls, merged into one compact row */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-white/[0.06] bg-black/25 px-4 py-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  'Library Management System',
+                  'E-commerce Store',
+                  'Hospital Records',
+                  'SaaS Billing',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setPrompt(preset)}
+                    disabled={generating}
+                    className="rounded-full border border-white/[0.07] bg-white/[0.02] px-2.5 py-1 text-[10.5px] text-white/45 transition-colors hover:border-[var(--accent)]/30 hover:bg-[var(--accent-dim)] hover:text-[var(--accent)] disabled:opacity-30"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
 
-            {/* bottom panel */}
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-b-[20px] border-t border-white/[0.06] bg-black/25 px-5 py-4">
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">
-                  Model
-                </span>
+              <div className="flex shrink-0 items-center gap-2.5">
                 <SelectMenu
                   value={model}
                   options={DEFAULT_MODELS.map((m) => ({
@@ -515,35 +479,24 @@ export default function DatabaseGenWorkspace() {
                   onChange={setModel}
                   ariaLabel="Select AI model"
                   disabled={generating}
-                  className="w-48"
+                  className="w-40"
                 />
-              </div>
-
-              <div className="flex items-center gap-4">
-                <span className="hidden text-[10px] tabular-nums text-white/20 sm:block">
-                  {prompt.length}/600
-                </span>
-
                 <button
                   type="button"
                   onClick={() => void generate()}
                   disabled={generating || !prompt.trim()}
-                  className="group/btn relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-[var(--accent)] via-[#d19a6a] to-[#c98560] px-6 py-3 text-xs font-bold tracking-wide text-[#1b120e] shadow-[0_4px_20px_-4px_var(--accent)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-[1.12] hover:shadow-[0_10px_32px_-6px_var(--accent)] active:translate-y-0 active:scale-[0.97] active:brightness-95 disabled:pointer-events-none disabled:opacity-35 disabled:shadow-none"
+                  className="group/btn relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-br from-[var(--accent)] via-[#d19a6a] to-[#c98560] px-4 py-2 text-xs font-bold tracking-wide text-[#1b120e] shadow-[0_4px_16px_-4px_var(--accent)] transition-all duration-200 hover:brightness-[1.12] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35 disabled:shadow-none"
                 >
-                  {/* hover'da yugurib o'tadigan yorug'lik */}
-                  <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/45 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-full" />
-                  {/* generatsiya paytida uzluksiz shine */}
                   {generating && (
                     <span className="anim-shine absolute inset-0" />
                   )}
-
-                  <span className="relative flex items-center gap-2">
+                  <span className="relative flex items-center gap-1.5">
                     {generating ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={13} className="animate-spin" />
                     ) : (
-                      <Sparkles size={14} />
+                      <Sparkles size={13} />
                     )}
-                    {generating ? 'Generating…' : 'Generate schema'}
+                    {generating ? 'Generating…' : 'Generate'}
                   </span>
                 </button>
               </div>
@@ -551,33 +504,30 @@ export default function DatabaseGenWorkspace() {
           </div>
         </div>
 
-        {/* ── Xato ─────────────────────────────────────────── */}
-        <div className="relative mt-4 min-h-[22px]">
-          {error && (
-            <div className="anim-rise inline-flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.08] px-3 py-1.5 text-[11.5px] font-medium text-red-300">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
-              {error}
-            </div>
-          )}
-        </div>
+        {error && (
+          <div className="anim-rise relative mt-2.5 inline-flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.08] px-3 py-1.5 text-[11.5px] font-medium text-red-300">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+            {error}
+          </div>
+        )}
       </div>
 
       {!schema ? (
-        <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-12 text-center">
-          <div className="rounded-2xl bg-[var(--accent-dim)] p-5 text-[var(--accent)] shadow-lg shadow-[var(--accent)]/10">
-            <Table2 size={32} />
+        <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 p-10 text-center">
+          <div className="rounded-xl bg-[var(--accent-dim)] p-4 text-[var(--accent)]">
+            <Table2 size={26} />
           </div>
-          <h3 className="font-serif text-3xl text-white font-bold">
+          <h3 className="text-lg font-bold text-white">
             Your schema canvas is ready
           </h3>
-          <p className="max-w-md text-sm leading-6 text-white/45">
+          <p className="max-w-md text-[13px] leading-6 text-white/45">
             Describe a system above to generate tables, primary keys, foreign
             keys and join tables. You can rearrange everything after generation.
           </p>
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] bg-gradient-to-r from-white/[0.02] to-transparent px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] bg-gradient-to-r from-white/[0.02] to-transparent px-5 py-3">
             <div className="flex items-center gap-4">
               <div className="text-sm font-bold text-white">{schema.name}</div>
               <span className="text-xs text-white/40 font-medium">
@@ -646,6 +596,7 @@ export default function DatabaseGenWorkspace() {
             </div>
           </div>
 
+          {/* ── Canvas — full size, untouched ─────────────── */}
           <div
             ref={canvasRef}
             onPointerMove={onPointerMove}

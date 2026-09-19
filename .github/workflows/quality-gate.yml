@@ -1,0 +1,60 @@
+name: GA Quality Gate
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master, 'hardening/**', 'release/**']
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend build and tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test -- --reporter=dot
+      - run: npm run validate:video-csp
+
+  rust:
+    name: Rust backend tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+      - name: Build SteamUtility runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $resourceDir = Join-Path $env:GITHUB_WORKSPACE 'src-tauri/resources/steam-utility'
+
+          if (Test-Path $resourceDir) {
+            Remove-Item $resourceDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
+
+          dotnet publish 'libs/SteamUtility/SteamUtility.csproj' `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $resourceDir `
+            -p:PublishSingleFile=false
+
+          $utility = Join-Path $resourceDir 'SteamUtility.exe'
+          if (-not (Test-Path $utility)) {
+            throw "SteamUtility publish did not produce $utility"
+          }
+      - run: cargo test --manifest-path src-tauri/Cargo.toml

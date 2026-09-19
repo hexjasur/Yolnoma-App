@@ -19,13 +19,14 @@ export default function ImageCropper({
   currentUrl,
   onCropped,
   maxSizeMb = 10,
+  onCancel,
 }: ImageCropperProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // 1x already covers the crop window. Lower values expose empty canvas area.
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isMouseDragging, setIsMouseDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isPointerDragging, setIsPointerDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Measured container width (responsive)
@@ -35,6 +36,7 @@ export default function ImageCropper({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, pointerId: -1 });
 
   // Preview dimensions: always fill container width
   const previewW = containerW;
@@ -82,18 +84,33 @@ export default function ImageCropper({
     ctx.drawImage(img, drawX, drawY, scaledW, scaledH);
   }, [zoom, offset, canvasW, canvasH]);
 
+  const clampOffset = useCallback((next: { x: number; y: number }, nextZoom = zoom) => {
+    const img = imageRef.current;
+    if (!img || previewW === 0 || previewH === 0) return { x: 0, y: 0 };
+    const scaleToFit = Math.max(previewW / img.naturalWidth, previewH / img.naturalHeight);
+    const scaledW = img.naturalWidth * scaleToFit * nextZoom;
+    const scaledH = img.naturalHeight * scaleToFit * nextZoom;
+    const maxX = Math.max(0, (scaledW - previewW) / 2);
+    const maxY = Math.max(0, (scaledH - previewH) / 2);
+    return {
+      x: Math.min(maxX, Math.max(-maxX, next.x)),
+      y: Math.min(maxY, Math.max(-maxY, next.y)),
+    };
+  }, [previewW, previewH, zoom]);
+
   useEffect(() => {
     drawImage();
   }, [drawImage]);
 
   const loadFile = (file: File) => {
     setError(null);
-    if (!file.type.startsWith('image/')) {
-      setError('Faqat rasm fayllari qabul qilinadi');
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Choose a JPEG, PNG, or WEBP image');
       return;
     }
     if (file.size > maxSizeMb * 1024 * 1024) {
-      setError(`Fayl hajmi ${maxSizeMb} MB dan oshmasligi kerak`);
+      setError(`Image must be smaller than ${maxSizeMb} MB`);
       return;
     }
 
@@ -102,6 +119,10 @@ export default function ImageCropper({
       const src = e.target?.result as string;
       const img = new Image();
       img.onload = () => {
+        if (img.naturalWidth < 256 || img.naturalHeight < 256) {
+          setError('Image must be at least 256 × 256 px');
+          return;
+        }
         imageRef.current = img;
         setImageSrc(src);
         setZoom(1);
@@ -126,25 +147,41 @@ export default function ImageCropper({
     if (file) loadFile(file);
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsMouseDragging(true);
-    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+    dragRef.current = {
+      active: true,
+      startX: e.clientX - offset.x,
+      startY: e.clientY - offset.y,
+      pointerId: e.pointerId,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsPointerDragging(true);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isMouseDragging) return;
-    setOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active || dragRef.current.pointerId !== e.pointerId) return;
+    setOffset(clampOffset({
+      x: e.clientX - dragRef.current.startX,
+      y: e.clientY - dragRef.current.startY,
+    }));
   };
 
-  const handleMouseUp = () => setIsMouseDragging(false);
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current.pointerId === e.pointerId) {
+      dragRef.current.active = false;
+      setIsPointerDragging(false);
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    setZoom((z) => Math.min(5, Math.max(0.2, z - e.deltaY * 0.002)));
+    setZoom((z) => {
+      const nextZoom = Math.min(5, Math.max(1, z - e.deltaY * 0.002));
+      setOffset((current) => clampOffset(current, nextZoom));
+      return nextZoom;
+    });
   };
 
   // Export: use a separate high-res offscreen canvas for output
@@ -195,7 +232,11 @@ export default function ImageCropper({
 
   return (
     // wrapperRef measures available width — MUST be w-full
-    <div ref={wrapperRef} className="w-full space-y-3">
+    <div
+      ref={wrapperRef}
+      className="w-full space-y-3"
+      style={{ maxWidth: aspectRatio === 1 ? 380 : 560, margin: '0 auto' }}
+    >
       {containerW === 0 ? null : !imageSrc ? (
         /* ── Drop Zone ─────────────────────────────────── */
         <div
@@ -236,7 +277,7 @@ export default function ImageCropper({
               <p className="text-xs text-white/40 text-center px-4 leading-relaxed">
                 {label}
                 <br />
-                <span className="text-white/25">yoki shu yerga tashlang</span>
+                <span className="text-white/25">or drop it here</span>
               </p>
             </div>
           )}
@@ -250,12 +291,13 @@ export default function ImageCropper({
             style={{
               width: '100%',
               height: previewH,
-              cursor: isMouseDragging ? 'grabbing' : 'grab',
+              cursor: isPointerDragging ? 'grabbing' : 'grab',
+              touchAction: 'none',
             }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onWheel={handleWheel}
           >
             {/*
@@ -282,18 +324,22 @@ export default function ImageCropper({
           {/* Zoom slider */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setZoom((z) => Math.max(0.2, z - 0.1))}
+              onClick={() => setZoom((z) => Math.max(1, z - 0.1))}
               className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-white/50 hover:text-white flex-shrink-0"
             >
               <ZoomOut size={13} />
             </button>
             <input
               type="range"
-              min={0.2}
+              min={1}
               max={5}
               step={0.01}
               value={zoom}
-              onChange={(e) => setZoom(parseFloat(e.target.value))}
+              onChange={(e) => {
+                const nextZoom = parseFloat(e.target.value);
+                setZoom(nextZoom);
+                setOffset((current) => clampOffset(current, nextZoom));
+              }}
               className="flex-1 accent-[#D97757] h-1"
             />
             <button
@@ -317,10 +363,11 @@ export default function ImageCropper({
               onClick={() => {
                 setImageSrc(null);
                 imageRef.current = null;
+                onCancel?.();
               }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
             >
-              <X size={13} /> Bekor qilish
+              <X size={13} /> Cancel
             </button>
             <button
               onClick={handleCrop}

@@ -48,6 +48,9 @@ pub struct WeatherLocation {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountConfig {
+    /// Persisted schema version; missing values are treated as the original format.
+    #[serde(default = "default_schema_version")]
+    pub schema_version: u32,
     #[serde(default)]
     pub system_monitoring: bool,
     #[serde(default)]
@@ -56,14 +59,35 @@ pub struct AccountConfig {
     pub weather_location: Option<WeatherLocation>,
 }
 
+const CURRENT_SCHEMA_VERSION: u32 = 1;
+
+fn default_schema_version() -> u32 {
+    CURRENT_SCHEMA_VERSION
+}
+
 impl Default for AccountConfig {
     fn default() -> Self {
         AccountConfig {
+            schema_version: CURRENT_SCHEMA_VERSION,
             system_monitoring: false,
             saved_tools: vec![],
             weather_location: None,
         }
     }
+}
+
+fn atomic_write(path: &std::path::Path, content: &str) -> Result<(), String> {
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, content)
+        .map_err(|e| format!("Failed to write temporary config: {}", e))?;
+    if path.exists() {
+        let backup = path.with_extension("json.backup");
+        let _ = std::fs::copy(path, &backup);
+        std::fs::remove_file(path)
+            .map_err(|e| format!("Failed to replace config.json: {}", e))?;
+    }
+    std::fs::rename(&tmp, path)
+        .map_err(|e| format!("Failed to commit config.json: {}", e))
 }
 
 // ── Path helpers ─────────────────────────────────────────────────────────────
@@ -232,6 +256,9 @@ pub fn set_current_user(
     user_id: String,
     state: tauri::State<'_, crate::AuthState>,
 ) -> Result<(), String> {
+    if !user_id.is_empty() {
+        validate_user_id(&user_id)?;
+    }
     let mut guard = state
         .user_id
         .lock()
@@ -256,8 +283,18 @@ pub fn get_account_config(user_id: String) -> Result<AccountConfig, String> {
     }
     let content =
         std::fs::read_to_string(&path).map_err(|e| format!("Failed to read config.json: {}", e))?;
-    serde_json::from_str::<AccountConfig>(&content)
-        .map_err(|e| format!("Failed to parse config.json: {}", e))
+    match serde_json::from_str::<AccountConfig>(&content) {
+        Ok(config) => Ok(config),
+        Err(_) => {
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|value| value.as_secs())
+                .unwrap_or_default();
+            let corrupt = path.with_file_name(format!("config.json.corrupt-{}", stamp));
+            let _ = std::fs::rename(&path, &corrupt);
+            Ok(AccountConfig::default())
+        }
+    }
 }
 
 /// Write config.json for the given account.
@@ -271,8 +308,7 @@ pub fn save_account_config(user_id: String, config: AccountConfig) -> Result<(),
 
     let content = serde_json::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
-    std::fs::write(dir.join("config.json"), content)
-        .map_err(|e| format!("Failed to write config.json: {}", e))
+    atomic_write(&dir.join("config.json"), &content)
 }
 
 /// Decrypt and return the API key for the given account.
@@ -428,6 +464,7 @@ mod tests {
     #[test]
     fn test_config_serde_camel_case() {
         let config = AccountConfig {
+            schema_version: CURRENT_SCHEMA_VERSION,
             system_monitoring: true,
             saved_tools: vec!["ai-chat".to_string(), "cleaner".to_string()],
             weather_location: None,
@@ -439,6 +476,20 @@ mod tests {
         let deserialized: AccountConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.system_monitoring, true);
         assert_eq!(deserialized.saved_tools.len(), 2);
+        assert_eq!(deserialized.schema_version, CURRENT_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn legacy_config_gets_current_schema_version() {
+        let config: AccountConfig = serde_json::from_str("{}").unwrap();
+        assert_eq!(config.schema_version, CURRENT_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn user_id_rejects_path_traversal() {
+        assert!(validate_user_id("../other-user").is_err());
+        assert!(validate_user_id("C:\\Windows\\system32").is_err());
+        assert!(validate_user_id("550e8400-e29b-41d4-a716-446655440000").is_ok());
     }
 
     #[test]
