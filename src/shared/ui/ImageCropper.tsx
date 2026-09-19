@@ -26,8 +26,7 @@ export default function ImageCropper({
   // 1x already covers the crop window. Lower values expose empty canvas area.
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isMouseDragging, setIsMouseDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isPointerDragging, setIsPointerDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Measured container width (responsive)
@@ -37,6 +36,7 @@ export default function ImageCropper({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, pointerId: -1 });
 
   // Preview dimensions: always fill container width
   const previewW = containerW;
@@ -106,11 +106,11 @@ export default function ImageCropper({
     setError(null);
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
-      setError('JPEG, PNG yoki WEBP formatidagi rasm tanlang');
+      setError('Choose a JPEG, PNG, or WEBP image');
       return;
     }
     if (file.size > maxSizeMb * 1024 * 1024) {
-      setError(`Fayl hajmi ${maxSizeMb} MB dan oshmasligi kerak`);
+      setError(`Image must be smaller than ${maxSizeMb} MB`);
       return;
     }
 
@@ -120,7 +120,7 @@ export default function ImageCropper({
       const img = new Image();
       img.onload = () => {
         if (img.naturalWidth < 256 || img.naturalHeight < 256) {
-          setError('Rasm kamida 256 × 256 px bo‘lishi kerak');
+          setError('Image must be at least 256 × 256 px');
           return;
         }
         imageRef.current = img;
@@ -147,21 +147,33 @@ export default function ImageCropper({
     if (file) loadFile(file);
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsMouseDragging(true);
-    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+    dragRef.current = {
+      active: true,
+      startX: e.clientX - offset.x,
+      startY: e.clientY - offset.y,
+      pointerId: e.pointerId,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsPointerDragging(true);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isMouseDragging) return;
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active || dragRef.current.pointerId !== e.pointerId) return;
     setOffset(clampOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
+      x: e.clientX - dragRef.current.startX,
+      y: e.clientY - dragRef.current.startY,
     }));
   };
 
-  const handleMouseUp = () => setIsMouseDragging(false);
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current.pointerId === e.pointerId) {
+      dragRef.current.active = false;
+      setIsPointerDragging(false);
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -261,7 +273,7 @@ export default function ImageCropper({
               <p className="text-xs text-white/40 text-center px-4 leading-relaxed">
                 {label}
                 <br />
-                <span className="text-white/25">yoki shu yerga tashlang</span>
+                <span className="text-white/25">or drop it here</span>
               </p>
             </div>
           )}
@@ -275,12 +287,13 @@ export default function ImageCropper({
             style={{
               width: '100%',
               height: previewH,
-              cursor: isMouseDragging ? 'grabbing' : 'grab',
+              cursor: isPointerDragging ? 'grabbing' : 'grab',
+              touchAction: 'none',
             }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onWheel={handleWheel}
           >
             {/*
@@ -350,7 +363,7 @@ export default function ImageCropper({
               }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
             >
-              <X size={13} /> Bekor qilish
+              <X size={13} /> Cancel
             </button>
             <button
               onClick={handleCrop}

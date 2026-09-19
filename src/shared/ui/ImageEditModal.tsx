@@ -52,7 +52,7 @@ export default function ImageEditModal({
       await onSave(draft.blob, draft.previewUrl, (state) => setProgress(state.progress));
       onClose();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Rasmni saqlab bo‘lmadi');
+      setSaveError(error instanceof Error ? error.message : 'Unable to save the image');
     } finally {
       setSaving(false);
     }
@@ -97,7 +97,7 @@ export default function ImageEditModal({
             />
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs text-emerald-200/80">
-            <Check size={14} /> Crop tayyor. Saqlashdan oldin natijani tekshiring.
+            <Check size={14} /> Crop is ready. Review the preview before saving.
           </div>
           {saving && (
             <div className="space-y-1.5">
@@ -118,7 +118,7 @@ export default function ImageEditModal({
             maxSizeMb={10}
           />
           <div className="flex items-center gap-2 text-[11px] text-white/40">
-            <Upload size={13} /> JPEG, PNG yoki WEBP · maksimal 10 MB · crop oynasidan tashqariga chiqmaydi
+            <Upload size={13} /> JPEG, PNG, or WEBP · max 10 MB · the crop stays inside the image
           </div>
         </div>
       )}
