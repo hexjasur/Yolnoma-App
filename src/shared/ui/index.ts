@@ -8,5 +8,6 @@ export { default as SearchInput } from './SearchInput';
 export { default as Input }        from './Input';
 export { default as Textarea }     from './Textarea';
 export { default as ImageUpload }  from './ImageUpload';
+export { default as ImageEditModal } from './ImageEditModal';
 export { default as UpdateModal } from './UpdateModal';
 export { CardGridSkeleton, LineSkeleton } from './Skeleton';
