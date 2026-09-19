@@ -64,7 +64,7 @@ export default function ImageEditModal({
       onClose={handleClose}
       title={title}
       subtitle={subtitle}
-      maxWidth="max-w-[700px]"
+      maxWidth="max-w-[620px]"
       footer={draft ? (
         <div className="flex w-full items-center justify-between gap-3">
           <button
@@ -93,7 +93,7 @@ export default function ImageEditModal({
             <img
               src={draft.previewUrl}
               alt="Crop preview"
-              className="block max-h-[390px] w-full object-contain"
+              className="block max-h-[320px] w-full object-contain"
             />
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs text-emerald-200/80">
