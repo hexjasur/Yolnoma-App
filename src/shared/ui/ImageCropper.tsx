@@ -232,7 +232,11 @@ export default function ImageCropper({
 
   return (
     // wrapperRef measures available width — MUST be w-full
-    <div ref={wrapperRef} className="w-full space-y-3">
+    <div
+      ref={wrapperRef}
+      className="w-full space-y-3"
+      style={{ maxWidth: aspectRatio === 1 ? 380 : 560, margin: '0 auto' }}
+    >
       {containerW === 0 ? null : !imageSrc ? (
         /* ── Drop Zone ─────────────────────────────────── */
         <div
