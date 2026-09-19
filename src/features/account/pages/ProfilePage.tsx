@@ -1,9 +1,8 @@
 ﻿import { useState, useEffect } from 'react';
-import { getVersion } from '@tauri-apps/api/app';
 import {
-  User, Shield, Settings, Camera,
+  User, Shield, Camera, Pencil,
   EyeOff, Check, Loader2, ChevronDown, ChevronUp,
-  Monitor, Package, Image as ImageIcon, CheckCircle
+  Image as ImageIcon, CheckCircle
 } from 'lucide-react';
 import { useAuth, UserProfile } from '@/features/auth/AuthContext';
 import ImageEditModal from '@/shared/ui/ImageEditModal';
@@ -56,13 +55,11 @@ export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const roleMeta = getRoleMeta(user?.role ?? 'user');
 
-  const [appVersion, setAppVersion] = useState('—');
-  const [osInfo, setOsInfo] = useState('—');
-
   // Profile section state
   const [displayName, setDisplayName] = useState(user?.displayName || user?.display_name || '');
   const [isPrivate, setIsPrivate] = useState(user?.isPrivate ?? user?.is_private ?? false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Image upload states
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || user?.avatar_url || null);
@@ -78,15 +75,6 @@ export default function ProfilePage() {
       setThumbPreview(user.thumbnailUrl || user.thumbnail_url || null);
     }
   }, [user, profileSaving]);
-
-  useEffect(() => {
-    getVersion().then(setAppVersion).catch(() => {});
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes('win')) setOsInfo('Windows');
-    else if (ua.includes('mac')) setOsInfo('macOS');
-    else if (ua.includes('linux')) setOsInfo('Linux');
-    else setOsInfo(navigator.platform);
-  }, []);
 
   const saveProfileImage = async (kind: 'avatar' | 'thumbnail', blob: Blob, onProgress: (state: UploadState) => void) => {
     if (!user) return;
@@ -144,6 +132,7 @@ export default function ProfilePage() {
 
       updateUser(updatedUser);
       setDisplayName(returnedName || '');
+      setIsEditing(false);
       toast.success('Profile details saved successfully!');
     } catch (e: any) {
       toast.error(e?.message || 'Failed to save profile details');
@@ -152,13 +141,21 @@ export default function ProfilePage() {
     }
   };
 
+  const cancelEditing = () => {
+    setDisplayName(user?.displayName || user?.display_name || '');
+    setIsPrivate(user?.isPrivate ?? user?.is_private ?? false);
+    setImageEditor(null);
+    setIsEditing(false);
+  };
+
   return (
     <div className="min-h-full pb-20" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
       {/* ── Thumbnail Banner ─────────────────────────── */}
       <button
         type="button"
-        onClick={() => setImageEditor('thumbnail')}
-        className="group relative block w-full rounded-2xl overflow-hidden mb-0 text-left focus:outline-none focus:ring-2 focus:ring-[#D97757]/50"
+        onClick={() => isEditing && setImageEditor('thumbnail')}
+        disabled={!isEditing}
+        className={`group relative block w-full rounded-2xl overflow-hidden mb-0 text-left focus:outline-none focus:ring-2 focus:ring-[#D97757]/50 ${isEditing ? 'cursor-pointer' : 'cursor-default'}`}
         style={{ height: 250 }}
         aria-label="Edit banner image"
       >
@@ -184,8 +181,9 @@ export default function ProfilePage() {
         <div className="relative flex-shrink-0">
           <button
             type="button"
-            onClick={() => setImageEditor('avatar')}
-            className={`group relative w-28 h-28 rounded-2xl border-4 border-[#14110E] overflow-hidden bg-gradient-to-br ${roleMeta.color} shadow-2xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#D97757]/60`}
+            onClick={() => isEditing && setImageEditor('avatar')}
+            disabled={!isEditing}
+            className={`group relative w-28 h-28 rounded-2xl border-4 border-[#14110E] overflow-hidden bg-gradient-to-br ${roleMeta.color} shadow-2xl flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#D97757]/60 ${isEditing ? 'cursor-pointer' : 'cursor-default'}`}
             aria-label="Edit profile picture"
           >
             {avatarPreview ? (
@@ -219,6 +217,17 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+        <div className="pb-2">
+          {isEditing ? (
+            <button type="button" onClick={cancelEditing} className="btn btn-ghost flex items-center gap-2 text-xs">
+              Cancel
+            </button>
+          ) : (
+            <button type="button" onClick={() => setIsEditing(true)} className="btn btn-ghost flex items-center gap-2 text-xs">
+              <Pencil size={13} /> Edit profile
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="px-8 grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -227,52 +236,37 @@ export default function ProfilePage() {
 
           {/* ── Profile Info ──────────────────────────── */}
           <SectionCard title="Profile Details" icon={User}>
-            <div className="pt-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-white/40 mb-2">Display Name</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder={user?.email?.split('@')[0] || 'Enter display name'}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D97757]/40 focus:border-[#D97757]/40 transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-white/40 mb-2">Email Address (Read-only)</label>
-                <input
-                  type="email"
-                  value={user?.email ?? ''}
-                  disabled
-                  className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 text-white/30 cursor-not-allowed"
-                />
-              </div>
-
-              {/* Private toggle */}
-              <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            {isEditing ? (
+              <div className="pt-5 space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-white/80">Private Profile</p>
-                  <p className="text-xs text-white/35 mt-0.5">Your profile and activities will not be visible to other members.</p>
+                  <label className="block text-xs font-medium text-white/40 mb-2">Display Name</label>
+                  <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={user?.email?.split('@')[0] || 'Enter display name'} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-[#D97757]/40 focus:border-[#D97757]/40 transition-all" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPrivate(p => !p)}
-                  className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${isPrivate ? 'bg-[#D97757]' : 'bg-white/10'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${isPrivate ? 'translate-x-5' : 'translate-x-0'}`} />
+                <div>
+                  <label className="block text-xs font-medium text-white/40 mb-2">Email Address</label>
+                  <input type="email" value={user?.email ?? ''} disabled className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 text-white/30 cursor-not-allowed" />
+                </div>
+                <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <div>
+                    <p className="text-sm font-medium text-white/80">Private Profile</p>
+                    <p className="text-xs text-white/35 mt-0.5">Your profile and activities will not be visible to other members.</p>
+                  </div>
+                  <button type="button" onClick={() => setIsPrivate(p => !p)} aria-label="Toggle private profile" className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${isPrivate ? 'bg-[#D97757]' : 'bg-white/10'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${isPrivate ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                <button type="button" onClick={saveProfile} disabled={profileSaving} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-[#D97757] hover:bg-[#c96a48] text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                  {profileSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  Save Changes
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={saveProfile}
-                disabled={profileSaving}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-[#D97757] hover:bg-[#c96a48] text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {profileSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                Save Changes
-              </button>
-            </div>
+            ) : (
+              <div className="grid gap-3 pt-5 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"><p className="text-[11px] uppercase tracking-wider text-white/35">Display Name</p><p className="mt-1 text-sm text-white/85">{displayName || 'Unnamed User'}</p></div>
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"><p className="text-[11px] uppercase tracking-wider text-white/35">Email</p><p className="mt-1 truncate text-sm text-white/65">{user?.email || '—'}</p></div>
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 sm:col-span-2"><p className="text-[11px] uppercase tracking-wider text-white/35">Visibility</p><p className="mt-1 text-sm text-white/70">{isPrivate ? 'Private profile' : 'Public profile'}</p></div>
+              </div>
+            )}
           </SectionCard>
 
           {/* ── Security / Auth Provider Info ────────── */}
@@ -306,12 +300,13 @@ export default function ProfilePage() {
             <div className="pt-5 space-y-4">
               <button
                 type="button"
-                onClick={() => setImageEditor('avatar')}
+                onClick={() => isEditing && setImageEditor('avatar')}
+                disabled={!isEditing}
                 className="group relative mx-auto block h-40 w-40 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-[#D97757]/70 focus:outline-none focus:ring-2 focus:ring-[#D97757]/50"
                 aria-label="Edit profile picture"
               >
                 {avatarPreview ? <img src={avatarPreview} alt="Profile preview" className="h-full w-full object-cover" /> : <User size={46} className="absolute inset-0 m-auto text-white/30" />}
-                <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100">Click to edit</span>
+                {isEditing && <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100">Click to edit</span>}
               </button>
               <p className="text-center text-xs text-white/40">Square profile image · click the image to upload and crop</p>
             </div>
@@ -322,47 +317,15 @@ export default function ProfilePage() {
             <div className="pt-5 space-y-4">
               <button
                 type="button"
-                onClick={() => setImageEditor('thumbnail')}
+                onClick={() => isEditing && setImageEditor('thumbnail')}
+                disabled={!isEditing}
                 className="group relative block h-40 w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-[#D97757]/70 focus:outline-none focus:ring-2 focus:ring-[#D97757]/50"
                 aria-label="Edit banner image"
               >
                 {thumbPreview ? <img src={thumbPreview} alt="Banner preview" className="h-full w-full object-cover" /> : <ImageIcon size={42} className="absolute inset-0 m-auto text-white/25" />}
-                <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100">Click to edit</span>
+                {isEditing && <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100">Click to edit</span>}
               </button>
               <p className="text-center text-xs text-white/40">Wide banner image · click the image to upload and crop</p>
-            </div>
-          </SectionCard>
-
-          {/* ── System Info ───────────────────────────── */}
-          <SectionCard title="System Information" icon={Settings}>
-            <div className="pt-5 space-y-3">
-              <div className="flex items-center gap-4 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Package size={14} className="text-white/50" />
-                </div>
-                <div>
-                  <p className="text-[11px] text-white/35 uppercase tracking-wider font-medium">Application Version</p>
-                  <p className="text-sm text-white/80 font-mono mt-0.5">v{appVersion}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Monitor size={14} className="text-white/50" />
-                </div>
-                <div>
-                  <p className="text-[11px] text-white/35 uppercase tracking-wider font-medium">Operating System</p>
-                  <p className="text-sm text-white/80 font-mono mt-0.5 capitalize">{osInfo}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <User size={14} className="text-white/50" />
-                </div>
-                <div>
-                  <p className="text-[11px] text-white/35 uppercase tracking-wider font-medium">User Identifier</p>
-                  <p className="text-[11px] text-white/40 font-mono mt-0.5 break-all">{user?.id}</p>
-                </div>
-              </div>
             </div>
           </SectionCard>
 
