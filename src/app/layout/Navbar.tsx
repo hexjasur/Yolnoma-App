@@ -18,6 +18,7 @@ export default function Navbar() {
   const { user } = useAuth();
 
   const [copied, setCopied] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Clean path formatting for yolnoma:// URL
   const cleanPath = location.pathname.startsWith('/')
@@ -44,7 +45,11 @@ export default function Navbar() {
   };
 
   const handleRefresh = () => {
-    window.location.reload();
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   return (
@@ -77,11 +82,16 @@ export default function Navbar() {
         <button
           type="button"
           onClick={handleRefresh}
-          className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] active:bg-white/[0.1] transition-all"
-          title="Reload the page"
+          disabled={isRefreshing}
+          className={`p-1.5 rounded-lg transition-all ${
+            isRefreshing
+              ? 'text-[var(--accent)] bg-white/[0.08] cursor-wait'
+              : 'text-white/50 hover:text-white hover:bg-white/[0.06] active:bg-white/[0.1]'
+          }`}
+          title={isRefreshing ? 'Yangilanmoqda...' : 'Reload the page'}
           aria-label="Refresh"
         >
-          <RotateCw size={14} strokeWidth={2} />
+          <RotateCw size={14} strokeWidth={2} className={isRefreshing ? 'animate-spin' : ''} />
         </button>
       </div>
 

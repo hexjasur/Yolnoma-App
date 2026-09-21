@@ -264,8 +264,14 @@ export default function StandaloneTabBar() {
     }
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const handleRefresh = () => {
-    window.location.reload();
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   return (
@@ -357,10 +363,15 @@ export default function StandaloneTabBar() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="p-1 rounded-md text-white/50 hover:text-white hover:bg-white/[0.06] active:bg-white/[0.1] transition-all"
-            title="Refresh"
+            disabled={isRefreshing}
+            className={`p-1 rounded-md transition-all ${
+              isRefreshing
+                ? 'text-[var(--accent)] bg-white/[0.08] cursor-wait'
+                : 'text-white/50 hover:text-white hover:bg-white/[0.06] active:bg-white/[0.1]'
+            }`}
+            title={isRefreshing ? 'Yangilanmoqda...' : 'Refresh'}
           >
-            <RotateCw size={12} strokeWidth={2} />
+            <RotateCw size={12} strokeWidth={2} className={isRefreshing ? 'animate-spin' : ''} />
           </button>
 
           <button
