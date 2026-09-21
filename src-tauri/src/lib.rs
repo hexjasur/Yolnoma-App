@@ -76,23 +76,48 @@ pub fn run() {
             };
 
             // Tray menyu
+            let idling_item = MenuItemBuilder::new("Steam: Idle")
+                .id("idle-status")
+                .enabled(true)
+                .build(app)?;
+            let stop_idling_item = MenuItemBuilder::new("⏹ Stop All Idling")
+                .id("idle-stop-all")
+                .enabled(false)
+                .build(app)?;
             let show = MenuItemBuilder::new("Show").id("show").build(app)?;
             let world_show = MenuItemBuilder::new("3D Show")
                 .id("world-3d-show")
                 .build(app)?;
             let quit = MenuItemBuilder::new("Exit").id("quit").build(app)?;
             let menu = MenuBuilder::new(app)
+                .item(&idling_item)
+                .item(&stop_idling_item)
+                .separator()
                 .item(&show)
                 .item(&world_show)
                 .item(&quit)
                 .build()?;
 
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Yolnoma")
                 .menu(&menu)
                 .show_menu_on_left_click(false) // Left click opens window, right click opens menu
                 .on_menu_event(move |app, event| match event.id().as_ref() {
+                    "idle-status" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.unminimize();
+                            let _ = w.set_focus();
+                            let _ = w.eval("window.location.hash = '#/tools/steam/steam-idler'");
+                        }
+                    }
+                    "idle-stop-all" => {
+                        let state = app.state::<domains::steam::IdlingState>();
+                        tauri::async_runtime::block_on(async {
+                            app_commands::stop_idling_processes(&state).await;
+                        });
+                    }
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
@@ -134,6 +159,38 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Background polling loop to dynamically update Tray tooltip and Idling menu item
+            let app_handle = app.handle().clone();
+            let idling_item_clone = idling_item.clone();
+            let stop_idling_clone = stop_idling_item.clone();
+            let tray_icon = tray.clone();
+
+            tauri::async_runtime::spawn(async move {
+                let mut last_count = usize::MAX;
+                loop {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+                    let count = {
+                        let state = app_handle.state::<domains::steam::IdlingState>();
+                        let guard = state.processes.lock().await;
+                        guard.len()
+                    };
+
+                    if count != last_count {
+                        last_count = count;
+                        if count > 0 {
+                            let text = format!("🟢 Steam: {} games idling", count);
+                            let _ = idling_item_clone.set_text(&text);
+                            let _ = stop_idling_clone.set_enabled(true);
+                            let _ = tray_icon.set_tooltip(Some(&format!("Yolnoma • {} games idling", count)));
+                        } else {
+                            let _ = idling_item_clone.set_text("Steam: No active idling");
+                            let _ = stop_idling_clone.set_enabled(false);
+                            let _ = tray_icon.set_tooltip(Some("Yolnoma"));
+                        }
+                    }
+                }
+            });
 
             Ok(())
         })
