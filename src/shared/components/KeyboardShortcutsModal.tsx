@@ -14,43 +14,43 @@ type ShortcutSection = {
 
 const SHORTCUT_SECTIONS: ShortcutSection[] = [
   {
-    title: 'Asosiy va Navigatsiya',
+    title: 'General & Navigation',
     icon: Compass,
     items: [
-      { keys: ['Ctrl', 'K'], description: 'Command Palette — Tezkor qidiruv va amallar' },
-      { keys: ['Ctrl', '/'], description: 'Klaviatura yorliqlari (ushbu oyna)' },
-      { keys: ['Ctrl', 'B'], description: 'Yon panelni (Sidebar) yig‘ish yoki ochish' },
-      { keys: ['Alt', '← / →'], description: 'Tarix bo‘yicha orqaga yoki oldinga o‘tish' },
-      { keys: ['Ctrl', 'R'], description: 'Joriy sahifani qayta yuklash (Refresh)' },
+      { keys: ['Ctrl', 'K'], description: 'Command Palette — Quick search and instant desktop actions' },
+      { keys: ['Ctrl', '/'], description: 'Keyboard Shortcuts — Open this reference cheat-sheet' },
+      { keys: ['Ctrl', 'B'], description: 'Toggle Sidebar — Collapse or expand navigation panel' },
+      { keys: ['Alt', '← / →'], description: 'Navigate Back / Forward in history' },
+      { keys: ['Ctrl', 'R'], description: 'Reload — Refresh current page (F5)' },
     ],
   },
   {
-    title: 'Tezkor Vositalar (Direct Jump)',
+    title: 'Direct Tool Shortcuts',
     icon: Wrench,
     items: [
-      { keys: ['Ctrl', 'Shift', 'I'], description: 'Steam Idler & SAM sahifasiga o‘tish' },
-      { keys: ['Ctrl', 'Shift', 'G'], description: 'Git boshqaruvi va Commit Generator' },
-      { keys: ['Ctrl', 'Shift', 'J'], description: 'JSON Edit & Viewer vositasi' },
-      { keys: ['Ctrl', 'Shift', 'D'], description: 'Global File Dropzone (Fayl tashlash paneli)' },
-      { keys: ['Ctrl', 'Shift', 'A'], description: 'Yolnoma AI Agent oynasini ochish' },
+      { keys: ['Ctrl', 'Shift', 'I'], description: 'Steam Idler & SAM — Jump to idling workspace' },
+      { keys: ['Ctrl', 'Shift', 'G'], description: 'Git Workspace — Open commit generator & history' },
+      { keys: ['Ctrl', 'Shift', 'J'], description: 'JSON Tool — Open JSON editor & visualizer' },
+      { keys: ['Ctrl', 'Shift', 'D'], description: 'Global Dropzone — Quick file upload & tool routing' },
+      { keys: ['Ctrl', 'Shift', 'A'], description: 'AI Agent — Launch standalone assistant window' },
     ],
   },
   {
-    title: 'Tablar va Ko‘p Oynali Rejim',
+    title: 'Tabs & Multi-Window',
     icon: Layout,
     items: [
-      { keys: ['Ctrl', 'T'], description: 'Yangi tab qo‘shish (Standalone Tab Window)' },
-      { keys: ['Ctrl', 'W'], description: 'Faol tabni yopish' },
-      { keys: ['Ctrl', 'Tab'], description: 'Keyingi tabga o‘tish' },
-      { keys: ['Ctrl', '1..9'], description: 'Tegishli raqamdagi tabga tezkor o‘tish' },
+      { keys: ['Ctrl', 'T'], description: 'New Tab — Open home in a new standalone tab' },
+      { keys: ['Ctrl', 'W'], description: 'Close Tab — Close currently active tab' },
+      { keys: ['Ctrl', 'Tab'], description: 'Cycle Tabs — Switch to the next open tab' },
+      { keys: ['Ctrl', '1..9'], description: 'Select Tab — Switch directly to tab by position' },
     ],
   },
   {
-    title: 'Umumiy boshqaruv',
+    title: 'Controls & Dialogs',
     icon: Sparkles,
     items: [
-      { keys: ['Esc'], description: 'Istalgan modal, palette yoki menyuni yopish' },
-      { keys: ['↑', '↓', 'Enter'], description: 'Qidiruv natijalarida harakatlanish va tanlash' },
+      { keys: ['Esc'], description: 'Dismiss — Close active modal, palette, or overlay' },
+      { keys: ['↑', '↓', 'Enter'], description: 'List Navigation — Move selection and execute' },
     ],
   },
 ];
@@ -145,13 +145,13 @@ export default function KeyboardShortcutsModal() {
             </div>
             <div>
               <h2 className="text-base font-semibold text-white tracking-wide flex items-center gap-2">
-                <span>Klaviatura Tezkor Tugmalari</span>
+                <span>Keyboard Shortcuts</span>
                 <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-white/[0.06] text-white/50">
                   Cheat-Sheet
                 </span>
               </h2>
               <p className="text-xs text-white/40 mt-0.5">
-                Yolnoma bo‘ylab tezroq harakatlanish uchun barcha qisqa tugmalar
+                Quick reference for navigation, workspaces, and window management
               </p>
             </div>
           </div>
@@ -159,14 +159,14 @@ export default function KeyboardShortcutsModal() {
             type="button"
             onClick={() => setIsOpen(false)}
             className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition"
-            aria-label="Yopish"
+            aria-label="Close"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Shortcuts list (scrollable) */}
-        <div className="mt-5 space-y-6 overflow-y-auto pr-1 scrollbar-thin">
+        {/* Shortcuts list (scrollable with custom-scrollbar) */}
+        <div className="mt-5 space-y-6 overflow-y-auto pr-1 custom-scrollbar">
           {SHORTCUT_SECTIONS.map((section) => {
             const Icon = section.icon;
             return (
@@ -209,10 +209,10 @@ export default function KeyboardShortcutsModal() {
 
         {/* Footer */}
         <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs text-white/35 shrink-0">
-          <span>Oynani yopish uchun Esc yoki tashqarisiga bosing</span>
+          <span>Press Esc or click outside to dismiss</span>
           <span className="flex items-center gap-1 text-[var(--accent)] font-medium">
-            <span>Maslahat:</span>
-            <span className="text-white/60">Istalgan payt Ctrl + / ni bosing</span>
+            <span>Tip:</span>
+            <span className="text-white/60">Press Ctrl + / at any time</span>
           </span>
         </div>
       </div>

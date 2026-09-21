@@ -35,10 +35,10 @@ const ACTION_ITEMS: CommandItem[] = [
   {
     id: 'action-keyboard-shortcuts',
     label: 'Keyboard Shortcuts Cheat-Sheet',
-    description: 'Barcha klaviatura tezkor tugmalari ro‘yxatini ko‘rish (Ctrl + /)',
+    description: 'View all keyboard shortcuts and hotkeys reference (Ctrl + /)',
     group: 'Actions',
     icon: Keyboard,
-    keywords: 'keyboard shortcuts hotkeys tugmalar yorliqlar help yordam cheatsheet',
+    keywords: 'keyboard shortcuts hotkeys keys cheat sheet help commands',
     action: () => {
       window.dispatchEvent(new CustomEvent('yolnoma:open-shortcuts'));
     },
@@ -46,10 +46,10 @@ const ACTION_ITEMS: CommandItem[] = [
   {
     id: 'action-toggle-sidebar',
     label: 'Toggle Sidebar Collapse',
-    description: 'Yon panelni ixchamlash yoki kengaytirish (Ctrl + B)',
+    description: 'Collapse or expand the navigation sidebar (Ctrl + B)',
     group: 'Actions',
     icon: PanelLeftClose,
-    keywords: 'sidebar panel menyu yashirish ochish toggle collapse expand',
+    keywords: 'sidebar panel menu toggle collapse expand hide show',
     action: () => {
       window.dispatchEvent(new CustomEvent('yolnoma:toggle-sidebar'));
     },
@@ -57,10 +57,10 @@ const ACTION_ITEMS: CommandItem[] = [
   {
     id: 'action-open-dropzone',
     label: 'Global File Dropzone',
-    description: 'Fayl yoki rasmlarni tashlash va tegishli vositada ochish',
+    description: 'Drop or select files to open in dedicated tools',
     group: 'Actions',
     icon: UploadCloud,
-    keywords: 'dropzone upload file rasm tashlash yuklash fayl convert',
+    keywords: 'dropzone upload file drop import media convert',
     action: () => {
       window.dispatchEvent(new CustomEvent('yolnoma:open-dropzone'));
     },
@@ -68,10 +68,10 @@ const ACTION_ITEMS: CommandItem[] = [
   {
     id: 'action-agent-window',
     label: 'Yolnoma AI Agent (Window)',
-    description: 'AI yordamchini mustaqil alohida oynada ochish',
+    description: 'Launch AI assistant in a dedicated standalone window',
     group: 'Actions',
     icon: Bot,
-    keywords: 'agent ai chatbot window popup yolnoma suniy intellekt',
+    keywords: 'agent ai chatbot window popup assistant helper',
     action: () => {
       openAgentWindow().catch(console.error);
     },
@@ -79,10 +79,10 @@ const ACTION_ITEMS: CommandItem[] = [
   {
     id: 'action-reload',
     label: 'Reload / Refresh Page',
-    description: 'Ilova sahifasini qayta yuklash (F5 / Ctrl + R)',
+    description: 'Refresh the application window (Ctrl + R / F5)',
     group: 'Actions',
     icon: RotateCw,
-    keywords: 'reload refresh yangilash qayta yuklash',
+    keywords: 'reload refresh restart update page',
     action: () => {
       window.location.reload();
     },
@@ -285,10 +285,10 @@ export default function CommandCenter() {
           </span>
         </div>
 
-        <div className="max-h-[55vh] overflow-y-auto p-2 scrollbar-thin">
+        <div className="max-h-[55vh] overflow-y-auto p-2 custom-scrollbar">
           {results.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-white/35">
-              Hech qanday mos vosita yoki buyruq topilmadi.
+              No matching tools or commands found.
             </div>
           ) : (
             results.map((item, index) => {
@@ -342,9 +342,9 @@ export default function CommandCenter() {
 
         <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-2.5 text-[10px] text-white/30 bg-black/20">
           <div className="flex items-center gap-4">
-            <span>↑↓ Harakatlanish</span>
-            <span>Enter Tanlash</span>
-            <span>Esc Yopish</span>
+            <span>↑↓ Navigate</span>
+            <span>Enter Select</span>
+            <span>Esc Close</span>
           </div>
           <button
             type="button"

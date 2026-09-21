@@ -47,7 +47,7 @@ export default function GlobalDropzone() {
         {
           id: 'bg-remover',
           title: 'Background Remover (AI)',
-          description: 'Sun’iy intellekt orqali rasm fonini olib tashlash',
+          description: 'Remove image background using AI',
           path: '/tools/bg-remover',
           icon: Sparkles,
           primary: true,
@@ -55,7 +55,7 @@ export default function GlobalDropzone() {
         {
           id: 'image-converter',
           title: 'Image Converter & Optimizer',
-          description: 'Formatni o‘zgartirish, siqish va optimallashtirish',
+          description: 'Convert formats, compress, and optimize image files',
           path: '/tools/image',
           icon: ImageIcon,
         },
@@ -68,7 +68,7 @@ export default function GlobalDropzone() {
         {
           id: 'archive-explorer',
           title: 'Archive Explorer',
-          description: 'Arxiv ichidagi fayllarni ko‘rish va ochish',
+          description: 'Browse and inspect files inside compressed archive',
           path: '/tools/archive-explorer',
           icon: FileArchive,
           primary: true,
@@ -82,7 +82,7 @@ export default function GlobalDropzone() {
         {
           id: 'json-viewer',
           title: 'JSON Edit & View',
-          description: 'JSON ma’lumotlarini ko‘rish, tahrirlash va kartalarga aylantirish',
+          description: 'Inspect, edit, and visualize JSON as interactive cards',
           path: '/tools/json',
           icon: Code,
           primary: true,
@@ -90,7 +90,7 @@ export default function GlobalDropzone() {
         {
           id: 'developer-tools',
           title: 'Developer Tools',
-          description: 'JSON formatter, validator va boshqa dasturchi vositalari',
+          description: 'JSON formatter, validator, and essential developer utilities',
           path: '/tools/developer-tools',
           icon: FileCode,
         },
@@ -103,7 +103,7 @@ export default function GlobalDropzone() {
         {
           id: 'css-tools',
           title: 'CSS Tools',
-          description: 'Gradiyentlar, scrollbar generator va minifikatsiya',
+          description: 'Gradients, scrollbar generator, and minification',
           path: '/tools/css-tools',
           icon: FileCode,
           primary: true,
@@ -116,7 +116,7 @@ export default function GlobalDropzone() {
       {
         id: 'developer-tools',
         title: 'Developer Tools',
-        description: 'Dasturchilar uchun universal asboblar to‘plami',
+        description: 'Universal workspace utilities for code and text',
         path: '/tools/developer-tools',
         icon: FileCode,
         primary: true,
@@ -124,7 +124,7 @@ export default function GlobalDropzone() {
       {
         id: 'archive-explorer',
         title: 'Archive Explorer',
-        description: 'Fayl yoki arxivlarni tahlil qilish',
+        description: 'Inspect archive and file structure',
         path: '/tools/archive-explorer',
         icon: FileArchive,
       },
@@ -240,14 +240,14 @@ export default function GlobalDropzone() {
               <UploadCloud size={44} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-wide">Faylni shu yerga tashlang</h2>
+              <h2 className="text-xl font-bold text-white tracking-wide">Drop files here</h2>
               <p className="text-sm text-white/50 mt-1.5">
-                Rasm, arxiv yoki JSON fayllarni tegishli asboblar bilan tezda oching
+                Quickly open images, archives, or JSON with dedicated desktop tools
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-[var(--accent)] font-medium px-3 py-1.5 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20">
               <Sparkles size={13} />
-              <span>Avtomatik vosita taklif qilinadi</span>
+              <span>Smart tool suggestion enabled</span>
             </div>
           </div>
         </div>
@@ -276,8 +276,8 @@ export default function GlobalDropzone() {
                     {primaryFile.name}
                   </h3>
                   <p className="text-xs text-white/40 mt-0.5">
-                    {formatBytes(primaryFile.size)} • {primaryFile.extension.toUpperCase() || 'FAYL'}
-                    {droppedFiles.length > 1 && ` (+ yana ${droppedFiles.length - 1} ta fayl)`}
+                    {formatBytes(primaryFile.size)} • {primaryFile.extension.toUpperCase() || 'FILE'}
+                    {droppedFiles.length > 1 && ` (+ ${droppedFiles.length - 1} more files)`}
                   </p>
                 </div>
               </div>
@@ -285,16 +285,16 @@ export default function GlobalDropzone() {
                 type="button"
                 onClick={() => setModalOpen(false)}
                 className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition"
-                aria-label="Yopish"
+                aria-label="Close"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Suggestions list */}
-            <div className="mt-5 space-y-2.5">
+            <div className="mt-5 space-y-2.5 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
-                Qaysi vosita orqali ochmoqchisiz?
+                Open with which tool?
               </p>
               {suggestions.map((tool) => {
                 const Icon = tool.icon;
@@ -324,7 +324,7 @@ export default function GlobalDropzone() {
                           <span>{tool.title}</span>
                           {tool.primary && (
                             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)] uppercase">
-                              Tavsiya
+                              Recommended
                             </span>
                           )}
                         </div>
@@ -342,13 +342,13 @@ export default function GlobalDropzone() {
 
             {/* Footer */}
             <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs text-white/35">
-              <span>Esc yoki tashqarisiga bosib bekor qilish mumkin</span>
+              <span>Press Esc or click outside to cancel</span>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
                 className="px-3 py-1.5 rounded-lg hover:bg-white/[0.06] text-white/60 hover:text-white transition"
               >
-                Bekor qilish
+                Cancel
               </button>
             </div>
           </div>
