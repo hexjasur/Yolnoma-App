@@ -70,9 +70,21 @@ export const useAccountConfigStore = create<AccountConfigState>((set, get) => ({
     const next: AccountConfig = { ...config, ...updates };
     // Optimistic update
     set({ config: next });
-    if (!userId) return;
+
+    let activeUserId = userId;
+    if (!activeUserId) {
+      try {
+        const stored = localStorage.getItem('yolnoma_user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.id) activeUserId = parsed.id;
+        }
+      } catch {}
+    }
+
+    if (!activeUserId) return;
     try {
-      await invoke('save_account_config', { userId, config: next });
+      await invoke('save_account_config', { userId: activeUserId, config: next });
     } catch (err) {
       console.error('[accountConfigStore] Failed to save config:', err);
     }

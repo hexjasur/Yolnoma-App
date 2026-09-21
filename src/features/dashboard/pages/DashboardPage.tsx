@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from 'react';
+import { useMemo, useState, useRef, type DragEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -23,8 +23,10 @@ import WeatherCard from '@/features/weather/components/WeatherCard';
 export default function HomePage() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
-  const { pinnedTools, movePinnedTool } = usePinnedTools();
+  const { pinnedTools, reorderPinnedTools } = usePinnedTools();
   const [draggedToolId, setDraggedToolId] = useState<string | null>(null);
+  const [dragOverToolId, setDragOverToolId] = useState<string | null>(null);
+  const isDraggingRef = useRef(false);
 
   // Real-time system monitoring toggle — persisted in config.json
   const monitoringEnabled = useAccountConfigStore(
@@ -40,9 +42,21 @@ export default function HomePage() {
     event: DragEvent<HTMLDivElement>,
     toolId: string,
   ) => {
+    isDraggingRef.current = true;
     setDraggedToolId(toolId);
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', toolId);
+  };
+
+  const handleToolDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    targetToolId: string,
+  ) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    if (dragOverToolId !== targetToolId) {
+      setDragOverToolId(targetToolId);
+    }
   };
 
   const handleToolDrop = (
@@ -50,14 +64,22 @@ export default function HomePage() {
     targetToolId: string,
   ) => {
     event.preventDefault();
+    setDragOverToolId(null);
     const sourceToolId =
       event.dataTransfer.getData('text/plain') || draggedToolId;
-    if (!sourceToolId || sourceToolId === targetToolId) return;
 
-    movePinnedTool(
-      pinnedTools.indexOf(sourceToolId),
-      pinnedTools.indexOf(targetToolId),
-    );
+    if (sourceToolId && sourceToolId !== targetToolId) {
+      reorderPinnedTools(sourceToolId, targetToolId);
+    }
+    setDraggedToolId(null);
+  };
+
+  const handleToolDragEnd = () => {
+    setDraggedToolId(null);
+    setDragOverToolId(null);
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 150);
   };
 
   // Native local system stats with 2s visibility-aware polling (only when enabled)
@@ -299,31 +321,47 @@ export default function HomePage() {
                 (candidate) => candidate.id === toolId,
               );
               if (!tool) return null;
+              const isDragged = draggedToolId === tool.id;
+              const isDragOver = dragOverToolId === tool.id && !isDragged;
+
               return (
                 <div
                   key={tool.id}
                   draggable
                   onDragStart={(event) => handleToolDragStart(event, tool.id)}
-                  onDragOver={(event) => event.preventDefault()}
+                  onDragOver={(event) => handleToolDragOver(event, tool.id)}
+                  onDragLeave={() =>
+                    setDragOverToolId((prev) => (prev === tool.id ? null : prev))
+                  }
                   onDrop={(event) => handleToolDrop(event, tool.id)}
-                  onDragEnd={() => setDraggedToolId(null)}
-                  className={`group rounded-2xl border border-white/[0.08] bg-[#111109] p-5 hover:border-[var(--accent-border)] hover:bg-white/[0.02] transition-all flex items-center gap-3.5 shadow-lg ${draggedToolId === tool.id ? 'cursor-grabbing opacity-50' : 'cursor-grab'}`}
+                  onDragEnd={handleToolDragEnd}
+                  className={`group rounded-2xl border p-5 transition-all duration-200 flex items-center gap-3.5 shadow-lg select-none ${
+                    isDragged
+                      ? 'opacity-35 scale-95 border-dashed border-[var(--accent)] bg-black/40 cursor-grabbing'
+                      : isDragOver
+                      ? 'border-[var(--accent)] bg-[var(--accent-glow)] ring-2 ring-[var(--accent)]/40 scale-[1.02] cursor-grab'
+                      : 'border-white/[0.08] bg-[#111109] hover:border-[var(--accent-border)] hover:bg-white/[0.02] cursor-grab'
+                  }`}
                 >
                   <Link
                     to={tool.to}
                     draggable={false}
-                    onClick={(event) =>
-                      handleDevFeatureClick(event, tool.id, user?.role)
-                    }
-                    className="flex min-w-0 flex-1 items-center gap-3.5"
+                    onClick={(event) => {
+                      if (isDraggingRef.current) {
+                        event.preventDefault();
+                        return;
+                      }
+                      handleDevFeatureClick(event, tool.id, user?.role);
+                    }}
+                    className="flex min-w-0 flex-1 items-center gap-3.5 pointer-events-auto"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[var(--accent)] flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
                       <ToolIcon
                         icon={tool.icon}
                         className="h-5 w-5 object-contain"
                       />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
                         {tool.label}
                       </p>
@@ -332,11 +370,15 @@ export default function HomePage() {
                       </p>
                     </div>
                   </Link>
-                  <GripVertical
-                    size={18}
-                    aria-label="Drag to reorder"
-                    className="ml-auto shrink-0 text-white/35 transition-colors group-hover:text-[var(--accent)]"
-                  />
+                  <div
+                    title="Drag to reorder"
+                    className="ml-auto shrink-0 p-1 cursor-grab active:cursor-grabbing text-white/35 hover:text-[var(--accent)] transition-colors"
+                  >
+                    <GripVertical
+                      size={18}
+                      aria-label="Drag to reorder"
+                    />
+                  </div>
                 </div>
               );
             })}
