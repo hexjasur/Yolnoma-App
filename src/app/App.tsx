@@ -6,6 +6,7 @@ import { UpdateModal } from '@/shared/ui';
 import { useUpdaterStore } from '@/shared/stores/updaterStore';
 import CommandCenter from './components/CommandCenter';
 import GlobalDropzone from '@/shared/components/GlobalDropzone';
+import KeyboardShortcutsModal from '@/shared/components/KeyboardShortcutsModal';
 
 const SPLASH_KEY = 'yolnoma_splash_shown';
 
@@ -56,6 +57,7 @@ function App() {
           <AppRoutes />
           <CommandCenter />
           <GlobalDropzone />
+          <KeyboardShortcutsModal />
           <UpdateModal />
         </>
       )}
