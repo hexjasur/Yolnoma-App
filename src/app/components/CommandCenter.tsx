@@ -1,17 +1,93 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Blocks, Clock3, Command, GitBranch, History, Search, Sparkles, Wrench, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Blocks,
+  Clock3,
+  Command,
+  GitBranch,
+  History,
+  Keyboard,
+  PanelLeftClose,
+  RotateCw,
+  Search,
+  Sparkles,
+  UploadCloud,
+  Wrench,
+  X,
+  Bot,
+} from 'lucide-react';
 import { ROUTE_CONFIG } from '@/app/routes.config';
+import { openAgentWindow } from '@/shared/lib/window';
 import type { LucideIcon } from 'lucide-react';
 
-type CommandItem = {
+export type CommandItem = {
   id: string;
   label: string;
   description: string;
-  path: string;
-  group: string;
+  path?: string;
+  group: 'Actions' | 'Git workspace' | 'Developer workspace' | 'Tools' | 'Workspace' | 'Home';
   icon: LucideIcon;
   keywords: string;
+  action?: () => void;
 };
+
+const ACTION_ITEMS: CommandItem[] = [
+  {
+    id: 'action-keyboard-shortcuts',
+    label: 'Keyboard Shortcuts Cheat-Sheet',
+    description: 'Barcha klaviatura tezkor tugmalari ro‘yxatini ko‘rish (Ctrl + /)',
+    group: 'Actions',
+    icon: Keyboard,
+    keywords: 'keyboard shortcuts hotkeys tugmalar yorliqlar help yordam cheatsheet',
+    action: () => {
+      window.dispatchEvent(new CustomEvent('yolnoma:open-shortcuts'));
+    },
+  },
+  {
+    id: 'action-toggle-sidebar',
+    label: 'Toggle Sidebar Collapse',
+    description: 'Yon panelni ixchamlash yoki kengaytirish (Ctrl + B)',
+    group: 'Actions',
+    icon: PanelLeftClose,
+    keywords: 'sidebar panel menyu yashirish ochish toggle collapse expand',
+    action: () => {
+      window.dispatchEvent(new CustomEvent('yolnoma:toggle-sidebar'));
+    },
+  },
+  {
+    id: 'action-open-dropzone',
+    label: 'Global File Dropzone',
+    description: 'Fayl yoki rasmlarni tashlash va tegishli vositada ochish',
+    group: 'Actions',
+    icon: UploadCloud,
+    keywords: 'dropzone upload file rasm tashlash yuklash fayl convert',
+    action: () => {
+      window.dispatchEvent(new CustomEvent('yolnoma:open-dropzone'));
+    },
+  },
+  {
+    id: 'action-agent-window',
+    label: 'Yolnoma AI Agent (Window)',
+    description: 'AI yordamchini mustaqil alohida oynada ochish',
+    group: 'Actions',
+    icon: Bot,
+    keywords: 'agent ai chatbot window popup yolnoma suniy intellekt',
+    action: () => {
+      openAgentWindow().catch(console.error);
+    },
+  },
+  {
+    id: 'action-reload',
+    label: 'Reload / Refresh Page',
+    description: 'Ilova sahifasini qayta yuklash (F5 / Ctrl + R)',
+    group: 'Actions',
+    icon: RotateCw,
+    keywords: 'reload refresh yangilash qayta yuklash',
+    action: () => {
+      window.location.reload();
+    },
+  },
+];
 
 const WORKSPACE_ITEMS: CommandItem[] = [
   {
@@ -59,12 +135,12 @@ const ROUTE_ITEMS: CommandItem[] = ROUTE_CONFIG
     label: route.label ?? route.id,
     description: route.description ?? `${route.label} workspace`,
     path: route.path,
-    group: route.navGroup === 'tools' ? 'Tools' : route.navGroup === 'workspace' ? 'Workspace' : 'Home',
+    group: (route.navGroup === 'tools' ? 'Tools' : route.navGroup === 'workspace' ? 'Workspace' : 'Home') as CommandItem['group'],
     icon: typeof route.icon === 'function' ? route.icon : Blocks,
     keywords: `${route.id} ${route.label ?? ''} ${route.description ?? ''}`,
   }));
 
-const COMMAND_ITEMS = [...WORKSPACE_ITEMS, ...ROUTE_ITEMS];
+const COMMAND_ITEMS: CommandItem[] = [...ACTION_ITEMS, ...WORKSPACE_ITEMS, ...ROUTE_ITEMS];
 const RECENT_COMMANDS_KEY = 'yolnoma_command_center_recent';
 const MAX_RECENT_COMMANDS = 8;
 
@@ -103,7 +179,16 @@ export default function CommandCenter() {
       return [...recent, ...COMMAND_ITEMS.filter((item) => !recentSet.has(item.id))];
     }
     return COMMAND_ITEMS
-      .map((item) => ({ item, score: item.keywords.toLowerCase().includes(normalized) ? (item.label.toLowerCase().startsWith(normalized) ? 2 : 1) : 0 }))
+      .map((item) => {
+        const isLabelMatch = item.label.toLowerCase().includes(normalized);
+        const isKeywordMatch = item.keywords.toLowerCase().includes(normalized);
+        const startsWith = item.label.toLowerCase().startsWith(normalized);
+        let score = 0;
+        if (startsWith) score = 3;
+        else if (isLabelMatch) score = 2;
+        else if (isKeywordMatch) score = 1;
+        return { item, score };
+      })
       .filter(({ score }) => score > 0)
       .sort((left, right) => right.score - left.score)
       .map(({ item }) => item);
@@ -112,15 +197,21 @@ export default function CommandCenter() {
   const openCommand = (item: CommandItem) => {
     rememberCommand(item.id);
     setRecentIds(readRecentIds());
-    goTo(item.path);
     setOpen(false);
+
+    if (item.action) {
+      item.action();
+    } else if (item.path) {
+      goTo(item.path);
+    }
   };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      // Toggle with Ctrl+K or Cmd+K
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setOpen(true);
+        setOpen((prev) => !prev);
         return;
       }
       if (!open) return;
@@ -156,34 +247,117 @@ export default function CommandCenter() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/65 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={() => setOpen(false)}>
-      <section className="w-full max-w-2xl overflow-hidden rounded-xl border border-white/[0.12] bg-[#18130f] shadow-2xl shadow-black/50" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Command Center">
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/65 px-4 pt-[12vh] backdrop-blur-sm"
+      onMouseDown={() => setOpen(false)}
+    >
+      <section
+        className="w-full max-w-2xl overflow-hidden rounded-xl border border-white/[0.12] bg-[#18130f] shadow-2xl shadow-black/50 flex flex-col"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command Center"
+      >
         <div className="flex items-center gap-3 border-b border-white/[0.08] px-5 py-4">
           <Search size={19} className="shrink-0 text-[var(--accent)]" />
-          <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tools, Git, workspaces…" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/30" aria-label="Search commands" />
-          <button type="button" onClick={() => setOpen(false)} className="rounded-md p-1.5 text-white/35 transition hover:bg-white/[0.07] hover:text-white" aria-label="Close command center"><X size={17} /></button>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search tools, actions, Git, workspaces… (or press Esc to close)"
+            className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/30"
+            aria-label="Search commands"
+          />
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-md p-1.5 text-white/35 transition hover:bg-white/[0.07] hover:text-white"
+            aria-label="Close command center"
+          >
+            <X size={17} />
+          </button>
         </div>
+
         <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
-          <span>{query.trim() ? 'Search results' : 'Recently opened'}</span>
-          <span className="flex items-center gap-1 normal-case tracking-normal text-white/25"><Command size={11} /> K to toggle</span>
+          <span>{query.trim() ? `Search results (${results.length})` : 'Quick actions & Recently opened'}</span>
+          <span className="flex items-center gap-1 normal-case tracking-normal text-white/25">
+            <Command size={11} /> K to toggle
+          </span>
         </div>
-        <div className="max-h-[58vh] overflow-y-auto p-2">
+
+        <div className="max-h-[55vh] overflow-y-auto p-2 scrollbar-thin">
           {results.length === 0 ? (
-            <div className="px-4 py-12 text-center text-sm text-white/35">No matching tools or workspaces.</div>
+            <div className="px-4 py-12 text-center text-sm text-white/35">
+              Hech qanday mos vosita yoki buyruq topilmadi.
+            </div>
           ) : (
             results.map((item, index) => {
               const Icon = item.icon;
+              const isAction = item.group === 'Actions';
               return (
-                <button key={item.id} type="button" onClick={() => openCommand(item)} className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition ${index === activeIndex ? 'bg-[var(--accent-dim)] text-white' : 'text-white/70 hover:bg-white/[0.05]'}`}>
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${index === activeIndex ? 'border-[var(--accent-border)] bg-[var(--accent)]/15 text-[var(--accent)]' : 'border-white/[0.08] bg-white/[0.03] text-white/40'}`}><Icon size={17} /></span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{item.label}</span><span className="mt-0.5 block truncate text-xs text-white/35">{item.description}</span></span>
-                  <span className="flex shrink-0 items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-white/25"><span className="hidden sm:inline">{!query.trim() && recentIds.includes(item.id) ? <Clock3 size={12} /> : item.group}</span><ArrowRight size={14} className={index === activeIndex ? 'text-[var(--accent)]' : 'opacity-0 transition group-hover:opacity-100'} /></span>
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openCommand(item)}
+                  className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${
+                    index === activeIndex ? 'bg-[var(--accent-dim)] text-white' : 'text-white/70 hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${
+                      index === activeIndex
+                        ? 'border-[var(--accent-border)] bg-[var(--accent)]/15 text-[var(--accent)]'
+                        : isAction
+                        ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
+                        : 'border-white/[0.08] bg-white/[0.03] text-white/40'
+                    }`}
+                  >
+                    <Icon size={17} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium flex items-center gap-2">
+                      {item.label}
+                      {isAction && (
+                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 uppercase tracking-wide">
+                          Action
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-white/35">{item.description}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-white/25">
+                    <span className="hidden sm:inline">
+                      {!query.trim() && recentIds.includes(item.id) ? <Clock3 size={12} /> : item.group}
+                    </span>
+                    <ArrowRight
+                      size={14}
+                      className={index === activeIndex ? 'text-[var(--accent)]' : 'opacity-0 transition group-hover:opacity-100'}
+                    />
+                  </span>
                 </button>
               );
             })
           )}
         </div>
-        <div className="flex items-center gap-4 border-t border-white/[0.06] px-5 py-3 text-[10px] text-white/25"><span>↑↓ Navigate</span><span>Enter Open</span><span>Esc Close</span></div>
+
+        <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-2.5 text-[10px] text-white/30 bg-black/20">
+          <div className="flex items-center gap-4">
+            <span>↑↓ Harakatlanish</span>
+            <span>Enter Tanlash</span>
+            <span>Esc Yopish</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              window.dispatchEvent(new CustomEvent('yolnoma:open-shortcuts'));
+            }}
+            className="flex items-center gap-1.5 text-white/40 hover:text-[var(--accent)] transition-colors"
+          >
+            <Keyboard size={12} />
+            <span>Shortcuts (Ctrl + /)</span>
+          </button>
+        </div>
       </section>
     </div>
   );
