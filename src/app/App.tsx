@@ -5,6 +5,7 @@ import { isStandaloneWindow } from '@/shared/lib/window';
 import { UpdateModal } from '@/shared/ui';
 import { useUpdaterStore } from '@/shared/stores/updaterStore';
 import CommandCenter from './components/CommandCenter';
+import GlobalDropzone from '@/shared/components/GlobalDropzone';
 
 const SPLASH_KEY = 'yolnoma_splash_shown';
 
@@ -54,6 +55,7 @@ function App() {
         <>
           <AppRoutes />
           <CommandCenter />
+          <GlobalDropzone />
           <UpdateModal />
         </>
       )}
