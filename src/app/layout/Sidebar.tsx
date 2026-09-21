@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   Star,
   MessageSquarePlus,
+  Keyboard,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { canAccessPage } from '@/config/roles';
@@ -22,6 +23,7 @@ import { usePluginNavigation } from '@/plugins';
 import { ConfirmModal } from '@/shared/ui';
 import { TOOL_CATALOG } from '@/config/toolCatalog';
 import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
+import { useActiveToolsStatus } from '@/shared/hooks/useActiveToolsStatus';
 import type { LucideIcon } from 'lucide-react';
 import { openAgentWindow } from '@/shared/lib/window';
 import { getNavigationRoutes } from '@/app/routes.config';
@@ -79,8 +81,17 @@ export default function Sidebar() {
   const resizeStart = useRef({ pointerX: 0, width: DEFAULT_SIDEBAR_WIDTH });
   const { logout, user } = useAuth();
   const { pinnedTools, togglePinnedTool } = usePinnedTools();
+  const { idlingCount, isCrosshairActive } = useActiveToolsStatus();
 
   const pluginNavItems = usePluginNavigation();
+
+  useEffect(() => {
+    const handleToggle = () => {
+      setIsCollapsed((prev) => !prev);
+    };
+    window.addEventListener('yolnoma:toggle-sidebar', handleToggle);
+    return () => window.removeEventListener('yolnoma:toggle-sidebar', handleToggle);
+  }, []);
 
   useEffect(() => {
     getVersion()
@@ -258,8 +269,46 @@ export default function Sidebar() {
                                 className={iconClassName}
                               />
                             )}
+
+                            {/* Collapsed view status dots */}
+                            {isCollapsed && link.name === 'steam-idler' && idlingCount > 0 && (
+                              <span className="absolute top-1.5 right-1.5 flex h-2 w-2" title={`Steam Idling: ${idlingCount} ta o‘yin faol`}>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                              </span>
+                            )}
+                            {isCollapsed && link.name === 'crosshair-overlay' && isCrosshairActive && (
+                              <span className="absolute top-1.5 right-1.5 flex h-2 w-2" title="Crosshair faol">
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500 shadow-[0_0_6px_#0ea5e9]" />
+                              </span>
+                            )}
+
                             {!isCollapsed && (
                               <span className="truncate">{label}</span>
+                            )}
+
+                            {/* Expanded view live indicators */}
+                            {!isCollapsed && link.name === 'steam-idler' && idlingCount > 0 && (
+                              <span
+                                className="ml-auto mr-1 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-semibold shrink-0 shadow-sm"
+                                title={`Steam Idling: ${idlingCount} ta o‘yin fonda ishlamoqda`}
+                              >
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                                </span>
+                                <span>{idlingCount}</span>
+                              </span>
+                            )}
+
+                            {!isCollapsed && link.name === 'crosshair-overlay' && isCrosshairActive && (
+                              <span
+                                className="ml-auto mr-1 flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-400 text-[9px] font-mono font-bold shrink-0"
+                                title="Crosshair Overlay faol"
+                              >
+                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-sky-400" />
+                                <span>ON</span>
+                              </span>
                             )}
                             {!isCollapsed &&
                               TOOL_CATALOG.some(
@@ -398,13 +447,24 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div
-        className={`border-t border-[var(--border)] ${isCollapsed ? 'p-2' : 'p-4'}`}
+        className={`border-t border-[var(--border)] ${isCollapsed ? 'p-2' : 'p-3'}`}
       >
-        {!isCollapsed && (
-          <p className="text-[11px] text-[var(--text-faint)] px-2 font-mono">
-            {version ? `v${version} — @ 2026 Yolnoma` : 'Loading…'}
-          </p>
-        )}
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between px-1'}`}>
+          {!isCollapsed && (
+            <p className="text-[11px] text-[var(--text-faint)] font-mono truncate">
+              {version ? `v${version}` : 'Loading…'}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('yolnoma:open-shortcuts'))}
+            className="flex items-center justify-center p-1.5 rounded-md hover:bg-white/[0.08] text-white/40 hover:text-[var(--accent)] transition-colors"
+            title="Keyboard Shortcuts (Ctrl + /)"
+            aria-label="Keyboard Shortcuts"
+          >
+            <Keyboard size={15} />
+          </button>
+        </div>
       </div>
 
       {!isCollapsed && (
