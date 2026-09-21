@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import StandaloneTabBar from './StandaloneTabBar';
+import KeepAliveOutlet from './KeepAliveOutlet';
 import { useIsStandalone } from '@/shared/lib/window';
 
 export default function Layout() {
@@ -20,7 +21,7 @@ export default function Layout() {
         <StandaloneTabBar />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 relative z-10">
-          <Outlet />
+          <KeepAliveOutlet />
         </main>
       </div>
     );
