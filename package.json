@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check package.json eslint.config.js scripts/build-steam-utility.js scripts/ensure-steam-utility-built.js src/app/App.tsx src/app/components/DevPreviewPanel.tsx src/shared/stores/updaterStore.ts src/shared/ui/UpdateModal.tsx",
+    "format:check": "prettier --check package.json eslint.config.js scripts/build-steam-utility.js scripts/ensure-steam-utility-built.js src/app/App.tsx src/app/components/YolnomaTurbo.tsx src/shared/stores/updaterStore.ts src/shared/ui/UpdateModal.tsx",
     "validate:video-csp": "node scripts/validate-video-csp.js",
     "test": "vitest run",
     "test:watch": "vitest",
