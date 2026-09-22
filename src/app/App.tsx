@@ -1,14 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
-import AppRoutes from './router';
-import SplashScreen from './components/SplashScreen';
-import { isStandaloneWindow } from '@/shared/lib/window';
-import { UpdateModal } from '@/shared/ui';
-import { useUpdaterStore } from '@/shared/stores/updaterStore';
-import CommandCenter from './components/CommandCenter';
-import GlobalDropzone from '@/shared/components/GlobalDropzone';
-import KeyboardShortcutsModal from '@/shared/components/KeyboardShortcutsModal';
+import { useState, useEffect, useRef } from "react";
+import AppRoutes from "./router";
+import SplashScreen from "./components/SplashScreen";
+import { isStandaloneWindow } from "@/shared/lib/window";
+import { UpdateModal } from "@/shared/ui";
+import { useUpdaterStore } from "@/shared/stores/updaterStore";
+import CommandCenter from "./components/CommandCenter";
+import GlobalDropzone from "@/shared/components/GlobalDropzone";
+import KeyboardShortcutsModal from "@/shared/components/KeyboardShortcutsModal";
+import DevPreviewPanel from "./components/DevPreviewPanel";
 
-const SPLASH_KEY = 'yolnoma_splash_shown';
+const SPLASH_KEY = "yolnoma_splash_shown";
 
 function App() {
   const isStandalone = isStandaloneWindow();
@@ -30,9 +31,20 @@ function App() {
     }
   }, [isStandalone]);
 
+  // Development-only visual preview hook. It overlays the existing splash without
+  // changing the persisted first-run behavior used by the production app.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const handlePreviewSplash = () => setShowSplash(true);
+    window.addEventListener("yolnoma:preview-splash", handlePreviewSplash);
+    return () =>
+      window.removeEventListener("yolnoma:preview-splash", handlePreviewSplash);
+  }, []);
+
   // Automatic background update check once on application startup (non-blocking)
   useEffect(() => {
-    if (import.meta.env.DEV || !appReady || hasCheckedStartupRef.current) return;
+    if (import.meta.env.DEV || !appReady || hasCheckedStartupRef.current)
+      return;
     hasCheckedStartupRef.current = true;
 
     // Small initial delay so app UI mounts and renders without any initial contention
@@ -44,14 +56,16 @@ function App() {
   }, [appReady]);
 
   const handleSplashFinish = () => {
-    sessionStorage.setItem(SPLASH_KEY, '1');
+    sessionStorage.setItem(SPLASH_KEY, "1");
     setShowSplash(false);
     setAppReady(true);
   };
 
   return (
     <>
-      {!isStandalone && showSplash && <SplashScreen onFinish={handleSplashFinish} />}
+      {!isStandalone && showSplash && (
+        <SplashScreen onFinish={handleSplashFinish} />
+      )}
       {appReady && (
         <>
           <AppRoutes />
@@ -59,6 +73,7 @@ function App() {
           <GlobalDropzone />
           <KeyboardShortcutsModal />
           <UpdateModal />
+          <DevPreviewPanel />
         </>
       )}
     </>

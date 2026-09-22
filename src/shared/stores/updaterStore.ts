@@ -32,6 +32,14 @@ export interface UpdateInfo {
   body?: string;
 }
 
+export type DevPreviewStage =
+  | "update-available"
+  | "preparing"
+  | "downloading"
+  | "installing"
+  | "complete"
+  | "error";
+
 interface UpdatePreparation {
   stoppedIdlingGames: number;
   killedSteamUtilityProcesses: number;
@@ -46,11 +54,14 @@ interface UpdaterState {
   error: string | null;
   modalOpen: boolean;
   lastChecked: Date | null;
+  devPreview: boolean;
 
   checkForUpdates: (options?: { silent?: boolean }) => Promise<boolean>;
   downloadAndInstall: () => Promise<void>;
   openModal: () => void;
   closeModal: () => void;
+  previewUpdate: () => void;
+  previewUpdaterStage: (stage: DevPreviewStage) => void;
   reset: () => void;
 }
 
@@ -84,6 +95,16 @@ let activeUpdate: Update | null = null;
 let isChecking = false;
 let isInstalling = false;
 
+const DEV_UPDATE_INFO: UpdateInfo = {
+  version: "1.0.24-preview",
+  currentVersion: "1.0.23",
+  date: "2026-09-22",
+  body: "Preview mode: test the complete updater animation, safe preparation steps, download progress, and relaunch confirmation without installing anything.",
+};
+
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
 export const useUpdaterStore = create<UpdaterState>((set, get) => ({
   status: "idle",
   updateInfo: null,
@@ -93,6 +114,7 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
   error: null,
   modalOpen: false,
   lastChecked: null,
+  devPreview: false,
 
   checkForUpdates: async (options = { silent: false }) => {
     const { silent } = options;
@@ -213,6 +235,22 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     )
       return;
 
+    if (get().devPreview) {
+      isInstalling = true;
+      set({ status: "preparing", progress: 0, error: null, modalOpen: true });
+      await wait(900);
+      set({ status: "downloading", progress: 8 });
+      for (const progress of [22, 44, 67, 88, 100]) {
+        await wait(280);
+        set({ progress });
+      }
+      set({ status: "installing", progress: 100 });
+      await wait(900);
+      set({ status: "complete", progress: 100 });
+      isInstalling = false;
+      return;
+    }
+
     if (!activeUpdate) {
       toast.error(
         "No update package is currently loaded. Please check for updates again.",
@@ -297,6 +335,41 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     set({ modalOpen: false });
   },
 
+  previewUpdate: () => {
+    if (!import.meta.env.DEV) return;
+    activeUpdate = null;
+    set({
+      devPreview: true,
+      status: "update-available",
+      updateInfo: DEV_UPDATE_INFO,
+      progress: 0,
+      downloadedBytes: 0,
+      totalBytes: 128 * 1024 * 1024,
+      error: null,
+      modalOpen: true,
+    });
+  },
+
+  previewUpdaterStage: (stage) => {
+    if (!import.meta.env.DEV) return;
+    set({
+      devPreview: true,
+      status: stage,
+      updateInfo: DEV_UPDATE_INFO,
+      modalOpen: true,
+      error:
+        stage === "error"
+          ? "Preview error: the signed package could not be applied. You can safely retry."
+          : null,
+      progress:
+        stage === "downloading"
+          ? 58
+          : stage === "installing" || stage === "complete"
+            ? 100
+            : 0,
+    });
+  },
+
   reset: () => {
     activeUpdate = null;
     isChecking = false;
@@ -309,6 +382,7 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
       totalBytes: null,
       error: null,
       modalOpen: false,
+      devPreview: false,
     });
   },
 }));
