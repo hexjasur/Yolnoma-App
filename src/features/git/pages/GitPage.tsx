@@ -116,47 +116,60 @@ export default function GitPage() {
       </header>
       <div className="mt-8">
         <ToolNavigation items={tabs} active={tab} onChange={selectTab} />
-        {tab === "commit-generator" && recentFolders.length > 0 && (
+        {tab === "commit-generator" && (
           <section className="mt-5 border border-white/[0.08] bg-black/10 p-4">
             <div className="mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                <FolderClock size={14} className="text-[var(--accent)]" />{" "}
-                Recent Git folders
-              </span>
+              <div>
+                <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
+                  <FolderClock size={14} className="text-[var(--accent)]" />{" "}
+                  Recent projects
+                </span>
+                <p className="mt-1 text-[10px] text-white/25">
+                  Your last generated Git workspaces appear here.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => void clearRecentFolders()}
-                className="text-[10px] text-white/35 hover:text-red-300"
+                disabled={!recentFolders.length}
+                className="text-[10px] text-white/35 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 Clear all
               </button>
             </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {recentFolders.map((path) => (
-                <div
-                  key={path}
-                  className="flex min-w-0 items-center gap-2 border border-white/[0.07] bg-white/[0.02] px-3 py-2"
-                >
-                  <button
-                    type="button"
-                    onClick={() => selectRecentFolder(path)}
-                    title={path}
-                    className="min-w-0 flex-1 truncate text-left font-mono text-xs text-white/60 hover:text-white"
+            {recentFolders.length ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                {recentFolders.map((path) => (
+                  <div
+                    key={path}
+                    className="flex min-w-0 items-center gap-2 border border-white/[0.07] bg-white/[0.02] px-3 py-2"
                   >
-                    {path}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void removeRecentFolder(path)}
-                    aria-label={`Remove ${path}`}
-                    title="Remove from recent folders"
-                    className="shrink-0 p-1 text-white/25 hover:text-red-300"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => selectRecentFolder(path)}
+                      title={path}
+                      className="min-w-0 flex-1 truncate text-left font-mono text-xs text-white/60 hover:text-white"
+                    >
+                      {path}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void removeRecentFolder(path)}
+                      aria-label={`Remove ${path}`}
+                      title="Remove from recent folders"
+                      className="shrink-0 p-1 text-white/25 hover:text-red-300"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="border border-dashed border-white/[0.09] px-4 py-5 text-center text-xs text-white/35">
+                No recent projects yet. Select a Git folder below to save it
+                here.
+              </div>
+            )}
             <p className="mt-3 text-[10px] text-white/25">
               Stored in the app data file{" "}
               <code>yolnoma-git-recent-folders.json</code>, not localStorage.
