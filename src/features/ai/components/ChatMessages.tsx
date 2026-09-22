@@ -1,4 +1,4 @@
-import { MessageSquare, Pencil, RotateCcw } from "lucide-react";
+import { Loader2, MessageSquare, Pencil, RotateCcw } from "lucide-react";
 import type { ChatMessage, OpenRouterModel } from "../types";
 import MarkdownContent from "./MarkdownContent";
 
@@ -13,27 +13,11 @@ interface ChatMessagesProps {
   regeneratingMessageId: string | null;
 }
 
-function ThinkingIndicator() {
-  return (
-    <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-2 text-xs text-white/55 shadow-sm">
-      <span className="flex items-center gap-1" aria-hidden="true">
-        {[0, 1, 2].map((delay) => (
-          <span
-            key={delay}
-            className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--accent)]"
-            style={{ animationDelay: `${delay * 140}ms` }}
-          />
-        ))}
-      </span>
-      <span>Thinking</span>
-    </div>
-  );
-}
-
 export default function ChatMessages({
   messages,
   models,
   loading,
+  activeModel,
   messagesEndRef,
   onEditUserMessage,
   onRegenerateAssistantMessage,
@@ -110,7 +94,14 @@ export default function ChatMessages({
               </div>
             </div>
           ))}
-          {loading && <ThinkingIndicator />}
+          {loading && (
+            <div className="flex items-center gap-2 text-xs text-white/40">
+              <Loader2 size={14} className="animate-spin" />{" "}
+              {models.find((model) => model.id === activeModel)?.name ??
+                "Model"}{" "}
+              is preparing a response...
+            </div>
+          )}
           <div ref={messagesEndRef} aria-hidden="true" />
         </div>
       )}
