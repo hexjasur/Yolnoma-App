@@ -1,33 +1,29 @@
 /**
  * updaterStore — Global auto-updater state & service for Tauri 2.
  *
- * Handles:
- * - Periodic/startup automated background checks
- * - Manual update checks from Settings/About
- * - Real-time download progress tracking (0-100%)
- * - NSIS passive installation and app relaunch
- * - Non-intrusive error reporting
- * - Infinite update loop protection: if an update for version X is attempted
- *   but the app still starts on the previous version after relaunch, version X
- *   is recorded as a failed target and will not be offered again until a newer
- *   version (Y > X) becomes available.
+ * The install path intentionally separates volatile runtime cleanup from account
+ * authentication. It stops idling/SteamUtility processes before installation but
+ * never clears auth tokens, account config, encrypted API keys, or user sessions.
  */
 
-import { create } from 'zustand';
-import { check, type Update } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
-import { getVersion } from '@tauri-apps/api/app';
-import { toast } from '@/shared/ui/Toast';
-import { getErrorMessage, reportError } from '@/shared/lib/errors';
+import { create } from "zustand";
+import { invoke } from "@tauri-apps/api/core";
+import { check, type Update } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { getVersion } from "@tauri-apps/api/app";
+import { toast } from "@/shared/ui/Toast";
+import { getErrorMessage, reportError } from "@/shared/lib/errors";
 
 export type UpdateStatus =
-  | 'idle'
-  | 'checking'
-  | 'update-available'
-  | 'downloading'
-  | 'installing'
-  | 'up-to-date'
-  | 'error';
+  | "idle"
+  | "checking"
+  | "update-available"
+  | "preparing"
+  | "downloading"
+  | "installing"
+  | "complete"
+  | "up-to-date"
+  | "error";
 
 export interface UpdateInfo {
   version: string;
@@ -36,42 +32,29 @@ export interface UpdateInfo {
   body?: string;
 }
 
+interface UpdatePreparation {
+  stoppedIdlingGames: number;
+  killedSteamUtilityProcesses: number;
+}
+
 interface UpdaterState {
   status: UpdateStatus;
   updateInfo: UpdateInfo | null;
-  progress: number; // 0 to 100
+  progress: number;
   downloadedBytes: number;
   totalBytes: number | null;
   error: string | null;
   modalOpen: boolean;
   lastChecked: Date | null;
 
-  /** Check for available updates (silent for startup check, non-silent for manual clicks) */
   checkForUpdates: (options?: { silent?: boolean }) => Promise<boolean>;
-
-  /** Download and install the available update, then relaunch the app */
   downloadAndInstall: () => Promise<void>;
-
-  /** Show the update dialog */
   openModal: () => void;
-
-  /** Close/dismiss the update dialog */
   closeModal: () => void;
-
-  /** Reset status back to idle */
   reset: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Infinite-update-loop protection
-// ---------------------------------------------------------------------------
-// Before installing we persist the target version to localStorage.
-// On the next startup, if the running version still equals the old version
-// (meaning the installer silently failed or did nothing), we skip offering
-// that same version again.
-// A genuinely newer version is always allowed through.
-// ---------------------------------------------------------------------------
-const FAILED_TARGET_KEY = 'yolnoma.updater.failed-target';
+const FAILED_TARGET_KEY = "yolnoma.updater.failed-target";
 
 function getFailedTarget(): string | null {
   try {
@@ -85,7 +68,7 @@ function setFailedTarget(version: string): void {
   try {
     localStorage.setItem(FAILED_TARGET_KEY, version);
   } catch {
-    // localStorage unavailable (e.g. test environment) — ignore
+    // localStorage unavailable in tests or restricted webviews — ignore.
   }
 }
 
@@ -93,24 +76,16 @@ function clearFailedTarget(): void {
   try {
     localStorage.removeItem(FAILED_TARGET_KEY);
   } catch {
-    // ignore
+    // Ignore unavailable storage.
   }
 }
 
-// ---------------------------------------------------------------------------
-// Module-level concurrency guards
-// ---------------------------------------------------------------------------
-// isChecking prevents overlapping check() calls.
-// isInstalling prevents overlapping downloadAndInstall() calls.
-// Both mirror the corresponding Zustand status values but live outside the
-// store so they are not susceptible to stale-closure capture.
-// ---------------------------------------------------------------------------
 let activeUpdate: Update | null = null;
 let isChecking = false;
 let isInstalling = false;
 
 export const useUpdaterStore = create<UpdaterState>((set, get) => ({
-  status: 'idle',
+  status: "idle",
   updateInfo: null,
   progress: 0,
   downloadedBytes: 0,
@@ -123,129 +98,106 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     const { silent } = options;
     if (import.meta.env.DEV) {
       activeUpdate = null;
-      set({ status: 'up-to-date', updateInfo: null, error: null, lastChecked: new Date() });
-      if (!silent) toast.info('Updates are checked in the installed production build.');
+      set({
+        status: "up-to-date",
+        updateInfo: null,
+        error: null,
+        lastChecked: new Date(),
+      });
+      if (!silent)
+        toast.info("Updates are checked in the installed production build.");
       return false;
     }
-    const currentStatus = get().status;
 
-    // Prevent duplicate or overlapping checks / installs
+    const currentStatus = get().status;
     if (
       isChecking ||
       isInstalling ||
-      currentStatus === 'checking' ||
-      currentStatus === 'downloading' ||
-      currentStatus === 'installing'
+      currentStatus === "checking" ||
+      currentStatus === "preparing" ||
+      currentStatus === "downloading" ||
+      currentStatus === "installing" ||
+      currentStatus === "complete"
     ) {
       return false;
     }
 
     isChecking = true;
-    set({ status: 'checking', error: null });
+    set({ status: "checking", error: null });
 
     let currentVersion: string;
     try {
       currentVersion = await getVersion();
     } catch (err: unknown) {
-      reportError('AutoUpdater:GetVersion', err);
-      const msg = getErrorMessage(err, 'Could not determine current application version.');
-      set({ status: 'error', error: msg });
-      if (!silent) {
-        toast.error(msg);
-      }
+      reportError("AutoUpdater:GetVersion", err);
+      const msg = getErrorMessage(
+        err,
+        "Could not determine current application version.",
+      );
+      set({ status: "error", error: msg });
+      if (!silent) toast.error(msg);
       isChecking = false;
       return false;
     }
 
-    if (!currentVersion || typeof currentVersion !== 'string') {
-      const msg = 'Current application version is unavailable.';
-      set({ status: 'error', error: msg });
-      if (!silent) {
-        toast.error(msg);
-      }
+    if (!currentVersion || typeof currentVersion !== "string") {
+      const msg = "Current application version is unavailable.";
+      set({ status: "error", error: msg });
+      if (!silent) toast.error(msg);
       isChecking = false;
       return false;
     }
 
-    // -----------------------------------------------------------------------
-    // Detect whether a previously attempted update actually succeeded.
-    // If the running version now matches the previously stored failed-target,
-    // the update DID succeed — clear the guard.
-    // -----------------------------------------------------------------------
     const failedTarget = getFailedTarget();
-    if (failedTarget && failedTarget === currentVersion) {
-      // Running version matches what we tried to install → success. Clear it.
-      clearFailedTarget();
-    }
+    if (failedTarget && failedTarget === currentVersion) clearFailedTarget();
 
     try {
       const update = await check();
       set({ lastChecked: new Date() });
 
       if (update && update.available) {
-        // -------------------------------------------------------------------
-        // Infinite-loop guard: skip if this exact version was already
-        // attempted and the app is still running the previous version.
-        // -------------------------------------------------------------------
         const currentFailedTarget = getFailedTarget();
         if (currentFailedTarget && update.version === currentFailedTarget) {
           activeUpdate = null;
           const skipMsg = `Update to v${update.version} previously failed. It will not be offered again until a newer version is released.`;
-          set({ status: 'error', error: skipMsg });
-
-          if (!silent) {
-            toast.error(`Update v${update.version} failed on last attempt. Waiting for a newer release.`);
-          }
-
+          set({ status: "error", error: skipMsg });
+          if (!silent)
+            toast.error(
+              `Update v${update.version} failed on last attempt. Waiting for a newer release.`,
+            );
           isChecking = false;
           return false;
         }
 
         activeUpdate = update;
-        const info: UpdateInfo = {
-          version: update.version,
-          currentVersion,
-          date: update.date,
-          body: update.body || 'Bug fixes and performance improvements.',
-        };
-
         set({
-          status: 'update-available',
-          updateInfo: info,
+          status: "update-available",
+          updateInfo: {
+            version: update.version,
+            currentVersion,
+            date: update.date,
+            body:
+              update.body ||
+              "Bug fixes, performance improvements, and security updates.",
+          },
           modalOpen: true,
           error: null,
         });
-
         isChecking = false;
         return true;
-      } else {
-        activeUpdate = null;
-        set({
-          status: 'up-to-date',
-          updateInfo: null,
-          error: null,
-        });
-
-        if (!silent) {
-          toast.success(`You are on the latest version (v${currentVersion}).`);
-        }
-
-        isChecking = false;
-        return false;
       }
+
+      activeUpdate = null;
+      set({ status: "up-to-date", updateInfo: null, error: null });
+      if (!silent)
+        toast.success(`You are on the latest version (v${currentVersion}).`);
+      isChecking = false;
+      return false;
     } catch (err: unknown) {
-      reportError('AutoUpdater', err);
-      const msg = getErrorMessage(err, 'Could not check for updates.');
-
-      set({
-        status: 'error',
-        error: msg,
-      });
-
-      if (!silent) {
-        toast.error(msg);
-      }
-
+      reportError("AutoUpdater", err);
+      const msg = getErrorMessage(err, "Could not check for updates.");
+      set({ status: "error", error: msg });
+      if (!silent) toast.error(msg);
       isChecking = false;
       return false;
     }
@@ -253,80 +205,81 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
 
   downloadAndInstall: async () => {
     const { status } = get();
-
-    // Concurrency guard — do not allow two simultaneous install attempts
-    if (isInstalling || status === 'downloading' || status === 'installing') return;
+    if (
+      isInstalling ||
+      status === "preparing" ||
+      status === "downloading" ||
+      status === "installing"
+    )
+      return;
 
     if (!activeUpdate) {
-      toast.error('No update package is currently loaded. Please check for updates again.');
+      toast.error(
+        "No update package is currently loaded. Please check for updates again.",
+      );
       return;
     }
 
-    // -----------------------------------------------------------------------
-    // Record the target version BEFORE starting the install.
-    // If the app restarts and is still on the current (old) version, this key
-    // will cause checkForUpdates to skip offering the same version again.
-    // The key is cleared automatically on the next startup if the running
-    // version has advanced to the target.
-    // -----------------------------------------------------------------------
-    setFailedTarget(activeUpdate.version);
-
     isInstalling = true;
     set({
-      status: 'downloading',
+      status: "preparing",
       progress: 0,
       downloadedBytes: 0,
       totalBytes: null,
       error: null,
+      modalOpen: true,
     });
 
     try {
+      // This command drains only volatile idling/helper processes. It does not
+      // clear auth/session storage, so the user remains signed in after relaunch.
+      const preparation = await invoke<UpdatePreparation>("prepare_for_update");
+      console.info("[AutoUpdater:Preparation]", {
+        stoppedIdlingGames: preparation.stoppedIdlingGames,
+        killedSteamUtilityProcesses: preparation.killedSteamUtilityProcesses,
+      });
+
+      // Record the target only after runtime cleanup succeeds. A cleanup failure
+      // must not poison the retry guard for an update that was never downloaded.
+      setFailedTarget(activeUpdate.version);
+      set({ status: "downloading" });
+
       let downloaded = 0;
       let total: number | null = null;
-
       await activeUpdate.downloadAndInstall((event) => {
         switch (event.event) {
-          case 'Started': {
+          case "Started":
             total = event.data.contentLength ?? null;
             set({ totalBytes: total, progress: 0 });
             break;
-          }
-          case 'Progress': {
+          case "Progress":
             downloaded += event.data.chunkLength;
-            let percent = 0;
-            if (total && total > 0) {
-              percent = Math.min(100, Math.round((downloaded / total) * 100));
-            }
             set({
               downloadedBytes: downloaded,
               totalBytes: total,
-              progress: percent,
+              progress:
+                total && total > 0
+                  ? Math.min(100, Math.round((downloaded / total) * 100))
+                  : 0,
             });
             break;
-          }
-          case 'Finished': {
-            set({
-              status: 'installing',
-              progress: 100,
-            });
+          case "Finished":
+            set({ status: "installing", progress: 100 });
             break;
-          }
         }
       });
 
-      // Once download & passive install finishes, relaunch the application.
-      // On the next startup, if the version has advanced, clearFailedTarget()
-      // is called in checkForUpdates and everything continues normally.
-      set({ status: 'installing', progress: 100 });
+      set({ status: "complete", progress: 100 });
+      await new Promise((resolve) => setTimeout(resolve, 900));
       await relaunch();
     } catch (err: unknown) {
-      reportError('AutoUpdater:Download', err);
-      const msg = getErrorMessage(err, 'Failed to download or install update.');
+      reportError("AutoUpdater:Download", err);
+      const msg = getErrorMessage(
+        err,
+        "Failed to prepare, download, or install the update.",
+      );
       isInstalling = false;
-      set({
-        status: 'error',
-        error: msg,
-      });
+      set({ status: "error", error: msg, modalOpen: true });
       toast.error(msg);
     }
   },
@@ -334,8 +287,13 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
   openModal: () => set({ modalOpen: true }),
   closeModal: () => {
     const { status } = get();
-    // Do not allow closing during active download or installation
-    if (status === 'downloading' || status === 'installing') return;
+    if (
+      status === "preparing" ||
+      status === "downloading" ||
+      status === "installing" ||
+      status === "complete"
+    )
+      return;
     set({ modalOpen: false });
   },
 
@@ -344,7 +302,7 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     isChecking = false;
     isInstalling = false;
     set({
-      status: 'idle',
+      status: "idle",
       updateInfo: null,
       progress: 0,
       downloadedBytes: 0,

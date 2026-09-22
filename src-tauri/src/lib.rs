@@ -16,6 +16,8 @@ mod domains;
 mod mobile_backend;
 #[cfg(not(target_os = "android"))]
 mod embedded_api_key;
+#[cfg(not(target_os = "android"))]
+mod updater;
 
 // Kept public for feature modules that use the shared authentication state.
 pub use app_state::AuthState;
@@ -275,6 +277,7 @@ pub fn run() {
             domains::steam::lock_all_achievements,
             domains::steam::update_stats,
             domains::steam::reset_all_stats,
+            updater::prepare_for_update,
             // ── Port Scanner ──
             domains::network::scan_ports,
             domains::network::get_common_ports,
