@@ -1,4 +1,4 @@
-import { Loader2, MessageSquare, Pencil, RotateCcw } from "lucide-react";
+import { MessageSquare, Pencil, RotateCcw } from "lucide-react";
 import type { ChatMessage, OpenRouterModel } from "../types";
 import MarkdownContent from "./MarkdownContent";
 
@@ -13,25 +13,19 @@ interface ChatMessagesProps {
   regeneratingMessageId: string | null;
 }
 
-function RouterLoadingAnimation({ activeModel }: { activeModel: string }) {
-  const modelLabel = activeModel ? "Auto Router (Beta)" : "Auto Router (Beta)";
+function ThinkingIndicator() {
   return (
-    <div className="mt-2 overflow-hidden rounded-2xl border border-[var(--accent-border)]/35 bg-[#030409] shadow-[0_0_40px_-18px_var(--accent)]">
-      <div className="relative h-28 w-full overflow-hidden">
-        <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_50%_45%,rgba(218,164,112,.17),transparent_58%)]" />
-        <iframe
-          title="AI response loading animation"
-          src="./test.html"
-          loading="eager"
-          className="pointer-events-none absolute inset-0 h-full w-full border-0 opacity-90"
-          aria-hidden="true"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#030409] via-transparent to-transparent" />
-        <div className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-2 text-[11px] font-medium text-white/80">
-          <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
-          <span>{modelLabel} is preparing your response</span>
-        </div>
-      </div>
+    <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-2 text-xs text-white/55 shadow-sm">
+      <span className="flex items-center gap-1" aria-hidden="true">
+        {[0, 1, 2].map((delay) => (
+          <span
+            key={delay}
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--accent)]"
+            style={{ animationDelay: `${delay * 140}ms` }}
+          />
+        ))}
+      </span>
+      <span>Thinking</span>
     </div>
   );
 }
@@ -40,7 +34,6 @@ export default function ChatMessages({
   messages,
   models,
   loading,
-  activeModel,
   messagesEndRef,
   onEditUserMessage,
   onRegenerateAssistantMessage,
@@ -117,7 +110,7 @@ export default function ChatMessages({
               </div>
             </div>
           ))}
-          {loading && <RouterLoadingAnimation activeModel={activeModel} />}
+          {loading && <ThinkingIndicator />}
           <div ref={messagesEndRef} aria-hidden="true" />
         </div>
       )}

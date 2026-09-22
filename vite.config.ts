@@ -20,10 +20,6 @@ export default defineConfig(async () => ({
   // Optimize bundle: split vendor chunks for better caching
   build: {
     rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, "index.html"),
-        test: path.resolve(__dirname, "test.html"),
-      },
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
