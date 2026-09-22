@@ -6,6 +6,7 @@ import {
   ChevronUp,
   CircleAlert,
   Crosshair,
+  Minus,
   Move,
   Play,
   RotateCcw,
@@ -198,7 +199,7 @@ export default function YolnomaTurbo() {
             onClick={() => setCompact(true)}
             className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-900 dark:hover:text-white"
           >
-            <ChevronDown size={14} />
+            <Minus size={14} />
           </button>
           <button
             type="button"
