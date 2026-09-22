@@ -43,8 +43,12 @@ function readSavedState() {
         : "left",
       compact: value.compact === true,
       custom: {
-        x: Number(value.custom?.x) || 16,
-        y: Number(value.custom?.y) || 16,
+        x: Number.isFinite(Number(value.custom?.x))
+          ? Number(value.custom?.x)
+          : 16,
+        y: Number.isFinite(Number(value.custom?.y))
+          ? Number(value.custom?.y)
+          : 16,
       },
     };
   } catch {
@@ -69,6 +73,7 @@ export default function YolnomaTurbo() {
   const [mode, setMode] = useState<PositionMode>("left");
   const [custom, setCustom] = useState<Point>({ x: 16, y: 16 });
   const [dragging, setDragging] = useState(false);
+  const preferencesHydratedRef = useRef(false);
   const dragRef = useRef<{
     pointerX: number;
     pointerY: number;
@@ -79,13 +84,16 @@ export default function YolnomaTurbo() {
 
   useEffect(() => {
     const saved = readSavedState();
-    if (!saved) return;
-    setMode(saved.mode);
-    setCompact(saved.compact);
-    setCustom(saved.custom);
+    if (saved) {
+      setMode(saved.mode);
+      setCompact(saved.compact);
+      setCustom(saved.custom);
+    }
+    preferencesHydratedRef.current = true;
   }, []);
 
   useEffect(() => {
+    if (!preferencesHydratedRef.current) return;
     saveState(mode, compact, custom);
   }, [mode, compact, custom]);
 
