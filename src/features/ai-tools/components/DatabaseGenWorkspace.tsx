@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from "react";
 import {
   Download,
   FileJson,
@@ -12,14 +12,16 @@ import {
   WandSparkles,
   ZoomIn,
   ZoomOut,
-} from 'lucide-react';
-import { getApiKey } from '@/shared/hooks/useAccountStorage';
-import { DEFAULT_MODELS } from '@/features/ai/types';
-import { useAuth } from '@/features/auth/AuthContext';
-import { requestOpenRouter } from '@/features/ai/api/openRouterApi';
-import SelectMenu from '@/shared/ui/SelectMenu';
-import '../css/styles.css';
-import { downloadBlob, downloadText } from '@/shared/lib/files';
+} from "lucide-react";
+import { getApiKey } from "@/shared/hooks/useAccountStorage";
+import { saveApiKey } from "@/shared/hooks/useAccountStorage";
+import { DEFAULT_MODELS } from "@/features/ai/types";
+import { useAuth } from "@/features/auth/AuthContext";
+import { requestOpenRouter } from "@/features/ai/api/openRouterApi";
+import SelectMenu from "@/shared/ui/SelectMenu";
+import "../css/styles.css";
+import { downloadBlob, downloadText } from "@/shared/lib/files";
+import ApiKeyModal from "@/features/ai/components/ApiKeyModal";
 
 type Column = {
   name: string;
@@ -39,7 +41,7 @@ type DatabaseSchema = { name: string; description?: string; tables: DbTable[] };
 
 type Point = { x: number; y: number };
 
-const SAMPLE_PROMPT = 'Library Management System';
+const SAMPLE_PROMPT = "Library Management System";
 const SYSTEM_PROMPT = `You are a senior database architect. Design a normalized relational database from the user's brief. Return ONLY valid JSON with this exact shape: {"name":"string","description":"string","tables":[{"name":"snake_case","description":"string","columns":[{"name":"snake_case","type":"integer|varchar(255)|text|boolean|date|timestamp|decimal(12,2)|json","nullable":false,"primaryKey":false,"unique":false,"references":{"table":"table_name","column":"column_name"}}],"position":{"x":number,"y":number}}]}. Every table must have one primary key. Add foreign keys and join tables for many-to-many relationships. Use 3-12 tables, clear names, and practical columns. Positions should form a readable diagram. Do not include markdown or commentary.`;
 
 /* ── Diagram geometry (Same as HTML card sizes) ───────────── */
@@ -53,16 +55,16 @@ function normalizeSchema(value: unknown): DatabaseSchema {
   const raw = value as Partial<DatabaseSchema>;
   const tables = Array.isArray(raw.tables) ? raw.tables : [];
   return {
-    name: String(raw.name || 'Generated Database'),
-    description: String(raw.description || ''),
+    name: String(raw.name || "Generated Database"),
+    description: String(raw.description || ""),
     tables: tables.map((table, index) => {
       const item = table as Partial<DbTable>;
       const columns = Array.isArray(item.columns) ? item.columns : [];
       return {
         name: String(item.name || `table_${index + 1}`)
-          .replace(/[^a-zA-Z0-9_]/g, '_')
+          .replace(/[^a-zA-Z0-9_]/g, "_")
           .toLowerCase(),
-        description: String(item.description || ''),
+        description: String(item.description || ""),
         position: {
           x: Number(item.position?.x) || 40 + (index % 3) * 300,
           y: Number(item.position?.y) || 40 + Math.floor(index / 3) * 240,
@@ -70,17 +72,17 @@ function normalizeSchema(value: unknown): DatabaseSchema {
         columns: columns.map((column) => {
           const c = column as Partial<Column>;
           const reference =
-            c.references && typeof c.references === 'object'
+            c.references && typeof c.references === "object"
               ? {
-                  table: String(c.references.table || ''),
-                  column: String(c.references.column || ''),
+                  table: String(c.references.table || ""),
+                  column: String(c.references.column || ""),
                 }
               : undefined;
           return {
-            name: String(c.name || 'field')
-              .replace(/[^a-zA-Z0-9_]/g, '_')
+            name: String(c.name || "field")
+              .replace(/[^a-zA-Z0-9_]/g, "_")
               .toLowerCase(),
-            type: String(c.type || 'text'),
+            type: String(c.type || "text"),
             nullable: Boolean(c.nullable),
             primaryKey: Boolean(c.primaryKey),
             unique: Boolean(c.unique),
@@ -99,20 +101,20 @@ function schemaToSql(schema: DatabaseSchema) {
     .map((table) => {
       const definitions = table.columns.map((column) => {
         const flags = [
-          column.primaryKey ? 'PRIMARY KEY' : '',
-          column.unique ? 'UNIQUE' : '',
-          !column.nullable && !column.primaryKey ? 'NOT NULL' : '',
+          column.primaryKey ? "PRIMARY KEY" : "",
+          column.unique ? "UNIQUE" : "",
+          !column.nullable && !column.primaryKey ? "NOT NULL" : "",
         ]
           .filter(Boolean)
-          .join(' ');
+          .join(" ");
         const reference = column.references
           ? ` REFERENCES ${column.references.table}(${column.references.column})`
-          : '';
-        return `  ${column.name} ${column.type.toUpperCase()}${flags ? ` ${flags}` : ''}${reference}`;
+          : "";
+        return `  ${column.name} ${column.type.toUpperCase()}${flags ? ` ${flags}` : ""}${reference}`;
       });
-      return `CREATE TABLE ${table.name} (\n${definitions.join(',\n')}\n);`;
+      return `CREATE TABLE ${table.name} (\n${definitions.join(",\n")}\n);`;
     })
-    .join('\n\n');
+    .join("\n\n");
 }
 
 function schemaToJson(schema: DatabaseSchema) {
@@ -132,14 +134,14 @@ function tableHeight(table: DbTable) {
 
 /* A distinct color for each connection — they remain distinguishable even if they overlap */
 const EDGE_COLORS = [
-  '#d19a6a',
-  '#7fb3d5',
-  '#8fc78a',
-  '#c792ea',
-  '#e5c07b',
-  '#e06c75',
-  '#56b6c2',
-  '#b58db5',
+  "#d19a6a",
+  "#7fb3d5",
+  "#8fc78a",
+  "#c792ea",
+  "#e5c07b",
+  "#e06c75",
+  "#56b6c2",
+  "#b58db5",
 ];
 
 /* Selects the exit and entry sides */
@@ -200,7 +202,7 @@ function edgesMarkup(schema: DatabaseSchema) {
         .filter((column) => column.references)
         .map((column) => {
           const target = byName.get(column.references!.table);
-          if (!target || target.name === table.name) return '';
+          if (!target || target.name === table.name) return "";
 
           const i = edgeIndex++;
           const color = EDGE_COLORS[i % EDGE_COLORS.length];
@@ -219,12 +221,12 @@ function edgesMarkup(schema: DatabaseSchema) {
             `<path d="${e.path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" opacity="0.95"/>` +
             `<circle cx="${e.sx}" cy="${e.sy}" r="3.5" fill="${color}"/>` +
             `<circle cx="${e.tx}" cy="${e.ty}" r="3.5" fill="${color}"/>` +
-            `<text x="${e.sx + e.sDir * 11}" y="${e.sy - 7}" text-anchor="${e.sDir > 0 ? 'start' : 'end'}" fill="${color}" font-family="Arial" font-size="13" font-weight="700">&#8734;</text>` +
-            `<text x="${e.tx + e.tDir * 11}" y="${e.ty - 7}" text-anchor="${e.tDir > 0 ? 'start' : 'end'}" fill="${color}" font-family="Arial" font-size="12" font-weight="700">1</text>`
+            `<text x="${e.sx + e.sDir * 11}" y="${e.sy - 7}" text-anchor="${e.sDir > 0 ? "start" : "end"}" fill="${color}" font-family="Arial" font-size="13" font-weight="700">&#8734;</text>` +
+            `<text x="${e.tx + e.tDir * 11}" y="${e.ty - 7}" text-anchor="${e.tDir > 0 ? "start" : "end"}" fill="${color}" font-family="Arial" font-size="12" font-weight="700">1</text>`
           );
         }),
     )
-    .join('');
+    .join("");
 }
 
 function canvasSize(schema: DatabaseSchema) {
@@ -255,14 +257,14 @@ function diagramSvg(schema: DatabaseSchema, scale = 1) {
         table.columns
           .map(
             (column, index) =>
-              `<circle cx="16" cy="${ROW_TOP - 1 + index * ROW_H}" r="3" fill="${column.primaryKey ? '#e3b777' : '#8e7a6a'}"/>` +
+              `<circle cx="16" cy="${ROW_TOP - 1 + index * ROW_H}" r="3" fill="${column.primaryKey ? "#e3b777" : "#8e7a6a"}"/>` +
               `<text x="28" y="${ROW_TOP + 4 + index * ROW_H}" fill="#eee" font-family="Arial" font-size="13">${column.name}</text>` +
               `<text x="${TABLE_W - 12}" y="${ROW_TOP + 4 + index * ROW_H}" text-anchor="end" fill="#a89585" font-family="Arial" font-size="11">${column.type}</text>`,
           )
-          .join('') +
+          .join("") +
         `</g>`,
     )
-    .join('');
+    .join("");
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(width * scale)}" height="${Math.round(height * scale)}" viewBox="0 0 ${width} ${height}">` +
@@ -278,7 +280,9 @@ export default function DatabaseGenWorkspace() {
   const [schema, setSchema] = useState<DatabaseSchema | null>(null);
   const [model, setModel] = useState(DEFAULT_MODELS[0].id);
   const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [draftKey, setDraftKey] = useState("");
   const [zoom, setZoom] = useState(1);
   const [dragging, setDragging] = useState<{
     index: number;
@@ -298,7 +302,7 @@ export default function DatabaseGenWorkspace() {
       ) ?? [],
     [schema],
   );
-  const edges = useMemo(() => (schema ? edgesMarkup(schema) : ''), [schema]);
+  const edges = useMemo(() => (schema ? edgesMarkup(schema) : ""), [schema]);
   const size = useMemo(
     () => (schema ? canvasSize(schema) : { width: 1000, height: 650 }),
     [schema],
@@ -308,22 +312,23 @@ export default function DatabaseGenWorkspace() {
     const cleanPrompt = prompt.trim();
     if (!cleanPrompt || generating) return;
     setGenerating(true);
-    setError('');
+    setError("");
     try {
-      const apiKey = await getApiKey(user?.id ?? '');
-      if (!apiKey)
-        throw new Error(
-          'OpenRouter API key not found. Add it in AI Chat first.',
-        );
+      const apiKey = await getApiKey(user?.id ?? "");
+      if (!apiKey) {
+        setError("OpenRouter API key not found. Add your key to continue.");
+        setShowKeyModal(true);
+        return;
+      }
       const response = await requestOpenRouter({
         apiKey,
         model,
         temperature: 0.2,
         maxTokens: 5000,
-        responseFormat: { type: 'json_object' },
-        title: 'Yolnoma Database Generator',
+        responseFormat: { type: "json_object" },
+        title: "Yolnoma Database Generator",
         systemContext: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: cleanPrompt }],
+        messages: [{ role: "user", content: cleanPrompt }],
       });
       const content = response.body.choices?.[0]?.message?.content;
       if (response.status < 200 || response.status >= 300 || !content)
@@ -332,18 +337,26 @@ export default function DatabaseGenWorkspace() {
             `OpenRouter returned HTTP ${response.status}`,
         );
       const parsed = JSON.parse(
-        content.replace(/^```json\s*|\s*```$/g, '').trim(),
+        content.replace(/^```json\s*|\s*```$/g, "").trim(),
       );
       setSchema(normalizeSchema(parsed));
     } catch (generationError) {
       setError(
         generationError instanceof Error
           ? generationError.message
-          : 'Could not generate the database schema.',
+          : "Could not generate the database schema.",
       );
     } finally {
       setGenerating(false);
     }
+  };
+
+  const saveKey = async () => {
+    const cleanKey = draftKey.trim();
+    if (!cleanKey) return;
+    await saveApiKey(user?.id ?? "", cleanKey);
+    setShowKeyModal(false);
+    setError("");
   };
 
   const updatePosition = (index: number, point: Point) =>
@@ -363,15 +376,15 @@ export default function DatabaseGenWorkspace() {
     const svg = diagramSvg(schema, 2);
     const image = new Image();
     image.onload = () => {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = image.width;
       canvas.height = image.height;
-      const context = canvas.getContext('2d');
+      const context = canvas.getContext("2d");
       if (!context) return;
       context.drawImage(image, 0, 0);
       canvas.toBlob((blob) => {
-        if (blob) downloadBlob('database-schema.png', blob);
-      }, 'image/png');
+        if (blob) downloadBlob("database-schema.png", blob);
+      }, "image/png");
     };
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   };
@@ -424,7 +437,7 @@ export default function DatabaseGenWorkspace() {
           <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/[0.08] px-2.5 py-1 text-[10px] font-medium text-emerald-200/90">
             <span
               className="anim-orb h-1.5 w-1.5 rounded-full bg-emerald-400"
-              style={{ boxShadow: '0 0 0 0 rgba(52,211,153,.5)' }}
+              style={{ boxShadow: "0 0 0 0 rgba(52,211,153,.5)" }}
             />
             OpenRouter
           </div>
@@ -437,7 +450,7 @@ export default function DatabaseGenWorkspace() {
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               onKeyDown={(event) => {
-                if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                   event.preventDefault();
                   void generate();
                 }
@@ -452,10 +465,10 @@ export default function DatabaseGenWorkspace() {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-white/[0.06] bg-black/25 px-4 py-2.5">
               <div className="flex flex-wrap items-center gap-1.5">
                 {[
-                  'Library Management System',
-                  'E-commerce Store',
-                  'Hospital Records',
-                  'SaaS Billing',
+                  "Library Management System",
+                  "E-commerce Store",
+                  "Hospital Records",
+                  "SaaS Billing",
                 ].map((preset) => (
                   <button
                     key={preset}
@@ -496,7 +509,7 @@ export default function DatabaseGenWorkspace() {
                     ) : (
                       <Sparkles size={13} />
                     )}
-                    {generating ? 'Generating…' : 'Generate'}
+                    {generating ? "Generating…" : "Generate"}
                   </span>
                 </button>
               </div>
@@ -531,7 +544,7 @@ export default function DatabaseGenWorkspace() {
             <div className="flex items-center gap-4">
               <div className="text-sm font-bold text-white">{schema.name}</div>
               <span className="text-xs text-white/40 font-medium">
-                {schema.tables.length} tables · {relationships.length}{' '}
+                {schema.tables.length} tables · {relationships.length}{" "}
                 relationships
               </span>
             </div>
@@ -556,9 +569,9 @@ export default function DatabaseGenWorkspace() {
                 type="button"
                 onClick={() =>
                   downloadText(
-                    `${schema.name.replace(/\s+/g, '-').toLowerCase()}.sql`,
+                    `${schema.name.replace(/\s+/g, "-").toLowerCase()}.sql`,
                     schemaToSql(schema),
-                    'text/plain',
+                    "text/plain",
                   )
                 }
                 className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs text-white/70 hover:text-white hover:bg-white/10 hover:border-white/25 transition-all"
@@ -569,9 +582,9 @@ export default function DatabaseGenWorkspace() {
                 type="button"
                 onClick={() =>
                   downloadText(
-                    `${schema.name.replace(/\s+/g, '-').toLowerCase()}.json`,
+                    `${schema.name.replace(/\s+/g, "-").toLowerCase()}.json`,
                     schemaToJson(schema),
-                    'application/json',
+                    "application/json",
                   )
                 }
                 className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs text-white/70 hover:text-white hover:bg-white/10 hover:border-white/25 transition-all"
@@ -605,8 +618,8 @@ export default function DatabaseGenWorkspace() {
             className="relative min-h-[650px] overflow-auto bg-[#0d0b09]"
             style={{
               backgroundImage:
-                'radial-gradient(circle, rgba(255,255,255,.07) 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
+                "radial-gradient(circle, rgba(255,255,255,.07) 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
             }}
           >
             <div
@@ -623,7 +636,7 @@ export default function DatabaseGenWorkspace() {
                 height={size.height}
                 style={{
                   transform: `scale(${zoom})`,
-                  transformOrigin: 'top left',
+                  transformOrigin: "top left",
                   zIndex: 1,
                 }}
                 dangerouslySetInnerHTML={{ __html: edges }}
@@ -634,7 +647,7 @@ export default function DatabaseGenWorkspace() {
                   width: size.width,
                   height: size.height,
                   transform: `scale(${zoom})`,
-                  transformOrigin: 'top left',
+                  transformOrigin: "top left",
                 }}
               >
                 {schema.tables.map((table, index) => (
@@ -660,7 +673,7 @@ export default function DatabaseGenWorkspace() {
                         );
                       setDragging(null);
                     }}
-                    className={`absolute w-[250px] cursor-grab select-none rounded-xl border border-[#8a6548]/80 bg-[#1d1813] active:cursor-grabbing ${dragging?.index === index ? 'z-20 shadow-2xl shadow-black/60 ring-1 ring-[var(--accent)]/40' : 'z-10 shadow-xl transition-shadow hover:shadow-2xl hover:shadow-[#8a6548]/20'}`}
+                    className={`absolute w-[250px] cursor-grab select-none rounded-xl border border-[#8a6548]/80 bg-[#1d1813] active:cursor-grabbing ${dragging?.index === index ? "z-20 shadow-2xl shadow-black/60 ring-1 ring-[var(--accent)]/40" : "z-10 shadow-xl transition-shadow hover:shadow-2xl hover:shadow-[#8a6548]/20"}`}
                     style={{ left: table.position.x, top: table.position.y }}
                   >
                     <div className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-[#32241b] to-[#2a1d15] px-4 py-2.5">
@@ -677,7 +690,7 @@ export default function DatabaseGenWorkspace() {
                         >
                           <span className="flex min-w-0 items-center gap-1.5 truncate text-white/85">
                             <span
-                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${column.primaryKey ? 'bg-[var(--accent)]' : 'bg-white/30'}`}
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${column.primaryKey ? "bg-[var(--accent)]" : "bg-white/30"}`}
                             />
                             {column.primaryKey && (
                               <span className="text-[9px] text-[var(--accent)] font-bold">
@@ -712,6 +725,14 @@ export default function DatabaseGenWorkspace() {
             </span>
           </div>
         </>
+      )}
+      {showKeyModal && (
+        <ApiKeyModal
+          draftKey={draftKey}
+          onDraftKeyChange={setDraftKey}
+          onSave={() => void saveKey()}
+          onDismiss={() => setShowKeyModal(false)}
+        />
       )}
     </section>
   );
