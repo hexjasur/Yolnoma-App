@@ -7,7 +7,7 @@ import { useUpdaterStore } from "@/shared/stores/updaterStore";
 import CommandCenter from "./components/CommandCenter";
 import GlobalDropzone from "@/shared/components/GlobalDropzone";
 import KeyboardShortcutsModal from "@/shared/components/KeyboardShortcutsModal";
-import DevPreviewPanel from "./components/DevPreviewPanel";
+import YolnomaTurbo from "./components/YolnomaTurbo";
 
 const SPLASH_KEY = "yolnoma_splash_shown";
 
@@ -73,7 +73,7 @@ function App() {
           <GlobalDropzone />
           <KeyboardShortcutsModal />
           <UpdateModal />
-          <DevPreviewPanel />
+          <YolnomaTurbo />
         </>
       )}
     </>
