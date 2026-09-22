@@ -1,16 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
-import { Bot, KeyRound, Settings2, ShieldCheck, Trash2, MessageSquare, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
-import { Button } from '@/shared/ui';
-import { useAuth } from '@/features/auth/AuthContext';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  Bot,
+  KeyRound,
+  Settings2,
+  ShieldCheck,
+  Trash2,
+  MessageSquare,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+} from "lucide-react";
+import { Button } from "@/shared/ui";
+import { useAuth } from "@/features/auth/AuthContext";
 import {
   fetchOpenRouterModels,
   getShortModelName,
   isLimitError,
   requestChatCompletion,
   generateChatTitle,
-} from '../api/openRouterApi';
+} from "../api/openRouterApi";
 import {
   DEFAULT_MODELS,
   type ChatMessage,
@@ -18,46 +29,52 @@ import {
   type OpenRouterModel,
   type ChatSession,
   type ChatSessionSummary,
-} from '../types';
-import ChatComposer from '../components/ChatComposer';
-import ChatMessages from '../components/ChatMessages';
-import ApiKeyModal from '../components/ApiKeyModal';
-import { buildProjectContext } from '../context/projectContext';
+} from "../types";
+import ChatComposer from "../components/ChatComposer";
+import ChatMessages from "../components/ChatMessages";
+import ApiKeyModal from "../components/ApiKeyModal";
+import { buildProjectContext } from "../context/projectContext";
+import { getApiKey, saveApiKey, removeApiKey } from "../storage";
 import {
-  getApiKey,
-  saveApiKey,
-  removeApiKey,
-} from '../storage';
-import { createSession, loadChatSession, loadChatSessions, migrateLegacyChat, persistChatSession } from '../storage';
+  createSession,
+  loadChatSession,
+  loadChatSessions,
+  migrateLegacyChat,
+  persistChatSession,
+} from "../storage";
 
 export default function AiChatPage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedSessionId = searchParams.get('sessionId');
-  const [apiKey, setApiKey] = useState('');
-  const [draftKey, setDraftKey] = useState('');
+  const requestedSessionId = searchParams.get("sessionId");
+  const [apiKey, setApiKey] = useState("");
+  const [draftKey, setDraftKey] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<'models' | 'sessions'>('sessions');
-  const [sessionSearch, setSessionSearch] = useState('');
+  const [sidebarTab, setSidebarTab] = useState<"models" | "sessions">(
+    "sessions",
+  );
+  const [sessionSearch, setSessionSearch] = useState("");
   const [openSessionMenu, setOpenSessionMenu] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState('');
+  const [editingTitle, setEditingTitle] = useState("");
   const [titleGenerating, setTitleGenerating] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
   const [models, setModels] = useState<OpenRouterModel[]>(DEFAULT_MODELS);
   const [selectedModels, setSelectedModels] = useState<string[]>([
     DEFAULT_MODELS[0].id,
   ]);
-  const [modelCategory, setModelCategory] = useState<ModelCategory>('all');
+  const [modelCategory, setModelCategory] = useState<ModelCategory>("all");
   const [modelsLoading, setModelsLoading] = useState(false);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [activeModel, setActiveModel] = useState('');
-  const [limitCheckedAt, setLimitCheckedAt] = useState('');
+  const [regeneratingMessageId, setRegeneratingMessageId] = useState<
+    string | null
+  >(null);
+  const [error, setError] = useState("");
+  const [activeModel, setActiveModel] = useState("");
+  const [limitCheckedAt, setLimitCheckedAt] = useState("");
   const [showKeyModal, setShowKeyModal] = useState(false);
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -66,14 +83,14 @@ export default function AiChatPage() {
   useEffect(() => {
     setStorageReady(false);
 
-    const userId = user?.id ?? '';
+    const userId = user?.id ?? "";
     getApiKey(userId).then((key) => {
-      const accountKey = key ?? '';
+      const accountKey = key ?? "";
       setApiKey(accountKey);
       setDraftKey(accountKey);
       setShowKeyModal(
         !accountKey &&
-          sessionStorage.getItem('yolnoma.ai-key-guide-dismissed') !== 'true',
+          sessionStorage.getItem("yolnoma.ai-key-guide-dismissed") !== "true",
       );
       setStorageReady(true);
     });
@@ -84,7 +101,10 @@ export default function AiChatPage() {
       const migrated = await migrateLegacyChat(user);
       if (migrated) loaded = await loadChatSessions(user);
       setSessions(loaded);
-      if (requestedSessionId && loaded.some((session) => session.id === requestedSessionId)) {
+      if (
+        requestedSessionId &&
+        loaded.some((session) => session.id === requestedSessionId)
+      ) {
         const selected = await loadChatSession(user, requestedSessionId);
         setActiveSession(selected);
         hydratedMessagesRef.current = JSON.stringify(selected.messages);
@@ -97,7 +117,13 @@ export default function AiChatPage() {
         if (requestedSessionId) setSearchParams({}, { replace: true });
       }
       setStorageReady(true);
-    })().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load chat sessions.'));
+    })().catch((loadError) =>
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Could not load chat sessions.",
+      ),
+    );
   }, [user?.id, user?.email, requestedSessionId, setSearchParams]);
 
   useEffect(() => {
@@ -107,23 +133,36 @@ export default function AiChatPage() {
       hydratedMessagesRef.current = null;
       return;
     }
-    const session = { ...activeSession, messages, updatedAt: Date.now().toString() };
+    const session = {
+      ...activeSession,
+      messages,
+      updatedAt: Date.now().toString(),
+    };
     // Optimistically move the active conversation to the top immediately. The
     // native writer also refreshes updatedAt, but the list must not wait for it.
     setActiveSession(session);
-    setSessions((current) => current
-      .map((item) => item.id === session.id
-        ? { ...item, title: session.title, updatedAt: session.updatedAt, messageCount: messages.length, model: session.model }
-        : item)
-      .sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt)));
+    setSessions((current) =>
+      current
+        .map((item) =>
+          item.id === session.id
+            ? {
+                ...item,
+                title: session.title,
+                updatedAt: session.updatedAt,
+                messageCount: messages.length,
+                model: session.model,
+              }
+            : item,
+        )
+        .sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt)),
+    );
     void persistChatSession(user, session);
   }, [messages]);
 
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'end',
+      behavior: "smooth",
+      block: "end",
     });
   }, [loading, messages]);
 
@@ -139,8 +178,8 @@ export default function AiChatPage() {
         return;
       const target = event.target as HTMLElement | null;
       if (
-        target?.tagName === 'TEXTAREA' ||
-        target?.tagName === 'INPUT' ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "INPUT" ||
         target?.isContentEditable
       )
         return;
@@ -150,8 +189,8 @@ export default function AiChatPage() {
       setPrompt((current) => current + event.key);
     };
 
-    window.addEventListener('keydown', handleGlobalTyping);
-    return () => window.removeEventListener('keydown', handleGlobalTyping);
+    window.addEventListener("keydown", handleGlobalTyping);
+    return () => window.removeEventListener("keydown", handleGlobalTyping);
   }, [loading, showKeyModal]);
 
   useEffect(() => {
@@ -159,7 +198,9 @@ export default function AiChatPage() {
     setModelsLoading(true);
     if (!storageReady || !apiKey.trim()) {
       setModelsLoading(false);
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
     fetchOpenRouterModels(apiKey)
       .then(({ response, models: fetchedModels }) => {
@@ -207,33 +248,32 @@ export default function AiChatPage() {
   );
 
   const visibleModels = useMemo(() => {
-    if (modelCategory === 'all') return models;
+    if (modelCategory === "all") return models;
     return models.filter((model) => {
       const isFree =
         Number(model.pricing?.prompt ?? 1) === 0 &&
         Number(model.pricing?.completion ?? 1) === 0;
-      return modelCategory === 'free' ? isFree : !isFree;
+      return modelCategory === "free" ? isFree : !isFree;
     });
   }, [modelCategory, models]);
 
   const saveKey = async () => {
     const cleanKey = draftKey.trim();
-    const userId = user?.id ?? '';
+    const userId = user?.id ?? "";
     if (cleanKey) {
       await saveApiKey(userId, cleanKey);
       setApiKey(cleanKey);
-      setError('');
+      setError("");
       setShowKeyModal(false);
     } else {
       await removeApiKey(userId);
-      setApiKey('');
+      setApiKey("");
       setShowKeyModal(true);
     }
   };
 
-
   const dismissKeyGuide = () => {
-    sessionStorage.setItem('yolnoma.ai-key-guide-dismissed', 'true');
+    sessionStorage.setItem("yolnoma.ai-key-guide-dismissed", "true");
     setShowKeyModal(false);
   };
 
@@ -245,7 +285,7 @@ export default function AiChatPage() {
     // Keep a new chat as a draft. Persist it only after the first message.
     setActiveSession(null);
     setMessages([]);
-    setSidebarTab('sessions');
+    setSidebarTab("sessions");
     setSearchParams({}, { replace: false });
   };
 
@@ -261,17 +301,24 @@ export default function AiChatPage() {
 
   const saveSessionTitle = async (id: string) => {
     if (!user || !editingTitle.trim()) return;
-    const target = activeSession?.id === id ? activeSession : await loadChatSession(user, id);
+    const target =
+      activeSession?.id === id
+        ? activeSession
+        : await loadChatSession(user, id);
     const next = { ...target, title: editingTitle.trim() };
     await persistChatSession(user, next);
     if (activeSession?.id === id) setActiveSession(next);
-    setSessions((current) => current.map((item) => item.id === id ? { ...item, title: next.title } : item));
+    setSessions((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, title: next.title } : item,
+      ),
+    );
     setEditingSessionId(null);
   };
 
   const deleteSession = async (id: string) => {
-    if (!user || !window.confirm('Delete this chat session?')) return;
-    await invoke('delete_ai_chat_session', { userId: user.id, sessionId: id });
+    if (!user || !window.confirm("Delete this chat session?")) return;
+    await invoke("delete_ai_chat_session", { userId: user.id, sessionId: id });
     const remaining = sessions.filter((session) => session.id !== id);
     if (activeSession?.id === id) {
       setActiveSession(null);
@@ -285,7 +332,8 @@ export default function AiChatPage() {
   const sendPrompt = async (text: string, conversationMessages = messages) => {
     if (!text || loading) return;
     if (!apiKey) {
-      setError('Enter and save your OpenRouter API key first.');
+      setError("Enter and save your OpenRouter API key first.");
+      setShowKeyModal(true);
       return;
     }
 
@@ -296,16 +344,21 @@ export default function AiChatPage() {
       setSessions((current) => [{ ...session!, messageCount: 0 }, ...current]);
       setSearchParams({ sessionId: session.id });
     }
-    const userMessage: ChatMessage = { role: 'user', content: text, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: text,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
     const nextMessages = [...conversationMessages, userMessage];
     setMessages(nextMessages);
-    setPrompt('');
-    if (promptInputRef.current) promptInputRef.current.style.height = '';
-    setError('');
-    setLimitCheckedAt('');
+    setPrompt("");
+    if (promptInputRef.current) promptInputRef.current.style.height = "";
+    setError("");
+    setLimitCheckedAt("");
     setLoading(true);
 
-    if (session.title === 'New chat') {
+    if (session.title === "New chat") {
       setTitleGenerating(true);
       void generateChatTitle(apiKey, selectedModels[0], text)
         .then((title) => {
@@ -315,7 +368,11 @@ export default function AiChatPage() {
             if (user) void persistChatSession(user, next);
             return next;
           });
-          setSessions((current) => current.map((item) => item.id === session?.id ? { ...item, title } : item));
+          setSessions((current) =>
+            current.map((item) =>
+              item.id === session?.id ? { ...item, title } : item,
+            ),
+          );
         })
         .catch(() => undefined)
         .finally(() => setTitleGenerating(false));
@@ -343,8 +400,8 @@ export default function AiChatPage() {
         setMessages((current) => [
           ...current,
           {
-            role: 'assistant',
-            content: response.body.choices?.[0]?.message?.content ?? '',
+            role: "assistant",
+            content: response.body.choices?.[0]?.message?.content ?? "",
             model,
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
@@ -352,9 +409,9 @@ export default function AiChatPage() {
         ]);
         return;
       }
-      const checkedAt = new Date().toLocaleTimeString('uz-UZ', {
-        hour: '2-digit',
-        minute: '2-digit',
+      const checkedAt = new Date().toLocaleTimeString("uz-UZ", {
+        hour: "2-digit",
+        minute: "2-digit",
       });
       setLimitCheckedAt(checkedAt);
       throw new Error(
@@ -366,11 +423,11 @@ export default function AiChatPage() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : 'An unknown error occurred.',
+          : "An unknown error occurred.",
       );
     } finally {
       setLoading(false);
-      setActiveModel('');
+      setActiveModel("");
     }
   };
 
@@ -392,11 +449,15 @@ export default function AiChatPage() {
   const regenerateAssistantMessage = (message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id);
     if (index < 0) return;
-    const previousUser = [...messages.slice(0, index)].reverse().find((item) => item.role === 'user');
+    const previousUser = [...messages.slice(0, index)]
+      .reverse()
+      .find((item) => item.role === "user");
     if (!previousUser || loading) return;
     setMessages(messages.slice(0, index));
     setRegeneratingMessageId(message.id ?? null);
-    void sendPrompt(previousUser.content, messages.slice(0, index)).finally(() => setRegeneratingMessageId(null));
+    void sendPrompt(previousUser.content, messages.slice(0, index)).finally(
+      () => setRegeneratingMessageId(null),
+    );
   };
 
   return (
@@ -413,10 +474,10 @@ export default function AiChatPage() {
                 Yolnoma Assistant
               </p>
               <p className="truncate text-xs text-white/35">
-                {selectedModelLabels.join(' → ')}
+                {selectedModelLabels.join(" → ")}
                 {limitCheckedAt && (
                   <span className="text-amber-200/60">
-                    {' '}
+                    {" "}
                     · limit tekshirildi {limitCheckedAt}
                   </span>
                 )}
@@ -465,75 +526,194 @@ export default function AiChatPage() {
       <aside className="order-2 flex h-[calc(100vh-150px)] min-h-0 flex-col gap-4 overflow-hidden lg:order-2">
         <section className="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/[0.08] bg-[#111109] p-4">
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
-            <button type="button" onClick={() => setSidebarTab('sessions')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'sessions' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><MessageSquare size={13} /> Sessions</button>
-            <button type="button" onClick={() => setSidebarTab('models')} className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === 'models' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}><Settings2 size={13} /> Models</button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab("sessions")}
+              className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === "sessions" ? "bg-[var(--accent-dim)] text-[var(--accent)]" : "text-white/40 hover:text-white/75"}`}
+            >
+              <MessageSquare size={13} /> Sessions
+            </button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab("models")}
+              className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${sidebarTab === "models" ? "bg-[var(--accent-dim)] text-[var(--accent)]" : "text-white/40 hover:text-white/75"}`}
+            >
+              <Settings2 size={13} /> Models
+            </button>
           </div>
-          {sidebarTab === 'models' ? <>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-sm font-semibold text-white">Choose a model</div>
-            {modelsLoading && <span className="text-[10px] text-white/30">Loading…</span>}
-          </div>
-          <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
-            {(['all', 'free', 'paid'] as ModelCategory[]).map((category) => (
-              <button
-                key={category}
-                type="button"
-                onClick={() => setModelCategory(category)}
-                className={`rounded-lg px-2 py-2 text-[11px] font-semibold capitalize transition-colors ${modelCategory === category ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-white/40 hover:text-white/75'}`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-            {modelsLoading &&
-              Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="h-10 shrink-0 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.03]"
-                />
-              ))}
-            {!modelsLoading && !visibleModels.length && (
-              <p className="text-xs text-white/40">
-                No models in this category.
-              </p>
-            )}
-            {!modelsLoading &&
-              visibleModels.map((model) => (
-                <label
-                  key={model.id}
-                  title={model.id}
-                  className={`flex h-10 min-w-0 shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 transition-colors ${selectedModels.includes(model.id) ? 'border-[var(--accent-border)] bg-[var(--accent-glow)] text-white' : 'border-white/[0.06] text-white/55 hover:border-white/[0.14] hover:text-white/80'}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedModels.includes(model.id)}
-                    onChange={() => toggleModel(model.id)}
-                    className="sr-only"
-                  />
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${selectedModels.includes(model.id) ? 'bg-[var(--accent)]' : 'bg-white/20'}`}
-                  />
-                  <span className="min-w-0 truncate text-xs font-medium">
-                    {getShortModelName(model)}
-                  </span>
-                </label>
-              ))}
-          </div>
-          </> : <>
-            <div className="mb-3 flex items-center justify-between gap-2"><span className="text-sm font-semibold text-white">Your conversations</span><button type="button" onClick={() => void newChat()} className="rounded-lg p-1.5 text-[var(--accent)] hover:bg-white/[0.08]" title="New chat"><Plus size={16} /></button></div>
-            <div className="mb-3 flex items-center gap-2 rounded-lg border border-white/[0.07] bg-black/10 px-2.5 py-2"><Search size={13} className="text-white/30" /><input value={sessionSearch} onChange={(event) => setSessionSearch(event.target.value)} placeholder="Search sessions" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/25" /></div>
-            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
-              {sessions.filter((session) => session.title.toLowerCase().includes(sessionSearch.toLowerCase())).map((session) => (
-                <div key={session.id} className={`group relative flex items-center gap-2 rounded-xl border px-3 py-2.5 ${activeSession?.id === session.id ? 'border-[var(--accent-border)] bg-[var(--accent-glow)]' : 'border-white/[0.06] hover:border-white/[0.14]'}`}>
-                  {editingSessionId === session.id ? <input autoFocus value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveSessionTitle(session.id); if (event.key === 'Escape') setEditingSessionId(null); }} onBlur={() => void saveSessionTitle(session.id)} className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none" /> : <button type="button" onClick={() => void selectSession(session.id)} className="min-w-0 flex-1 text-left"><span className="block truncate text-xs font-medium text-white/80">{session.title}{titleGenerating && activeSession?.id === session.id && ' …'}</span><span className="text-[10px] text-white/30">{session.messageCount} messages</span></button>}
-                  <button type="button" onClick={() => setOpenSessionMenu(openSessionMenu === session.id ? null : session.id)} className="shrink-0 rounded-md p-1 text-white/30 hover:bg-white/[0.08] hover:text-white" aria-label="Session actions"><MoreHorizontal size={15} /></button>
-                  {openSessionMenu === session.id && <div className="absolute right-2 top-9 z-20 w-32 rounded-xl border border-white/10 bg-[#211b17] p-1 shadow-xl"><button type="button" onClick={() => { setEditingSessionId(session.id); setEditingTitle(session.title); setOpenSessionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-white/70 hover:bg-white/[0.08]"><Pencil size={12} /> Rename</button><button type="button" onClick={() => void deleteSession(session.id)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-red-300 hover:bg-red-400/10"><Trash2 size={12} /> Delete</button></div>}
+          {sidebarTab === "models" ? (
+            <>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold text-white">
+                  Choose a model
                 </div>
-              ))}
-              {!sessions.length && <p className="py-5 text-center text-xs text-white/30">No sessions yet.</p>}
-            </div>
-          </>}
+                {modelsLoading && (
+                  <span className="text-[10px] text-white/30">Loading…</span>
+                )}
+              </div>
+              <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
+                {(["all", "free", "paid"] as ModelCategory[]).map(
+                  (category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => setModelCategory(category)}
+                      className={`rounded-lg px-2 py-2 text-[11px] font-semibold capitalize transition-colors ${modelCategory === category ? "bg-[var(--accent-dim)] text-[var(--accent)]" : "text-white/40 hover:text-white/75"}`}
+                    >
+                      {category}
+                    </button>
+                  ),
+                )}
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+                {modelsLoading &&
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-10 shrink-0 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.03]"
+                    />
+                  ))}
+                {!modelsLoading && !visibleModels.length && (
+                  <p className="text-xs text-white/40">
+                    No models in this category.
+                  </p>
+                )}
+                {!modelsLoading &&
+                  visibleModels.map((model) => (
+                    <label
+                      key={model.id}
+                      title={model.id}
+                      className={`flex h-10 min-w-0 shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 transition-colors ${selectedModels.includes(model.id) ? "border-[var(--accent-border)] bg-[var(--accent-glow)] text-white" : "border-white/[0.06] text-white/55 hover:border-white/[0.14] hover:text-white/80"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedModels.includes(model.id)}
+                        onChange={() => toggleModel(model.id)}
+                        className="sr-only"
+                      />
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${selectedModels.includes(model.id) ? "bg-[var(--accent)]" : "bg-white/20"}`}
+                      />
+                      <span className="min-w-0 truncate text-xs font-medium">
+                        {getShortModelName(model)}
+                      </span>
+                    </label>
+                  ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-white">
+                  Your conversations
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void newChat()}
+                  className="rounded-lg p-1.5 text-[var(--accent)] hover:bg-white/[0.08]"
+                  title="New chat"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="mb-3 flex items-center gap-2 rounded-lg border border-white/[0.07] bg-black/10 px-2.5 py-2">
+                <Search size={13} className="text-white/30" />
+                <input
+                  value={sessionSearch}
+                  onChange={(event) => setSessionSearch(event.target.value)}
+                  placeholder="Search sessions"
+                  className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/25"
+                />
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
+                {sessions
+                  .filter((session) =>
+                    session.title
+                      .toLowerCase()
+                      .includes(sessionSearch.toLowerCase()),
+                  )
+                  .map((session) => (
+                    <div
+                      key={session.id}
+                      className={`group relative flex items-center gap-2 rounded-xl border px-3 py-2.5 ${activeSession?.id === session.id ? "border-[var(--accent-border)] bg-[var(--accent-glow)]" : "border-white/[0.06] hover:border-white/[0.14]"}`}
+                    >
+                      {editingSessionId === session.id ? (
+                        <input
+                          autoFocus
+                          value={editingTitle}
+                          onChange={(event) =>
+                            setEditingTitle(event.target.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter")
+                              void saveSessionTitle(session.id);
+                            if (event.key === "Escape")
+                              setEditingSessionId(null);
+                          }}
+                          onBlur={() => void saveSessionTitle(session.id)}
+                          className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void selectSession(session.id)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <span className="block truncate text-xs font-medium text-white/80">
+                            {session.title}
+                            {titleGenerating &&
+                              activeSession?.id === session.id &&
+                              " …"}
+                          </span>
+                          <span className="text-[10px] text-white/30">
+                            {session.messageCount} messages
+                          </span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenSessionMenu(
+                            openSessionMenu === session.id ? null : session.id,
+                          )
+                        }
+                        className="shrink-0 rounded-md p-1 text-white/30 hover:bg-white/[0.08] hover:text-white"
+                        aria-label="Session actions"
+                      >
+                        <MoreHorizontal size={15} />
+                      </button>
+                      {openSessionMenu === session.id && (
+                        <div className="absolute right-2 top-9 z-20 w-32 rounded-xl border border-white/10 bg-[#211b17] p-1 shadow-xl">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingSessionId(session.id);
+                              setEditingTitle(session.title);
+                              setOpenSessionMenu(null);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-white/70 hover:bg-white/[0.08]"
+                          >
+                            <Pencil size={12} /> Rename
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void deleteSession(session.id)}
+                            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-red-300 hover:bg-red-400/10"
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                {!sessions.length && (
+                  <p className="py-5 text-center text-xs text-white/30">
+                    No sessions yet.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </section>
 
         <section className="shrink-0 rounded-2xl border border-white/[0.08] bg-[#111109] p-4">
@@ -542,22 +722,22 @@ export default function AiChatPage() {
               <KeyRound size={16} /> API key
             </div>
             <span
-              className={`h-2 w-2 rounded-full ${apiKey ? 'bg-emerald-400' : 'bg-amber-300'}`}
+              className={`h-2 w-2 rounded-full ${apiKey ? "bg-emerald-400" : "bg-amber-300"}`}
             />
           </div>
           <p className="mt-3 text-xs leading-relaxed text-white/40">
             {apiKey
-              ? 'Connected and ready to chat.'
-              : 'Required before starting a chat.'}
+              ? "Connected and ready to chat."
+              : "Required before starting a chat."}
           </p>
           <div className="mt-4 grid grid-cols-[8fr_2fr] gap-2">
             <Button
               className="w-full justify-center"
               size="sm"
-              variant={apiKey ? 'ghost' : 'primary'}
+              variant={apiKey ? "ghost" : "primary"}
               onClick={() => setShowKeyModal(true)}
             >
-              <KeyRound size={15} /> {apiKey ? 'Change key' : 'Add API key'}
+              <KeyRound size={15} /> {apiKey ? "Change key" : "Add API key"}
             </Button>
             <Button
               className="w-full justify-center"
@@ -567,11 +747,11 @@ export default function AiChatPage() {
               title="Remove API key"
               aria-label="Remove API key"
               onClick={async () => {
-                if (!window.confirm('Remove the saved OpenRouter API key?'))
+                if (!window.confirm("Remove the saved OpenRouter API key?"))
                   return;
-                await removeApiKey(user?.id ?? '');
-                setApiKey('');
-                setDraftKey('');
+                await removeApiKey(user?.id ?? "");
+                setApiKey("");
+                setDraftKey("");
                 setShowKeyModal(true);
               }}
             >
