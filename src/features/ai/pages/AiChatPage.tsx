@@ -43,6 +43,57 @@ import {
   persistChatSession,
 } from "../storage";
 
+type PendingChat = {
+  sessionId: string;
+  prompt: string;
+  model: string;
+  startedAt: number;
+};
+const PENDING_CHAT_KEY = "yolnoma.ai-chat.pending";
+const pendingChatRequests = new Map<string, PendingChat>();
+
+function readPendingChat(): PendingChat | null {
+  try {
+    const value = JSON.parse(
+      sessionStorage.getItem(PENDING_CHAT_KEY) ?? "null",
+    ) as Partial<PendingChat> | null;
+    if (!value?.sessionId || !value.prompt || !value.model) return null;
+    if (Date.now() - Number(value.startedAt) > 30 * 60 * 1000) {
+      sessionStorage.removeItem(PENDING_CHAT_KEY);
+      return null;
+    }
+    return value as PendingChat;
+  } catch {
+    return null;
+  }
+}
+
+function savePendingChat(value: PendingChat) {
+  pendingChatRequests.set(value.sessionId, value);
+  try {
+    sessionStorage.setItem(PENDING_CHAT_KEY, JSON.stringify(value));
+  } catch {
+    /* best effort */
+  }
+  window.dispatchEvent(
+    new CustomEvent("yolnoma:chat-pending", { detail: value }),
+  );
+}
+
+function clearPendingChat(sessionId: string) {
+  pendingChatRequests.delete(sessionId);
+  try {
+    const current = readPendingChat();
+    if (current?.sessionId === sessionId)
+      sessionStorage.removeItem(PENDING_CHAT_KEY);
+  } catch {
+    /* best effort */
+  }
+  window.dispatchEvent(
+    new CustomEvent("yolnoma:chat-complete", { detail: { sessionId } }),
+  );
+}
+
 export default function AiChatPage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -101,14 +152,18 @@ export default function AiChatPage() {
       const migrated = await migrateLegacyChat(user);
       if (migrated) loaded = await loadChatSessions(user);
       setSessions(loaded);
-      if (
-        requestedSessionId &&
-        loaded.some((session) => session.id === requestedSessionId)
-      ) {
-        const selected = await loadChatSession(user, requestedSessionId);
+      const pending = readPendingChat();
+      const sessionId = requestedSessionId ?? pending?.sessionId;
+      if (sessionId && loaded.some((session) => session.id === sessionId)) {
+        const selected = await loadChatSession(user, sessionId);
         setActiveSession(selected);
         hydratedMessagesRef.current = JSON.stringify(selected.messages);
         setMessages(selected.messages);
+        if (pending?.sessionId === selected.id) {
+          setPrompt(pending.prompt);
+          setActiveModel(pending.model);
+          setLoading(true);
+        }
       } else {
         // Start every visit in a clean draft unless the URL explicitly names a
         // session. This keeps refreshes deterministic and avoids stale history.
@@ -125,6 +180,32 @@ export default function AiChatPage() {
       ),
     );
   }, [user?.id, user?.email, requestedSessionId, setSearchParams]);
+
+  useEffect(() => {
+    const pending = readPendingChat();
+    if (!pending || pending.sessionId !== activeSession?.id) return;
+    setPrompt(pending.prompt);
+    setActiveModel(pending.model);
+    setLoading(true);
+  }, [activeSession?.id]);
+
+  useEffect(() => {
+    const handleCompletion = (event: Event) => {
+      const sessionId = (event as CustomEvent<{ sessionId?: string }>).detail
+        ?.sessionId;
+      if (!sessionId || sessionId !== activeSession?.id || !user) return;
+      void loadChatSession(user, sessionId).then((session) => {
+        setActiveSession(session);
+        setMessages(session.messages);
+        setPrompt("");
+        setLoading(false);
+        setActiveModel("");
+      });
+    };
+    window.addEventListener("yolnoma:chat-complete", handleCompletion);
+    return () =>
+      window.removeEventListener("yolnoma:chat-complete", handleCompletion);
+  }, [activeSession?.id, user]);
 
   useEffect(() => {
     if (!storageReady || !activeSession || !user) return;
@@ -285,6 +366,8 @@ export default function AiChatPage() {
     // Keep a new chat as a draft. Persist it only after the first message.
     setActiveSession(null);
     setMessages([]);
+    setPrompt("");
+    setLoading(false);
     setSidebarTab("sessions");
     setSearchParams({}, { replace: false });
   };
@@ -295,6 +378,15 @@ export default function AiChatPage() {
     setActiveSession(session);
     hydratedMessagesRef.current = JSON.stringify(session.messages);
     setMessages(session.messages);
+    const pending = readPendingChat();
+    if (pending?.sessionId === id) {
+      setPrompt(pending.prompt);
+      setActiveModel(pending.model);
+      setLoading(true);
+    } else {
+      setLoading(false);
+      setPrompt("");
+    }
     setSearchParams({ sessionId: id });
     setOpenSessionMenu(null);
   };
@@ -352,11 +444,26 @@ export default function AiChatPage() {
     };
     const nextMessages = [...conversationMessages, userMessage];
     setMessages(nextMessages);
-    setPrompt("");
-    if (promptInputRef.current) promptInputRef.current.style.height = "";
+    setPrompt(text);
     setError("");
     setLimitCheckedAt("");
     setLoading(true);
+
+    const pending: PendingChat = {
+      sessionId: session.id,
+      prompt: text,
+      model: selectedModels[0] ?? DEFAULT_MODELS[0].id,
+      startedAt: Date.now(),
+    };
+    savePendingChat(pending);
+    // Persist the user message before the network call. If the user changes
+    // pages, the chat can be rehydrated and the eventual response can still be
+    // written to the same session by this in-flight request.
+    void persistChatSession(user, {
+      ...session,
+      messages: nextMessages,
+      updatedAt: Date.now().toString(),
+    });
 
     if (session.title === "New chat") {
       setTitleGenerating(true);
@@ -381,6 +488,7 @@ export default function AiChatPage() {
     try {
       for (const model of selectedModels) {
         setActiveModel(model);
+        savePendingChat({ ...pending, model });
         const response = await requestChatCompletion(
           apiKey,
           model,
@@ -397,16 +505,23 @@ export default function AiChatPage() {
           if (isLimitError(response.status, providerError)) continue;
           throw new Error(providerError);
         }
-        setMessages((current) => [
-          ...current,
-          {
-            role: "assistant",
-            content: response.body.choices?.[0]?.message?.content ?? "",
-            model,
-            id: crypto.randomUUID(),
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        const assistantMessage: ChatMessage = {
+          role: "assistant",
+          content: response.body.choices?.[0]?.message?.content ?? "",
+          model,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        };
+        setMessages((current) => [...current, assistantMessage]);
+        clearPendingChat(session.id);
+        setPrompt("");
+        if (promptInputRef.current) promptInputRef.current.style.height = "";
+        void persistChatSession(user, {
+          ...session,
+          messages: [...nextMessages, assistantMessage],
+          model,
+          updatedAt: Date.now().toString(),
+        });
         return;
       }
       const checkedAt = new Date().toLocaleTimeString("uz-UZ", {
@@ -418,7 +533,8 @@ export default function AiChatPage() {
         `All selected models reached their limit. Last checked at ${checkedAt}.`,
       );
     } catch (requestError) {
-      setMessages(conversationMessages);
+      clearPendingChat(session.id);
+      setMessages(nextMessages);
       setPrompt(text);
       setError(
         requestError instanceof Error
