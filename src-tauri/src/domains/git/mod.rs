@@ -25,7 +25,13 @@ pub struct GitCommit {
 
 fn run_git(root: &Path, args: &[&str]) -> Result<std::process::Output, String> {
     let root_string = root.to_string_lossy().to_string();
+    // Git 2.35+ can reject repositories created by another Windows user with
+    // "detected dubious ownership". Scope the exception to this canonical,
+    // user-selected repository and this single command instead of mutating the
+    // user's global Git configuration.
+    let safe_directory = format!("safe.directory={root_string}");
     Command::new("git")
+        .args(["-c", safe_directory.as_str()])
         .args(["-C", root_string.as_str()])
         .args(args)
         .output()
