@@ -20,6 +20,10 @@ export default defineConfig(async () => ({
   // Optimize bundle: split vendor chunks for better caching
   build: {
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        test: path.resolve(__dirname, "test.html"),
+      },
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
@@ -41,10 +45,10 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host
       ? {
-        protocol: "ws",
-        host,
-        port: 1421,
-      }
+          protocol: "ws",
+          host,
+          port: 1421,
+        }
       : undefined,
     watch: {
       ignored: ["**/src-tauri/**"],
