@@ -4,8 +4,6 @@
 //! touches Yolnoma authentication tokens, account config, encrypted API keys, or user
 //! session records, so an update can relaunch without forcing a new login.
 
-use std::ffi::OsStr;
-
 use serde::Serialize;
 use sysinfo::System;
 use tauri::State;
@@ -58,20 +56,19 @@ fn kill_steam_utility_processes() -> usize {
         .count()
 }
 
-fn is_steam_utility_name(name: &OsStr) -> bool {
-    let normalized = name.to_string_lossy().to_ascii_lowercase();
+fn is_steam_utility_name(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
     normalized == STEAM_UTILITY_PROCESS || normalized == format!("{STEAM_UTILITY_PROCESS}.exe")
 }
 
 #[cfg(test)]
 mod tests {
     use super::is_steam_utility_name;
-    use std::ffi::OsStr;
 
     #[test]
     fn recognizes_windows_and_linux_helper_names() {
-        assert!(is_steam_utility_name(OsStr::new("SteamUtility.exe")));
-        assert!(is_steam_utility_name(OsStr::new("SteamUtility")));
-        assert!(!is_steam_utility_name(OsStr::new("steam.exe")));
+        assert!(is_steam_utility_name("SteamUtility.exe"));
+        assert!(is_steam_utility_name("SteamUtility"));
+        assert!(!is_steam_utility_name("steam.exe"));
     }
 }
