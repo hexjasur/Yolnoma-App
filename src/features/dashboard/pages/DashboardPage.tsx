@@ -52,7 +52,7 @@ export default function HomePage() {
       <DashboardHeader
         displayName={displayName}
         greeting={greeting}
-        osName={stats?.osName}
+        osName={stats?.osName ?? undefined}
       />
 
       {/* ── 1. CORE FEATURE: SYSTEM OVERVIEW MONITORING ── */}
