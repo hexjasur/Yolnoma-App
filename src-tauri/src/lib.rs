@@ -1,6 +1,4 @@
-#[cfg(not(target_os = "android"))]
 use tauri::Manager;
-#[cfg(not(target_os = "android"))]
 use tauri_plugin_deep_link::DeepLinkExt;
 
 #[cfg(not(target_os = "android"))]
@@ -8,12 +6,13 @@ mod app_commands;
 mod app_state;
 #[cfg(not(target_os = "android"))]
 mod commands;
-#[cfg(not(target_os = "android"))]
 mod deep_link;
 #[cfg(not(target_os = "android"))]
 mod domains;
 #[cfg(target_os = "android")]
 mod mobile_backend;
+#[cfg(target_os = "android")]
+mod mobile_proxy;
 #[cfg(not(target_os = "android"))]
 mod embedded_api_key;
 #[cfg(not(target_os = "android"))]
@@ -309,9 +308,25 @@ pub fn run() {
     tauri::Builder::default()
         .manage(app_state::AuthState::new())
         .manage(mobile_backend::MobileStorage::new())
+        // Android login opens Google in the system browser through the opener
+        // plugin, then receives the yolnoma://auth callback through deep-link.
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                for parsed_url in event.urls() {
+                    if parsed_url.scheme() == "yolnoma" {
+                        deep_link::handle_url(&handle, &parsed_url);
+                    }
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
+            mobile_proxy::proxy_request,
             mobile_backend::set_current_user,
             mobile_backend::get_account_config,
             mobile_backend::save_account_config,

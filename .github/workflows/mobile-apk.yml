@@ -48,6 +48,13 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Prepare desktop resource glob for mobile build
+        run: |
+          # tauri.conf.json keeps the SteamUtility resource for desktop builds.
+          # Android does not use it, but Tauri still validates the glob.
+          mkdir -p src-tauri/resources/steam-utility
+          touch src-tauri/resources/steam-utility/.mobile-placeholder
+
       - name: Initialize Tauri Android project
         run: npm run tauri -- android init --ci --skip-targets-install
 

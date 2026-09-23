@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { listen } from '@tauri-apps/api/event';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { useAuth, UserProfile } from '@/features/auth/AuthContext';
-import { api } from '@/shared/api/http';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { listen } from "@tauri-apps/api/event";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { useAuth, UserProfile } from "@/features/auth/AuthContext";
+import { api } from "@/shared/api/http";
 import {
   BACKEND_ENVIRONMENTS,
   getBackendUrl,
   setBackendUrl,
-} from '@/shared/config/backend';
+} from "@/shared/config/backend";
 import {
   Server,
   Loader2,
@@ -18,18 +19,18 @@ import {
   AlertCircle,
   ArrowRight,
   Sparkles,
-} from 'lucide-react';
-import { images } from '@/shared/assets/images';
+} from "lucide-react";
+import { images } from "@/shared/assets/images";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isWaitingForBrowser, setIsWaitingForBrowser] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [selectedBackend, setSelectedBackend] = useState(getBackendUrl());
   const [showEnvPicker, setShowEnvPicker] = useState(false);
   const [showManualCode, setShowManualCode] = useState(false);
-  const [manualCode, setManualCode] = useState('');
+  const [manualCode, setManualCode] = useState("");
   const processedCodes = React.useRef<Set<string>>(new Set());
   const isExchangingRef = React.useRef<boolean>(false);
 
@@ -37,7 +38,7 @@ export default function LoginPage() {
   const location = useLocation();
   const { login } = useAuth();
 
-  const from = (location.state as any)?.from?.pathname || '/';
+  const from = (location.state as any)?.from?.pathname || "/";
 
   const handleBackendChange = (url: string) => {
     setSelectedBackend(url);
@@ -51,15 +52,19 @@ export default function LoginPage() {
     if (!cleanCode) return;
 
     // Check if the input is a session-limit deep link or temp_code
-    if (cleanCode.includes('temp_code=') || cleanCode.includes('session-limit')) {
+    if (
+      cleanCode.includes("temp_code=") ||
+      cleanCode.includes("session-limit")
+    ) {
       const match = cleanCode.match(/[?&]temp_code=([^&#]+)/);
-      const tempCode = match && match[1] ? decodeURIComponent(match[1]) : cleanCode;
-      navigate('/session-limit', { state: { tempCode } });
+      const tempCode =
+        match && match[1] ? decodeURIComponent(match[1]) : cleanCode;
+      navigate("/session-limit", { state: { tempCode } });
       return;
     }
 
     // Extract code if user or deep link passed full URL (e.g. yolnoma://auth?code=XXXX)
-    if (cleanCode.includes('code=')) {
+    if (cleanCode.includes("code=")) {
       const match = cleanCode.match(/[?&]code=([^&#]+)/);
       if (match && match[1]) {
         cleanCode = decodeURIComponent(match[1]);
@@ -74,12 +79,12 @@ export default function LoginPage() {
     isExchangingRef.current = true;
 
     setIsLoading(true);
-    setError('');
-    setSuccessMsg('Authorization is being confirmed...');
+    setError("");
+    setSuccessMsg("Authorization is being confirmed...");
 
     try {
       const response = await api.post(
-        '/api/v2/auth/desktop/exchange',
+        "/api/v2/auth/desktop/exchange",
         { code: cleanCode },
         { skipAuth: true },
       );
@@ -90,24 +95,24 @@ export default function LoginPage() {
       const sessionId = response?.data?.sessionId || response?.sessionId;
 
       if (!accessToken || !refreshToken) {
-        throw new Error('Tokens were not retrieved from the server.');
+        throw new Error("Tokens were not retrieved from the server.");
       }
 
       // Temporarily store token so get /me works
-      localStorage.setItem('yolnoma_access_token', accessToken);
-      localStorage.setItem('yolnoma_refresh_token', refreshToken);
+      localStorage.setItem("yolnoma_access_token", accessToken);
+      localStorage.setItem("yolnoma_refresh_token", refreshToken);
       if (sessionId) {
-        localStorage.setItem('yolnoma_session_id', sessionId);
+        localStorage.setItem("yolnoma_session_id", sessionId);
       }
 
       // Fetch user details
-      const userRes = await api.get('/api/v2/auth/me');
+      const userRes = await api.get("/api/v2/auth/me");
       const rawUser = userRes?.data?.user || userRes?.user || userRes;
 
       const formattedUser: UserProfile = {
         id: rawUser.id || rawUser._id,
         email: rawUser.email,
-        role: rawUser.role || 'user',
+        role: rawUser.role || "user",
         display_name:
           rawUser.name || rawUser.display_name || rawUser.displayName,
         avatar_url: rawUser.avatar || rawUser.avatar_url || rawUser.picture,
@@ -115,19 +120,19 @@ export default function LoginPage() {
         is_private: rawUser.is_private ?? false,
       };
 
-      setSuccessMsg('You have successfully logged in!');
+      setSuccessMsg("You have successfully logged in!");
       login(formattedUser, accessToken, refreshToken, sessionId);
       navigate(from, { replace: true });
     } catch (err: any) {
-      console.error('Desktop auth exchange error:', err);
-      localStorage.removeItem('yolnoma_access_token');
-      localStorage.removeItem('yolnoma_refresh_token');
-      localStorage.removeItem('yolnoma_session_id');
+      console.error("Desktop auth exchange error:", err);
+      localStorage.removeItem("yolnoma_access_token");
+      localStorage.removeItem("yolnoma_refresh_token");
+      localStorage.removeItem("yolnoma_session_id");
       setError(
         err?.message ||
-          'The authorization code is expired or invalid. Please try again.',
+          "The authorization code is expired or invalid. Please try again.",
       );
-      setSuccessMsg('');
+      setSuccessMsg("");
     } finally {
       setIsLoading(false);
       setIsWaitingForBrowser(false);
@@ -139,9 +144,39 @@ export default function LoginPage() {
   useEffect(() => {
     let unlistenAuth: (() => void) | null = null;
     let unlistenSessionLimit: (() => void) | null = null;
+    let unlistenDeepLink: (() => void) | null = null;
+
+    const handleDeepLinkUrls = (urls: string[]) => {
+      for (const url of urls) {
+        if (url.startsWith("yolnoma://auth") || url.includes("code=")) {
+          void handleExchangeCode(url);
+        } else if (
+          url.startsWith("yolnoma://session-limit") ||
+          url.includes("temp_code=")
+        ) {
+          const match = url.match(/[?&]temp_code=([^&#]+)/);
+          const tempCode = match?.[1] ? decodeURIComponent(match[1]) : url;
+          setIsWaitingForBrowser(false);
+          navigate("/session-limit", { state: { tempCode } });
+        }
+      }
+    };
+
+    // Android may deliver the callback while the app is being cold-started;
+    // the event listener below alone would miss that URL.
+    void getCurrent()
+      .then((urls) => {
+        if (urls?.length) handleDeepLinkUrls(urls);
+      })
+      .catch((error) =>
+        console.warn("Could not read current deep link:", error),
+      );
+    void onOpenUrl((urls) => handleDeepLinkUrls(urls)).then((fn) => {
+      unlistenDeepLink = fn;
+    });
 
     // Normal auth deep link: yolnoma://auth?code=XXXX
-    listen<string>('auth-code-received', (event) => {
+    listen<string>("auth-code-received", (event) => {
       if (event.payload) {
         handleExchangeCode(event.payload);
       }
@@ -150,10 +185,10 @@ export default function LoginPage() {
     });
 
     // Session limit deep link: yolnoma://session-limit?temp_code=XXXX
-    listen<string>('session-limit-reached', (event) => {
+    listen<string>("session-limit-reached", (event) => {
       if (event.payload) {
         setIsWaitingForBrowser(false);
-        navigate('/session-limit', { state: { tempCode: event.payload } });
+        navigate("/session-limit", { state: { tempCode: event.payload } });
       }
     }).then((fn) => {
       unlistenSessionLimit = fn;
@@ -162,11 +197,12 @@ export default function LoginPage() {
     return () => {
       if (unlistenAuth) unlistenAuth();
       if (unlistenSessionLimit) unlistenSessionLimit();
+      if (unlistenDeepLink) unlistenDeepLink();
     };
   }, [navigate]);
 
   const handleStartGoogleSignIn = async () => {
-    setError('');
+    setError("");
     setIsWaitingForBrowser(true);
 
     try {
@@ -176,9 +212,9 @@ export default function LoginPage() {
       // Open in default browser using Tauri Opener plugin
       await openUrl(authUrl);
     } catch (err: any) {
-      console.error('Failed to open browser:', err);
+      console.error("Failed to open browser:", err);
       setError(
-        'An error occurred while opening the browser. Enter the code manually.',
+        "An error occurred while opening the browser. Enter the code manually.",
       );
       setIsWaitingForBrowser(false);
     }
@@ -187,7 +223,7 @@ export default function LoginPage() {
   const handleManualCodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualCode.trim()) {
-      setError('Please enter the code.');
+      setError("Please enter the code.");
       return;
     }
     handleExchangeCode(manualCode);
@@ -200,16 +236,16 @@ export default function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden text-[#F2EDE6]"
-      style={{ background: '#14110E' }}
+      style={{ background: "#14110E" }}
     >
       {/* Decorative ambient glow */}
       <div
         className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[140px] pointer-events-none opacity-[0.12]"
-        style={{ background: '#D97757' }}
+        style={{ background: "#D97757" }}
       />
       <div
         className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-[140px] pointer-events-none opacity-[0.08]"
-        style={{ background: '#D97757', animationDelay: '2s' }}
+        style={{ background: "#D97757", animationDelay: "2s" }}
       />
 
       <div className="relative w-full max-w-md">
@@ -218,7 +254,7 @@ export default function LoginPage() {
           className="bg-[#181410]/95 backdrop-blur-2xl border border-white/[0.08] rounded-3xl p-8 shadow-2xl overflow-hidden relative"
           style={{
             boxShadow:
-              '0 25px 50px -12px rgba(0,0,0,0.6), 0 0 50px rgba(217,119,87,0.08)',
+              "0 25px 50px -12px rgba(0,0,0,0.6), 0 0 50px rgba(217,119,87,0.08)",
           }}
         >
           {/* Subtle top border gradient */}
@@ -324,7 +360,7 @@ export default function LoginPage() {
                 <KeyRound size={13} />
                 <span>
                   {showManualCode
-                    ? 'Hide code'
+                    ? "Hide code"
                     : "Didn't open automatically? Enter the code manually"}
                 </span>
               </button>
@@ -383,7 +419,7 @@ export default function LoginPage() {
                 </div>
 
                 <span className="text-white/20 text-[10px]">
-                  {showEnvPicker ? '▲' : '▼'}
+                  {showEnvPicker ? "▲" : "▼"}
                 </span>
               </button>
 
@@ -397,8 +433,8 @@ export default function LoginPage() {
                       className={`w-full text-left px-4 py-3 text-xs transition-colors hover:bg-white/[0.05]
               ${
                 selectedBackend === env.url
-                  ? 'text-[#D97757] bg-[#D97757]/10'
-                  : 'text-white/60'
+                  ? "text-[#D97757] bg-[#D97757]/10"
+                  : "text-white/60"
               }`}
                     >
                       <div className="font-medium">{env.name}</div>
