@@ -2,7 +2,36 @@ import { BaseDirectory } from "@tauri-apps/api/path";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
 const STORAGE_FILE = "yolnoma-git-recent-folders.json";
+const LOCAL_STORAGE_KEY = "yolnoma.git.recent-folders.v1";
 const MAX_RECENT_FOLDERS = 8;
+
+function readLocalFolders(): string[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed
+          .filter(
+            (value): value is string =>
+              typeof value === "string" && value.trim().length > 0,
+          )
+          .slice(0, MAX_RECENT_FOLDERS)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalFolders(folders: string[]) {
+  try {
+    localStorage.setItem(
+      LOCAL_STORAGE_KEY,
+      JSON.stringify(folders.slice(0, MAX_RECENT_FOLDERS)),
+    );
+  } catch {
+    // The AppData file remains the primary persistence layer in Tauri.
+  }
+}
 
 async function readFolders(): Promise<string[]> {
   try {
@@ -10,26 +39,26 @@ async function readFolders(): Promise<string[]> {
       baseDir: BaseDirectory.AppData,
     });
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
+    if (!Array.isArray(parsed)) return readLocalFolders();
+    const folders = parsed
       .filter(
         (value): value is string =>
           typeof value === "string" && value.trim().length > 0,
       )
       .slice(0, MAX_RECENT_FOLDERS);
+    writeLocalFolders(folders);
+    return folders;
   } catch {
-    return [];
+    return readLocalFolders();
   }
 }
 
 async function writeFolders(folders: string[]) {
-  await writeTextFile(
-    STORAGE_FILE,
-    JSON.stringify(folders.slice(0, MAX_RECENT_FOLDERS), null, 2),
-    {
-      baseDir: BaseDirectory.AppData,
-    },
-  );
+  const next = folders.slice(0, MAX_RECENT_FOLDERS);
+  writeLocalFolders(next);
+  await writeTextFile(STORAGE_FILE, JSON.stringify(next, null, 2), {
+    baseDir: BaseDirectory.AppData,
+  });
 }
 
 export async function listRecentGitFolders() {

@@ -70,7 +70,18 @@ export default function GitPage() {
   const changeFolder = (path: string) => {
     setFolderPath(path);
     setChanges([]);
-    void rememberGitFolder(path).then(setRecentFolders);
+    setRecentFolders((current) =>
+      [path, ...current.filter((item) => item !== path)].slice(0, 8),
+    );
+    void rememberGitFolder(path)
+      .then(setRecentFolders)
+      .catch((value) => {
+        toast.error(
+          value instanceof Error
+            ? value.message
+            : "Could not save this project to Recent projects",
+        );
+      });
   };
 
   const selectRecentFolder = (path: string) => {
