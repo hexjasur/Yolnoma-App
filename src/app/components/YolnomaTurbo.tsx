@@ -71,6 +71,9 @@ function saveState(mode: PositionMode, compact: boolean, custom: Point) {
 export default function YolnomaTurbo() {
   const [open, setOpen] = useState(false);
   const [showRouteLoadingPreview, setShowRouteLoadingPreview] = useState(false);
+  const [splashPreview, setSplashPreview] = useState<
+    "standard" | "loading" | null
+  >(null);
   const [compact, setCompact] = useState(
     () => readSavedState()?.compact ?? false,
   );
@@ -87,7 +90,13 @@ export default function YolnomaTurbo() {
     x: number;
     y: number;
   } | null>(null);
-  const { previewUpdate, previewUpdaterStage } = useUpdaterStore();
+  const {
+    previewUpdate,
+    previewUpdaterStage,
+    reset: resetUpdaterPreview,
+    devPreview,
+    modalOpen,
+  } = useUpdaterStore();
 
   useEffect(() => {
     saveState(mode, compact, custom);
@@ -156,8 +165,24 @@ export default function YolnomaTurbo() {
 
   if (!import.meta.env.DEV) return null;
 
-  const previewSplash = () =>
-    window.dispatchEvent(new CustomEvent("yolnoma:preview-splash"));
+  const previewSplash = (variant: "standard" | "loading") => {
+    setSplashPreview(variant);
+    window.dispatchEvent(
+      new CustomEvent("yolnoma:preview-splash", { detail: { variant } }),
+    );
+  };
+  const closeSplash = () => {
+    setSplashPreview(null);
+    window.dispatchEvent(new CustomEvent("yolnoma:hide-splash"));
+  };
+  const toggleUpdater = () => {
+    if (devPreview && modalOpen) resetUpdaterPreview();
+    else previewUpdate();
+  };
+  const toggleUpdaterStage = (stage: DevPreviewStage) => {
+    if (devPreview && modalOpen) resetUpdaterPreview();
+    else previewUpdaterStage(stage);
+  };
   const previewRouteLoading = () => {
     setShowRouteLoadingPreview(true);
     window.dispatchEvent(new CustomEvent("yolnoma:preview-route-loading"));
@@ -268,17 +293,37 @@ export default function YolnomaTurbo() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={previewUpdate}
+              onClick={toggleUpdater}
               className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
-              <Play size={13} /> Full updater
+              <Play size={13} />{" "}
+              {devPreview && modalOpen ? "Close updater" : "Full updater"}
             </button>
             <button
               type="button"
-              onClick={previewSplash}
+              onClick={() =>
+                splashPreview === "standard"
+                  ? closeSplash()
+                  : previewSplash("standard")
+              }
               className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
-              <Sparkles size={13} /> Splash screen
+              <Sparkles size={13} />{" "}
+              {splashPreview === "standard" ? "Close splash" : "Splash screen"}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                splashPreview === "loading"
+                  ? closeSplash()
+                  : previewSplash("loading")
+              }
+              className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <LoaderCircle size={13} />{" "}
+              {splashPreview === "loading"
+                ? "Close splash loading"
+                : "Splash screen loading"}
             </button>
             <button
               type="button"
@@ -299,7 +344,7 @@ export default function YolnomaTurbo() {
               <button
                 key={stage.value}
                 type="button"
-                onClick={() => previewUpdaterStage(stage.value)}
+                onClick={() => toggleUpdaterStage(stage.value)}
                 className="rounded-lg border border-zinc-200 px-2 py-1.5 text-[10px] text-zinc-500 transition hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-white"
               >
                 {stage.label}

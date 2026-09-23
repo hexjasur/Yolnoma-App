@@ -15,6 +15,9 @@ const SPLASH_KEY = "yolnoma_splash_shown";
 function App() {
   const isStandalone = isStandaloneWindow();
   const [showSplash, setShowSplash] = useState(false);
+  const [splashPreview, setSplashPreview] = useState<
+    "standard" | "loading" | null
+  >(null);
   const [showRouteLoadingPreview, setShowRouteLoadingPreview] = useState(false);
   const [appReady, setAppReady] = useState(isStandalone);
   const hasCheckedStartupRef = useRef(false);
@@ -37,7 +40,12 @@ function App() {
   // changing the persisted first-run behavior used by the production app.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    const handlePreviewSplash = () => setShowSplash(true);
+    const handlePreviewSplash = (event: Event) => {
+      const variant = (
+        event as CustomEvent<{ variant?: "standard" | "loading" }>
+      ).detail?.variant;
+      setSplashPreview(variant === "loading" ? "loading" : "standard");
+    };
     const handlePreviewRouteLoading = () => setShowRouteLoadingPreview(true);
     window.addEventListener("yolnoma:preview-splash", handlePreviewSplash);
     window.addEventListener(
@@ -49,6 +57,8 @@ function App() {
       "yolnoma:hide-route-loading",
       handleHideRouteLoading,
     );
+    const handleHideSplash = () => setSplashPreview(null);
+    window.addEventListener("yolnoma:hide-splash", handleHideSplash);
     return () => {
       window.removeEventListener("yolnoma:preview-splash", handlePreviewSplash);
       window.removeEventListener(
@@ -59,6 +69,7 @@ function App() {
         "yolnoma:hide-route-loading",
         handleHideRouteLoading,
       );
+      window.removeEventListener("yolnoma:hide-splash", handleHideSplash);
     };
   }, []);
 
@@ -86,6 +97,13 @@ function App() {
     <>
       {!isStandalone && showSplash && (
         <SplashScreen onFinish={handleSplashFinish} />
+      )}
+      {splashPreview && (
+        <SplashScreen
+          preview
+          loadingPreview={splashPreview === "loading"}
+          onFinish={() => setSplashPreview(null)}
+        />
       )}
       {appReady && (
         <>
