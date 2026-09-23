@@ -1,0 +1,155 @@
+name: Auto Version Tag
+
+# ─── Trigger ──────────────────────────────────────────────────────────────────
+# Runs ONLY on master branch pushes, and ONLY when at least one version-bearing
+# file has been modified.  All other branches (and all other files) are ignored.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - package.json
+      - src-tauri/tauri.conf.json
+      - src-tauri/Cargo.toml
+
+permissions:
+  contents: write # required to push a new Git tag
+
+jobs:
+  tag:
+    name: Create version tag if version changed
+    runs-on: ubuntu-24.04
+
+    steps:
+      # ── 1. Checkout full history so we can diff against the previous commit ──
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # HEAD and HEAD~1 are enough for a one-commit diff
+
+      # ── 2. Read current versions from all three files ─────────────────────────
+      - name: Read current versions
+        id: current
+        run: |
+          PKG_VERSION=$(jq -r '.version' package.json)
+          TAURI_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          CARGO_VERSION=$(grep -m1 '^version' src-tauri/Cargo.toml | sed 's/version *= *"\(.*\)"/\1/')
+
+          echo "pkg=$PKG_VERSION"       >> "$GITHUB_OUTPUT"
+          echo "tauri=$TAURI_VERSION"   >> "$GITHUB_OUTPUT"
+          echo "cargo=$CARGO_VERSION"   >> "$GITHUB_OUTPUT"
+
+          echo "package.json       → $PKG_VERSION"
+          echo "tauri.conf.json    → $TAURI_VERSION"
+          echo "Cargo.toml         → $CARGO_VERSION"
+
+      # ── 3. Read the PREVIOUS commit's version from package.json ───────────────
+      #    (package.json is the single source of truth for "did the version change")
+      - name: Read previous version
+        id: prev
+        run: |
+          PREV=$(git show HEAD~1:package.json 2>/dev/null | jq -r '.version' || echo "")
+          echo "pkg=$PREV" >> "$GITHUB_OUTPUT"
+          echo "Previous package.json version → ${PREV:-<not found>}"
+
+      # ── 4. Guard: skip if version has NOT changed ─────────────────────────────
+      - name: Check whether version actually changed
+        id: changed
+        run: |
+          CURRENT="${{ steps.current.outputs.pkg }}"
+          PREV="${{ steps.prev.outputs.pkg }}"
+
+          if [ "$CURRENT" = "$PREV" ]; then
+            echo "Version unchanged ($CURRENT). Nothing to tag."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version changed: $PREV → $CURRENT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 5. Guard: ensure all three files carry the SAME version ───────────────
+      - name: Validate version consistency across all files
+        if: steps.changed.outputs.skip == 'false'
+        run: |
+          PKG="${{ steps.current.outputs.pkg }}"
+          TAURI="${{ steps.current.outputs.tauri }}"
+          CARGO="${{ steps.current.outputs.cargo }}"
+
+          echo "─────────────────────────────────────────────"
+          echo "  package.json       → $PKG"
+          echo "  tauri.conf.json    → $TAURI"
+          echo "  Cargo.toml         → $CARGO"
+          echo "─────────────────────────────────────────────"
+
+          if [ "$PKG" != "$TAURI" ] || [ "$PKG" != "$CARGO" ]; then
+            echo "::error::Version mismatch detected!"
+            echo "::error::  package.json    → $PKG"
+            echo "::error::  tauri.conf.json → $TAURI"
+            echo "::error::  Cargo.toml      → $CARGO"
+            echo "::error::All three files must carry the same version before tagging."
+            echo "::error::Fix the mismatch and push again."
+            exit 1
+          fi
+
+          echo "✓ All three files agree on version $PKG"
+
+      # ── 6. Guard: skip if the tag already exists ──────────────────────────────
+      - name: Check whether tag already exists
+        id: tag_exists
+        if: steps.changed.outputs.skip == 'false'
+        run: |
+          TAG="v${{ steps.current.outputs.pkg }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "Tag $TAG already exists on remote. Skipping tag creation."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag $TAG does not exist yet."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 7. Create and push the tag ─────────────────────────────────────────────
+      - name: Create and push Git tag
+        if: >
+          steps.changed.outputs.skip == 'false' &&
+          steps.tag_exists.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.current.outputs.pkg }}"
+          TAG="v$VERSION"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git tag "$TAG" -m "chore(release): $TAG"
+
+          git push origin "$TAG"
+
+          echo "✓ Tag $TAG created and pushed to origin."
+
+      # ── 8. Human-readable summary ─────────────────────────────────────────────
+      - name: Summary
+        if: always()
+        run: |
+          SKIP="${{ steps.changed.outputs.skip }}"
+          EXISTS="${{ steps.tag_exists.outputs.exists }}"
+          VERSION="${{ steps.current.outputs.pkg }}"
+          PREV="${{ steps.prev.outputs.pkg }}"
+
+          echo "## Auto Version Tag — Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$SKIP" = "true" ]; then
+            echo "⏭️ **Skipped** — version unchanged (\`$VERSION\`)" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$EXISTS" = "true" ]; then
+            echo "⏭️ **Skipped** — tag \`v$VERSION\` already exists on remote" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✅ **Tagged** \`v$VERSION\` (was \`$PREV\`)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| File | Version |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|---------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`package.json\` | \`${{ steps.current.outputs.pkg }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`tauri.conf.json\` | \`${{ steps.current.outputs.tauri }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`Cargo.toml\` | \`${{ steps.current.outputs.cargo }}\` |" >> "$GITHUB_STEP_SUMMARY"
