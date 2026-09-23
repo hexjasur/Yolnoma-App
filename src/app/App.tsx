@@ -7,7 +7,6 @@ import { useUpdaterStore } from "@/shared/stores/updaterStore";
 import CommandCenter from "./components/CommandCenter";
 import GlobalDropzone from "@/shared/components/GlobalDropzone";
 import KeyboardShortcutsModal from "@/shared/components/KeyboardShortcutsModal";
-import YolnomaTurbo from "./components/YolnomaTurbo";
 import RouteLoadingFallback from "./components/RouteLoadingFallback";
 
 const SPLASH_KEY = "yolnoma_splash_shown";
@@ -125,7 +124,6 @@ function App() {
           <GlobalDropzone />
           <KeyboardShortcutsModal />
           <UpdateModal />
-          <YolnomaTurbo />
           {showRouteLoadingPreview && (
             <div className="fixed inset-0 z-[110] flex h-screen w-screen items-center justify-center bg-black/80 backdrop-blur-sm">
               <RouteLoadingFallback />
