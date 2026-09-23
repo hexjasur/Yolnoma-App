@@ -63,7 +63,7 @@ release notes for the version you are using.
 ## Requirements
 
 - Windows 10 or later for the full desktop feature set.
-- Node.js and npm for frontend development.
+- Bun 1.4 or later for frontend development and dependency management.
 - Rust and the Tauri prerequisites for desktop builds.
 - A Steam account for Steam-related features.
 
@@ -76,20 +76,20 @@ Use local environment variables or GitHub Actions secrets instead.
 Install dependencies and start the development application:
 
 ```bash
-npm install
-npm run tauri dev
+bun install
+bun run tauri dev
 ```
 
 Build the frontend:
 
 ```bash
-npm run build
+bun run build
 ```
 
 Build the Tauri application locally:
 
 ```bash
-npm run tauri build
+bun run tauri build
 ```
 
 The release workflow creates signed updater artifacts. The Tauri updater private

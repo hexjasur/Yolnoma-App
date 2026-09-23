@@ -22,11 +22,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.4.2
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -34,7 +33,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: "8.x"
 
       - name: Cache Rust build artifacts
         uses: swatinem/rust-cache@v2
@@ -42,7 +41,7 @@ jobs:
           workspaces: ./src-tauri -> target
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build SteamUtility runtime
         shell: pwsh
@@ -93,7 +92,7 @@ jobs:
           }
 
       - name: Build Tauri application
-        run: npm run tauri build
+        run: bun run tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}

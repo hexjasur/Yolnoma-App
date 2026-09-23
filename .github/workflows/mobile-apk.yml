@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'mobile-v*'
+      - "mobile-v*"
 
 permissions:
   contents: write
@@ -18,17 +18,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.4.2
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -46,7 +45,7 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Prepare desktop resource glob for mobile build
         run: |
@@ -56,10 +55,10 @@ jobs:
           touch src-tauri/resources/steam-utility/.mobile-placeholder
 
       - name: Initialize Tauri Android project
-        run: npm run tauri -- android init --ci --skip-targets-install
+        run: bun run tauri -- android init --ci --skip-targets-install
 
       - name: Build debug APK
-        run: npm run tauri -- android build --debug --apk --target aarch64 --ci
+        run: bun run tauri -- android build --debug --apk --target aarch64 --ci
 
       - name: Locate APK
         id: apk

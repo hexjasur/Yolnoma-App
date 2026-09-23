@@ -3,6 +3,7 @@
   "private": true,
   "version": "v1.0.23",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -21,7 +22,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check": "npm run typecheck && npm run lint && npm run build && npm run test && npm run validate:video-csp",
+    "check": "bun run typecheck && bun run lint && bun run build && bun run test && bun run validate:video-csp",
     "prepare": "husky"
   },
   "dependencies": {

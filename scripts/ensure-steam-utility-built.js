@@ -42,7 +42,7 @@ if (!outputMtime || sourceMtime > outputMtime) {
   console.warn(
     "[ensure-steam-utility-built] Source is newer than the bundled helper; rebuilding...",
   );
-  execFileSync("npm", ["run", "build:libs"], { cwd: root, stdio: "inherit" });
+  execFileSync("bun", ["run", "build:libs"], { cwd: root, stdio: "inherit" });
 } else {
   console.log(
     "[ensure-steam-utility-built] SteamUtility is up to date; skipping rebuild.",
