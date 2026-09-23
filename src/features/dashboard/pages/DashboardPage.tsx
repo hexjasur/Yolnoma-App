@@ -1,5 +1,5 @@
-import { useMemo, useState, useRef, type DragEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, useState, useRef, type DragEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Cpu,
@@ -9,20 +9,20 @@ import {
   Shield,
   Monitor,
   GripVertical,
-} from 'lucide-react';
-import { usePerformances } from '@/features/performance/hooks/usePerformances';
-import { useSystemStats } from '@/features/system-monitor/hooks/useSystemStats';
-import { useAuth } from '@/features/auth/AuthContext';
-import { handleDevFeatureClick } from '@/config/features';
-import { TOOL_CATALOG } from '@/config/toolCatalog';
-import { ToolIcon } from '@/config/ToolIcon';
-import { usePinnedTools } from '@/shared/hooks/usePinnedTools';
-import { useAccountConfigStore } from '@/shared/stores/accountConfigStore';
-import WeatherCard from '@/features/weather/components/WeatherCard';
+} from "lucide-react";
+import { usePerformances } from "@/features/performance/hooks/usePerformances";
+import { useSystemStats } from "@/features/system-monitor/hooks/useSystemStats";
+import { useAuth } from "@/features/auth/AuthContext";
+import { handleDevFeatureClick } from "@/config/features";
+import { TOOL_CATALOG } from "@/config/toolCatalog";
+import { ToolIcon } from "@/config/ToolIcon";
+import { usePinnedTools } from "@/shared/hooks/usePinnedTools";
+import { useAccountConfigStore } from "@/shared/stores/accountConfigStore";
+import WeatherCard from "@/features/dashboard/components/WeatherCard";
 
 export default function HomePage() {
   const { user } = useAuth();
-  const isOwner = user?.role === 'owner';
+  const isOwner = user?.role === "owner";
   const { pinnedTools, reorderPinnedTools } = usePinnedTools();
   const [draggedToolId, setDraggedToolId] = useState<string | null>(null);
   const [dragOverToolId, setDragOverToolId] = useState<string | null>(null);
@@ -44,8 +44,8 @@ export default function HomePage() {
   ) => {
     isDraggingRef.current = true;
     setDraggedToolId(toolId);
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', toolId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", toolId);
   };
 
   const handleToolDragOver = (
@@ -53,7 +53,7 @@ export default function HomePage() {
     targetToolId: string,
   ) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.dropEffect = "move";
     if (dragOverToolId !== targetToolId) {
       setDragOverToolId(targetToolId);
     }
@@ -66,7 +66,7 @@ export default function HomePage() {
     event.preventDefault();
     setDragOverToolId(null);
     const sourceToolId =
-      event.dataTransfer.getData('text/plain') || draggedToolId;
+      event.dataTransfer.getData("text/plain") || draggedToolId;
 
     if (sourceToolId && sourceToolId !== targetToolId) {
       reorderPinnedTools(sourceToolId, targetToolId);
@@ -102,16 +102,16 @@ export default function HomePage() {
   const displayName =
     user?.displayName ||
     user?.display_name ||
-    user?.email?.split('@')[0] ||
-    'there';
+    user?.email?.split("@")[0] ||
+    "there";
   const hour = new Date().getHours();
   const greeting =
-    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
     <div
       className="space-y-10 max-w-5xl mx-auto pb-16"
-      style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
+      style={{ fontFamily: "var(--font-sans)", color: "var(--text-primary)" }}
     >
       {/* ── Welcome & Header ── */}
       <div>
@@ -134,7 +134,7 @@ export default function HomePage() {
         {/* Glow ambient background */}
         <div
           className="pointer-events-none absolute -top-16 -left-16 w-56 h-56 rounded-full opacity-15 blur-3xl"
-          style={{ background: 'var(--accent)' }}
+          style={{ background: "var(--accent)" }}
         />
 
         {/* Section Header */}
@@ -149,8 +149,8 @@ export default function HomePage() {
               </h2>
               <p className="text-xs text-white/40 truncate max-w-md">
                 {monitoringEnabled
-                  ? stats?.cpuModel || 'Protsessor va operativ xotira holati'
-                  : 'Monitoring disabled (press the button on the right to enable)'}
+                  ? stats?.cpuModel || "Protsessor va operativ xotira holati"
+                  : "Monitoring disabled (press the button on the right to enable)"}
               </p>
             </div>
           </div>
@@ -161,26 +161,26 @@ export default function HomePage() {
               <span
                 className={`w-2 h-2 rounded-full ${
                   !monitoringEnabled
-                    ? 'bg-zinc-500/60'
+                    ? "bg-zinc-500/60"
                     : isPaused
-                      ? 'bg-amber-400 opacity-60'
-                      : 'bg-emerald-400 animate-ping'
+                      ? "bg-amber-400 opacity-60"
+                      : "bg-emerald-400 animate-ping"
                 }`}
               />
               <span
                 className={
                   !monitoringEnabled
-                    ? 'text-zinc-400'
+                    ? "text-zinc-400"
                     : isPaused
-                      ? 'text-amber-300/70'
-                      : 'text-emerald-400'
+                      ? "text-amber-300/70"
+                      : "text-emerald-400"
                 }
               >
                 {!monitoringEnabled
-                  ? 'Disabled'
+                  ? "Disabled"
                   : isPaused
                     ? "To'xtatildi (fon)"
-                    : 'Real-time (2s)'}
+                    : "Real-time (2s)"}
               </span>
             </div>
 
@@ -192,18 +192,18 @@ export default function HomePage() {
               onClick={toggleMonitoring}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                 monitoringEnabled
-                  ? 'bg-[var(--accent)]'
-                  : 'bg-white/10 hover:bg-white/15'
+                  ? "bg-[var(--accent)]"
+                  : "bg-white/10 hover:bg-white/15"
               }`}
               title={
                 monitoringEnabled
                   ? "Monitoringni to'xtatish"
-                  : 'Monitoringni yoqish'
+                  : "Monitoringni yoqish"
               }
             >
               <span
                 className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  monitoringEnabled ? 'translate-x-5' : 'translate-x-0'
+                  monitoringEnabled ? "translate-x-5" : "translate-x-0"
                 }`}
               />
             </button>
@@ -216,13 +216,13 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<Cpu size={18} />}
             name="CPU"
-            value={statsLoading ? '—' : stats ? `${stats.cpuPercent}%` : '—'}
+            value={statsLoading ? "—" : stats ? `${stats.cpuPercent}%` : "—"}
             detail={
               stats?.cpuCores
                 ? `${stats.cpuCores} cores`
                 : monitoringEnabled
-                  ? 'Usage'
-                  : 'inactive'
+                  ? "Usage"
+                  : "inactive"
             }
             percent={stats?.cpuPercent ?? 0}
             color="from-amber-500 to-orange-500"
@@ -233,13 +233,13 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<Layers size={18} />}
             name="RAM"
-            value={statsLoading ? '—' : stats ? `${stats.ramUsedGb} GB` : '—'}
+            value={statsLoading ? "—" : stats ? `${stats.ramUsedGb} GB` : "—"}
             detail={
               stats?.ramTotalGb
                 ? `${stats.ramUsedGb} / ${stats.ramTotalGb} GB`
                 : monitoringEnabled
-                  ? 'Memory'
-                  : 'inactive'
+                  ? "Memory"
+                  : "inactive"
             }
             percent={
               stats
@@ -254,13 +254,13 @@ export default function HomePage() {
           <ResourceMetricCard
             icon={<HardDrive size={18} />}
             name="DISK"
-            value={statsLoading ? '—' : stats ? `${stats.diskUsedGb} GB` : '—'}
+            value={statsLoading ? "—" : stats ? `${stats.diskUsedGb} GB` : "—"}
             detail={
               stats?.diskTotalGb
                 ? `${stats.diskUsedGb} / ${stats.diskTotalGb} GB`
                 : monitoringEnabled
-                  ? 'Storage'
-                  : 'inactive'
+                  ? "Storage"
+                  : "inactive"
             }
             percent={
               stats
@@ -279,19 +279,19 @@ export default function HomePage() {
             name="GPU"
             value={
               statsLoading
-                ? '—'
+                ? "—"
                 : stats?.gpuPercent != null
                   ? `${stats.gpuPercent}%`
                   : monitoringEnabled
-                    ? 'N/A'
-                    : '—'
+                    ? "N/A"
+                    : "—"
             }
             detail={
               stats?.gpuPercent != null
-                ? 'Active'
+                ? "Active"
                 : monitoringEnabled
-                  ? 'Integrated / Standby'
-                  : 'inactive'
+                  ? "Integrated / Standby"
+                  : "inactive"
             }
             percent={stats?.gpuPercent ?? 0}
             color="from-emerald-500 to-teal-500"
@@ -331,16 +331,18 @@ export default function HomePage() {
                   onDragStart={(event) => handleToolDragStart(event, tool.id)}
                   onDragOver={(event) => handleToolDragOver(event, tool.id)}
                   onDragLeave={() =>
-                    setDragOverToolId((prev) => (prev === tool.id ? null : prev))
+                    setDragOverToolId((prev) =>
+                      prev === tool.id ? null : prev,
+                    )
                   }
                   onDrop={(event) => handleToolDrop(event, tool.id)}
                   onDragEnd={handleToolDragEnd}
                   className={`group rounded-2xl border p-5 transition-all duration-200 flex items-center gap-3.5 shadow-lg select-none ${
                     isDragged
-                      ? 'opacity-35 scale-95 border-dashed border-[var(--accent)] bg-black/40 cursor-grabbing'
+                      ? "opacity-35 scale-95 border-dashed border-[var(--accent)] bg-black/40 cursor-grabbing"
                       : isDragOver
-                      ? 'border-[var(--accent)] bg-[var(--accent-glow)] ring-2 ring-[var(--accent)]/40 scale-[1.02] cursor-grab'
-                      : 'border-white/[0.08] bg-[#111109] hover:border-[var(--accent-border)] hover:bg-white/[0.02] cursor-grab'
+                        ? "border-[var(--accent)] bg-[var(--accent-glow)] ring-2 ring-[var(--accent)]/40 scale-[1.02] cursor-grab"
+                        : "border-white/[0.08] bg-[#111109] hover:border-[var(--accent-border)] hover:bg-white/[0.02] cursor-grab"
                   }`}
                 >
                   <Link
@@ -374,10 +376,7 @@ export default function HomePage() {
                     title="Drag to reorder"
                     className="ml-auto shrink-0 p-1 cursor-grab active:cursor-grabbing text-white/35 hover:text-[var(--accent)] transition-colors"
                   >
-                    <GripVertical
-                      size={18}
-                      aria-label="Drag to reorder"
-                    />
+                    <GripVertical size={18} aria-label="Drag to reorder" />
                   </div>
                 </div>
               );
@@ -442,7 +441,7 @@ export default function HomePage() {
                           onError={(e) => {
                             (
                               e.currentTarget as HTMLImageElement
-                            ).style.display = 'none';
+                            ).style.display = "none";
                           }}
                         />
                       </div>
@@ -508,7 +507,7 @@ function ResourceMetricCard({
         <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden mb-1.5">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-500`}
-            style={{ width: loading ? '0%' : `${safePercent}%` }}
+            style={{ width: loading ? "0%" : `${safePercent}%` }}
           />
         </div>
         <p className="text-[10px] text-white/35 font-mono truncate">{detail}</p>
@@ -518,12 +517,12 @@ function ResourceMetricCard({
 }
 
 function formatDate(iso: string): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString('uz-UZ', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(iso).toLocaleDateString("uz-UZ", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   } catch {
     return iso;

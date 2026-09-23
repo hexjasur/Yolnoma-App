@@ -25,7 +25,7 @@ The repository also contains a clearly identified Steam integration derived from
 or based on [Steam Game Idler](https://github.com/zevnda/steam-game-idler) by
 **zevnda**. That upstream attribution is preserved because it is required for
 those derived portions; it does not mean that Yolnoma-App is an official Steam
-Game Idler release. See [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) for
+Game Idler release. See [THIRD-PARTY-NOTICES.md](./src-tauri/THIRD-PARTY-NOTICES.md) for
 the detailed license and attribution information.
 
 ## About the author
@@ -40,11 +40,11 @@ reports, and constructive feedback are welcome through the repository.
 
 ## Tools and features
 
-| Tool Name | Description | Image |
-|---|---|---|
-| **Dashboard** | Yolnoma workspace and quick access to application tools. | <img src=".github/images/app/dashboard.png" alt="dashboard" width="100"> |
-| **Developer Tools** | JWT, JSON, Markdown, UUID, IP lookup, QR, and related utilities. | <img src=".github/images/app/workspace.png" alt="workspace" width="100"> |
-| **Background Remover** | Image background-removal workflow. | <img src=".github/images/app/bg_remover.png" alt="background remover" width="100"> |
+| Tool Name              | Description                                                      | Image                                                                              |
+| ---------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Dashboard**          | Yolnoma workspace and quick access to application tools.         | <img src=".github/images/app/dashboard.png" alt="dashboard" width="100">           |
+| **Developer Tools**    | JWT, JSON, Markdown, UUID, IP lookup, QR, and related utilities. | <img src=".github/images/app/workspace.png" alt="workspace" width="100">           |
+| **Background Remover** | Image background-removal workflow.                               | <img src=".github/images/app/bg_remover.png" alt="background remover" width="100"> |
 
 Additional features include:
 
