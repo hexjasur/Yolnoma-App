@@ -70,6 +70,7 @@ function saveState(mode: PositionMode, compact: boolean, custom: Point) {
 
 export default function YolnomaTurbo() {
   const [open, setOpen] = useState(false);
+  const [showRouteLoadingPreview, setShowRouteLoadingPreview] = useState(false);
   const [compact, setCompact] = useState(
     () => readSavedState()?.compact ?? false,
   );
@@ -158,7 +159,14 @@ export default function YolnomaTurbo() {
   const previewSplash = () =>
     window.dispatchEvent(new CustomEvent("yolnoma:preview-splash"));
   const previewRouteLoading = () =>
-    window.dispatchEvent(new CustomEvent("yolnoma:preview-route-loading"));
+    (() => {
+      setShowRouteLoadingPreview(true);
+      window.dispatchEvent(new CustomEvent("yolnoma:preview-route-loading"));
+    })();
+  const closeRouteLoadingPreview = () => {
+    setShowRouteLoadingPreview(false);
+    window.dispatchEvent(new CustomEvent("yolnoma:hide-route-loading"));
+  };
 
   if (compact) {
     return (
@@ -166,7 +174,7 @@ export default function YolnomaTurbo() {
         <button
           type="button"
           aria-label="Open Yolnoma Turbo v0.2"
-          title="Yolnoma Turbo v0.2"
+          title="Yolnoma Turbo v0.2 — Laz Load UI"
           onClick={() => setCompact(false)}
           className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-800 shadow-xl shadow-black/15 transition hover:scale-105 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
         >
@@ -275,10 +283,15 @@ export default function YolnomaTurbo() {
             </button>
             <button
               type="button"
-              onClick={previewRouteLoading}
+              onClick={
+                showRouteLoadingPreview
+                  ? closeRouteLoadingPreview
+                  : previewRouteLoading
+              }
               className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
-              <LoaderCircle size={13} /> Opening tool
+              <LoaderCircle size={13} />
+              {showRouteLoadingPreview ? "Close Laz Load UI" : "Laz Load UI"}
             </button>
           </div>
 

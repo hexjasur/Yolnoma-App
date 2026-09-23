@@ -44,11 +44,20 @@ function App() {
       "yolnoma:preview-route-loading",
       handlePreviewRouteLoading,
     );
+    const handleHideRouteLoading = () => setShowRouteLoadingPreview(false);
+    window.addEventListener(
+      "yolnoma:hide-route-loading",
+      handleHideRouteLoading,
+    );
     return () => {
       window.removeEventListener("yolnoma:preview-splash", handlePreviewSplash);
       window.removeEventListener(
         "yolnoma:preview-route-loading",
         handlePreviewRouteLoading,
+      );
+      window.removeEventListener(
+        "yolnoma:hide-route-loading",
+        handleHideRouteLoading,
       );
     };
   }, []);
@@ -86,12 +95,7 @@ function App() {
           <KeyboardShortcutsModal />
           <UpdateModal />
           <YolnomaTurbo />
-          {showRouteLoadingPreview && (
-            <RouteLoadingFallback
-              preview
-              onDismiss={() => setShowRouteLoadingPreview(false)}
-            />
-          )}
+          {showRouteLoadingPreview && <RouteLoadingFallback preview />}
         </>
       )}
     </>
