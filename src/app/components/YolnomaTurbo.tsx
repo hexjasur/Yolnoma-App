@@ -102,6 +102,19 @@ export default function YolnomaTurbo() {
     saveState(mode, compact, custom);
   }, [mode, compact, custom]);
 
+  useEffect(() => {
+    const closeOtherPreviews = () => {
+      setShowRouteLoadingPreview(false);
+      setSplashPreview(null);
+    };
+    window.addEventListener("yolnoma:close-all-previews", closeOtherPreviews);
+    return () =>
+      window.removeEventListener(
+        "yolnoma:close-all-previews",
+        closeOtherPreviews,
+      );
+  }, []);
+
   const getPositionStyle = useCallback((): React.CSSProperties => {
     if (mode === "custom") {
       return { left: custom.x, top: custom.y };
@@ -166,6 +179,7 @@ export default function YolnomaTurbo() {
   if (!import.meta.env.DEV) return null;
 
   const previewSplash = (variant: "standard" | "loading") => {
+    window.dispatchEvent(new CustomEvent("yolnoma:close-all-previews"));
     setSplashPreview(variant);
     window.dispatchEvent(
       new CustomEvent("yolnoma:preview-splash", { detail: { variant } }),
@@ -177,13 +191,20 @@ export default function YolnomaTurbo() {
   };
   const toggleUpdater = () => {
     if (devPreview && modalOpen) resetUpdaterPreview();
-    else previewUpdate();
+    else {
+      window.dispatchEvent(new CustomEvent("yolnoma:close-all-previews"));
+      previewUpdate();
+    }
   };
   const toggleUpdaterStage = (stage: DevPreviewStage) => {
     if (devPreview && modalOpen) resetUpdaterPreview();
-    else previewUpdaterStage(stage);
+    else {
+      window.dispatchEvent(new CustomEvent("yolnoma:close-all-previews"));
+      previewUpdaterStage(stage);
+    }
   };
   const previewRouteLoading = () => {
+    window.dispatchEvent(new CustomEvent("yolnoma:close-all-previews"));
     setShowRouteLoadingPreview(true);
     window.dispatchEvent(new CustomEvent("yolnoma:preview-route-loading"));
   };
@@ -198,7 +219,7 @@ export default function YolnomaTurbo() {
         <button
           type="button"
           aria-label="Open Yolnoma Turbo v0.2"
-          title="Yolnoma Turbo v0.2 — Laz Load UI"
+          title="Yolnoma Turbo v0.2 — Lazy Load UI"
           onClick={() => setCompact(false)}
           className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-800 shadow-xl shadow-black/15 transition hover:scale-105 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
         >
@@ -335,7 +356,7 @@ export default function YolnomaTurbo() {
               className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               <LoaderCircle size={13} />
-              {showRouteLoadingPreview ? "Close Laz Load UI" : "Laz Load UI"}
+              {showRouteLoadingPreview ? "Close Lazy Load UI" : "Lazy Load UI"}
             </button>
           </div>
 

@@ -59,6 +59,15 @@ function App() {
     );
     const handleHideSplash = () => setSplashPreview(null);
     window.addEventListener("yolnoma:hide-splash", handleHideSplash);
+    const handleCloseAllPreviews = () => {
+      setSplashPreview(null);
+      setShowRouteLoadingPreview(false);
+      useUpdaterStore.getState().reset();
+    };
+    window.addEventListener(
+      "yolnoma:close-all-previews",
+      handleCloseAllPreviews,
+    );
     return () => {
       window.removeEventListener("yolnoma:preview-splash", handlePreviewSplash);
       window.removeEventListener(
@@ -70,6 +79,10 @@ function App() {
         handleHideRouteLoading,
       );
       window.removeEventListener("yolnoma:hide-splash", handleHideSplash);
+      window.removeEventListener(
+        "yolnoma:close-all-previews",
+        handleCloseAllPreviews,
+      );
     };
   }, []);
 
