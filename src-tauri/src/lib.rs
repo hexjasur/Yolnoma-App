@@ -11,6 +11,8 @@ mod deep_link;
 mod domains;
 #[cfg(target_os = "android")]
 mod mobile_backend;
+#[cfg(target_os = "android")]
+mod mobile_proxy;
 #[cfg(not(target_os = "android"))]
 mod embedded_api_key;
 #[cfg(not(target_os = "android"))]
@@ -324,6 +326,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            mobile_proxy::proxy_request,
             mobile_backend::set_current_user,
             mobile_backend::get_account_config,
             mobile_backend::save_account_config,
