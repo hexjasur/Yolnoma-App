@@ -18,12 +18,10 @@
         "height": 780,
         "minWidth": 1000,
         "minHeight": 600,
-        "fullscreen": false,
-        "resizable": true,
-        "decorations": false,
+        "decorations": true,
         "transparent": true,
         "focus": false,
-        "visible": false,
+        "visible": true,
         "center": true,
         "label": "main"
       }
