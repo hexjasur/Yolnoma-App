@@ -6,6 +6,12 @@ on:
   push:
     branches: [master, "hardening/**", "release/**"]
 
+# Cancel an in-progress run for the same ref when a newer commit arrives.
+# This prevents redundant CI runs piling up on fast-moving branches.
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -13,27 +19,54 @@ jobs:
   frontend:
     name: Frontend build and tests
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-      - run: bun install --frozen-lockfile
-      - run: bun run build
-      - run: bun run test -- --reporter=dot
-      - run: bun run validate:video-csp
+        # bun-version intentionally omitted — reads .bun-version automatically
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type-check
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Format check
+        run: bun run format:check
+
+      - name: Build
+        run: bun run build
+
+      - name: Tests
+        run: bun run test -- --reporter=dot
+
+      - name: Validate video CSP
+        run: bun run validate:video-csp
 
   rust:
     name: Rust backend tests
-    runs-on: windows-latest
+    runs-on: windows-2022
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.x"
+
       - name: Build SteamUtility runtime
         shell: pwsh
         run: |
@@ -56,4 +89,9 @@ jobs:
           if (-not (Test-Path $utility)) {
             throw "SteamUtility publish did not produce $utility"
           }
-      - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: Cargo tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml

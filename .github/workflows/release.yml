@@ -8,13 +8,20 @@ on:
 permissions:
   contents: write
 
+# Only one release workflow runs per tag at a time.
+# A second push of the same tag is extremely unlikely but guarded here.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ============================================================================
   # Job 1: Build & Sign Tauri Windows Application + Create Private Release
   # ============================================================================
   build:
     name: Build & Release Tauri App
-    runs-on: windows-latest
+    runs-on: windows-2022
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -24,8 +31,7 @@ jobs:
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
+        # bun-version intentionally omitted — reads .bun-version automatically
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -253,7 +259,8 @@ jobs:
   publish-release-assets:
     name: Publish Updater Assets to GitHub Release
     needs: build
-    runs-on: windows-latest
+    runs-on: windows-2022
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository

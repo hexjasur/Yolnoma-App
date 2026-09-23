@@ -19,6 +19,7 @@ jobs:
   tag:
     name: Create version tag if version changed
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
 
     steps:
       # ── 1. Checkout full history so we can diff against the previous commit ──
