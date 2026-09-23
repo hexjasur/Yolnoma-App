@@ -158,11 +158,10 @@ export default function YolnomaTurbo() {
 
   const previewSplash = () =>
     window.dispatchEvent(new CustomEvent("yolnoma:preview-splash"));
-  const previewRouteLoading = () =>
-    (() => {
-      setShowRouteLoadingPreview(true);
-      window.dispatchEvent(new CustomEvent("yolnoma:preview-route-loading"));
-    })();
+  const previewRouteLoading = () => {
+    setShowRouteLoadingPreview(true);
+    window.dispatchEvent(new CustomEvent("yolnoma:preview-route-loading"));
+  };
   const closeRouteLoadingPreview = () => {
     setShowRouteLoadingPreview(false);
     window.dispatchEvent(new CustomEvent("yolnoma:hide-route-loading"));

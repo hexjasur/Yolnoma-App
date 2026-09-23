@@ -95,7 +95,11 @@ function App() {
           <KeyboardShortcutsModal />
           <UpdateModal />
           <YolnomaTurbo />
-          {showRouteLoadingPreview && <RouteLoadingFallback preview />}
+          {showRouteLoadingPreview && (
+            <div className="fixed inset-0 z-[110] flex h-screen w-screen items-center justify-center bg-black/80 backdrop-blur-sm">
+              <RouteLoadingFallback />
+            </div>
+          )}
         </>
       )}
     </>
