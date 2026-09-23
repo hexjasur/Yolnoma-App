@@ -79,7 +79,13 @@
     "deep-link": {
       "desktop": {
         "schemes": ["yolnoma"]
-      }
+      },
+      "mobile": [
+        {
+          "scheme": ["yolnoma"],
+          "appLink": false
+        }
+      ]
     }
   }
 }
