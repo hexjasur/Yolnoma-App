@@ -6,6 +6,7 @@ import {
   ChevronUp,
   CircleAlert,
   Crosshair,
+  LoaderCircle,
   Minus,
   Move,
   Play,
@@ -156,6 +157,8 @@ export default function YolnomaTurbo() {
 
   const previewSplash = () =>
     window.dispatchEvent(new CustomEvent("yolnoma:preview-splash"));
+  const previewRouteLoading = () =>
+    window.dispatchEvent(new CustomEvent("yolnoma:preview-route-loading"));
 
   if (compact) {
     return (
@@ -269,6 +272,13 @@ export default function YolnomaTurbo() {
               className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               <Sparkles size={13} /> Splash screen
+            </button>
+            <button
+              type="button"
+              onClick={previewRouteLoading}
+              className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <LoaderCircle size={13} /> Opening tool
             </button>
           </div>
 

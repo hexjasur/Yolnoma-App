@@ -8,12 +8,14 @@ import CommandCenter from "./components/CommandCenter";
 import GlobalDropzone from "@/shared/components/GlobalDropzone";
 import KeyboardShortcutsModal from "@/shared/components/KeyboardShortcutsModal";
 import YolnomaTurbo from "./components/YolnomaTurbo";
+import RouteLoadingFallback from "./components/RouteLoadingFallback";
 
 const SPLASH_KEY = "yolnoma_splash_shown";
 
 function App() {
   const isStandalone = isStandaloneWindow();
   const [showSplash, setShowSplash] = useState(false);
+  const [showRouteLoadingPreview, setShowRouteLoadingPreview] = useState(false);
   const [appReady, setAppReady] = useState(isStandalone);
   const hasCheckedStartupRef = useRef(false);
 
@@ -36,9 +38,19 @@ function App() {
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     const handlePreviewSplash = () => setShowSplash(true);
+    const handlePreviewRouteLoading = () => setShowRouteLoadingPreview(true);
     window.addEventListener("yolnoma:preview-splash", handlePreviewSplash);
-    return () =>
+    window.addEventListener(
+      "yolnoma:preview-route-loading",
+      handlePreviewRouteLoading,
+    );
+    return () => {
       window.removeEventListener("yolnoma:preview-splash", handlePreviewSplash);
+      window.removeEventListener(
+        "yolnoma:preview-route-loading",
+        handlePreviewRouteLoading,
+      );
+    };
   }, []);
 
   // Automatic background update check once on application startup (non-blocking)
@@ -74,6 +86,12 @@ function App() {
           <KeyboardShortcutsModal />
           <UpdateModal />
           <YolnomaTurbo />
+          {showRouteLoadingPreview && (
+            <RouteLoadingFallback
+              preview
+              onDismiss={() => setShowRouteLoadingPreview(false)}
+            />
+          )}
         </>
       )}
     </>
