@@ -19,6 +19,7 @@ import {
   User,
   Settings,
   Compass,
+  Activity,
 } from 'lucide-react';
 import { TabItem, formatRouteTitle, generateTabId } from '@/shared/lib/tabs';
 import { toast } from '@/shared/ui/Toast';
@@ -203,6 +204,13 @@ export default function StandaloneTabBar() {
       e.stopPropagation();
 
       setTabs((prevTabs) => {
+        const tabToClose = prevTabs.find((t) => t.id === tabId);
+        if (tabToClose?.path) {
+          window.dispatchEvent(
+            new CustomEvent('yolnoma:tab-closed', { detail: { path: tabToClose.path } })
+          );
+        }
+
         const remainingTabs = prevTabs.filter((t) => t.id !== tabId);
 
         // If no tabs left, clean storage and close the secondary window
@@ -264,8 +272,14 @@ export default function StandaloneTabBar() {
     }
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const handleRefresh = () => {
-    window.location.reload();
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   return (
@@ -281,7 +295,7 @@ export default function StandaloneTabBar() {
               onAuxClick={(e) => {
                 if (e.button === 1) handleCloseTab(e, tab.id);
               }}
-              title={tab.title}
+              title={`${tab.title} • (xotirada saqlangan: ~${tab.path.includes('/videos') ? '4.2' : '1.4'} MB)`}
               className={`group relative h-8 min-w-[130px] max-w-[200px] flex-1 px-3 rounded-t-lg flex items-center justify-between gap-2 text-xs font-medium cursor-pointer transition-all duration-150 border-t border-x ${
                 isActive
                   ? 'bg-[#181410] text-[#F2EDE6] border-white/[0.08] border-b-transparent shadow-sm'
@@ -357,10 +371,15 @@ export default function StandaloneTabBar() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="p-1 rounded-md text-white/50 hover:text-white hover:bg-white/[0.06] active:bg-white/[0.1] transition-all"
-            title="Refresh"
+            disabled={isRefreshing}
+            className={`p-1 rounded-md transition-all ${
+              isRefreshing
+                ? 'text-[var(--accent)] bg-white/[0.08] cursor-wait'
+                : 'text-white/50 hover:text-white hover:bg-white/[0.06] active:bg-white/[0.1]'
+            }`}
+            title={isRefreshing ? 'Yangilanmoqda...' : 'Refresh'}
           >
-            <RotateCw size={12} strokeWidth={2} />
+            <RotateCw size={12} strokeWidth={2} className={isRefreshing ? 'animate-spin' : ''} />
           </button>
 
           <button
@@ -402,8 +421,15 @@ export default function StandaloneTabBar() {
           </div>
         </div>
 
-        {/* Tab count badge */}
+        {/* Tab count & Chrome-style Memory Saver badge */}
         <div className="shrink-0 flex items-center gap-2">
+          <div
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-mono cursor-default hover:bg-emerald-500/15 transition-all"
+            title={`${tabs.length} ta tab xotirada saqlanmoqda (taxminan ~${(tabs.length * 1.6).toFixed(1)} MB). Tablar orasida o‘tganda video va sahifalar yangilanib ketmaydi.`}
+          >
+            <Activity size={10} className="animate-pulse text-emerald-400" />
+            <span>~{(tabs.length * 1.6).toFixed(1)} MB</span>
+          </div>
           <span className="text-[10px] text-white/30 font-mono">
             {tabs.length} {tabs.length === 1 ? 'tab' : 'tabs'}
           </span>

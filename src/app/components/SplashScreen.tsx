@@ -1,11 +1,17 @@
-import { images } from '@/shared/assets/images';
-import { useEffect, useState } from 'react';
+import { images } from "@/shared/assets/images";
+import { useEffect, useState } from "react";
 
 interface SplashScreenProps {
   onFinish: () => void;
+  preview?: boolean;
+  loadingPreview?: boolean;
 }
 
-export default function SplashScreen({ onFinish }: SplashScreenProps) {
+export default function SplashScreen({
+  onFinish,
+  preview = false,
+  loadingPreview = false,
+}: SplashScreenProps) {
   const [progress, setProgress] = useState(0);
   const [fadeOut, setFadeOut] = useState(false);
 
@@ -23,9 +29,11 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
     function runStep() {
       if (current >= steps.length) {
-        // End — fade out
-        setTimeout(() => setFadeOut(true), 150);
-        setTimeout(() => onFinish(), 650);
+        if (!preview) {
+          // End — fade out
+          setTimeout(() => setFadeOut(true), 150);
+          setTimeout(() => onFinish(), 650);
+        }
         return;
       }
       const { target, delay } = steps[current];
@@ -36,6 +44,11 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       }, delay);
     }
 
+    if (preview && !loadingPreview) {
+      setProgress(100);
+      return () => clearTimeout(timer);
+    }
+
     // 300ms kechiktirib boshlash (UI render bo'lsin)
     const startTimer = setTimeout(runStep, 300);
 
@@ -43,39 +56,44 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       clearTimeout(startTimer);
       clearTimeout(timer);
     };
-  }, [onFinish]);
+  }, [loadingPreview, onFinish, preview]);
 
   return (
     <div
       style={{
-        position: 'fixed',
+        position: "fixed",
         inset: 0,
-        background: '#14110E',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
+        background: "#14110E",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: preview ? 110 : 9999,
         opacity: fadeOut ? 0 : 1,
-        transition: 'opacity 0.5s ease',
-        userSelect: 'none',
+        transition: "opacity 0.5s ease",
+        userSelect: "none",
       }}
     >
       {/* Background glow */}
-      <div style={{
-        position: 'absolute',
-        width: 400,
-        height: 400,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(217,119,87,0.12) 0%, transparent 70%)',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -60%)',
-        pointerEvents: 'none',
-      }} />
+      <div
+        style={{
+          position: "absolute",
+          width: 400,
+          height: 400,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(217,119,87,0.12) 0%, transparent 70%)",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -60%)",
+          pointerEvents: "none",
+        }}
+      />
 
       {/* Logo / Brand */}
-      <div style={{ textAlign: 'center', marginBottom: 48, position: 'relative' }}>
+      <div
+        style={{ textAlign: "center", marginBottom: 48, position: "relative" }}
+      >
         {/* Animated icon */}
         {/* <div style={{
           width: 80,
@@ -105,64 +123,81 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
         <img src={images.brands.logo_png} alt="Yolnoma" />
 
-        <p style={{
-          fontSize: 11,
-          letterSpacing: '0.22em',
-          textTransform: 'uppercase',
-          color: 'rgba(217,119,87,0.7)',
-          fontFamily: '"Inter", sans-serif',
-          fontWeight: 600,
-          marginBottom: 8,
-        }}>
+        <p
+          style={{
+            fontSize: 11,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "rgba(217,119,87,0.7)",
+            fontFamily: '"Inter", sans-serif',
+            fontWeight: 600,
+            marginBottom: 8,
+          }}
+        >
           JK Software
         </p>
-        <h1 style={{
-          fontSize: 36,
-          fontWeight: 500,
-          fontFamily: '"Georgia", serif',
-          color: '#F2EDE6',
-          margin: 0,
-          letterSpacing: '-0.02em',
-        }}>
+        <h1
+          style={{
+            fontSize: 36,
+            fontWeight: 500,
+            fontFamily: '"Georgia", serif',
+            color: "#F2EDE6",
+            margin: 0,
+            letterSpacing: "-0.02em",
+          }}
+        >
           Yolnoma
         </h1>
-        <p style={{
-          fontSize: 13,
-          color: 'rgba(242,237,230,0.35)',
-          fontFamily: '"Inter", sans-serif',
-          marginTop: 6,
-          margin: '6px 0 0',
-        }}>
+        <p
+          style={{
+            fontSize: 13,
+            color: "rgba(242,237,230,0.35)",
+            fontFamily: '"Inter", sans-serif',
+            marginTop: 6,
+            margin: "6px 0 0",
+          }}
+        >
           Swiss Army Knife
         </p>
       </div>
 
       {/* Progress bar */}
-      <div style={{ width: 200, position: 'relative' }}>
-        <div style={{
-          height: 2,
-          background: 'rgba(242,237,230,0.07)',
-          borderRadius: 4,
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            height: '100%',
-            width: `${progress}%`,
-            background: 'linear-gradient(90deg, #D97757, rgba(217,119,87,0.6))',
+      <div style={{ width: 200, position: "relative" }}>
+        <div
+          style={{
+            height: 2,
+            background: "rgba(242,237,230,0.07)",
             borderRadius: 4,
-            transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 0 8px rgba(217,119,87,0.5)',
-          }} />
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${progress}%`,
+              background:
+                "linear-gradient(90deg, #D97757, rgba(217,119,87,0.6))",
+              borderRadius: 4,
+              transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              boxShadow: "0 0 8px rgba(217,119,87,0.5)",
+            }}
+          />
         </div>
-        <p style={{
-          textAlign: 'center',
-          fontSize: 11,
-          color: 'rgba(242,237,230,0.25)',
-          fontFamily: '"Inter", sans-serif',
-          marginTop: 12,
-          letterSpacing: '0.05em',
-        }}>
-          {progress < 60 ? 'Loading...' : progress < 100 ? 'Almost ready...' : 'Ready!'}
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: 11,
+            color: "rgba(242,237,230,0.25)",
+            fontFamily: '"Inter", sans-serif',
+            marginTop: 12,
+            letterSpacing: "0.05em",
+          }}
+        >
+          {progress < 60
+            ? "Loading..."
+            : progress < 100
+              ? "Almost ready..."
+              : "Ready!"}
         </p>
       </div>
 

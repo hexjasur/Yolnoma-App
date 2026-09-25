@@ -91,7 +91,20 @@ export default function VideoDetailPage() {
   const [video, setVideo] = useState<EPVideo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [server, setServer] = useState<'www' | 'es'>('www');
+  const [server, setServer] = useState<'www' | 'es'>(() => {
+    try {
+      const saved = sessionStorage.getItem(`yolnoma_video_server_${videoId}`);
+      if (saved === 'www' || saved === 'es') return saved;
+    } catch {}
+    return 'www';
+  });
+
+  const changeServer = (newServer: 'www' | 'es') => {
+    setServer(newServer);
+    try {
+      sessionStorage.setItem(`yolnoma_video_server_${videoId}`, newServer);
+    } catch {}
+  };
 
   const backTarget =
     location.state?.from ||
@@ -233,7 +246,7 @@ export default function VideoDetailPage() {
           </div>
           <div className="flex gap-1.5">
             <button
-              onClick={() => setServer('www')}
+              onClick={() => changeServer('www')}
               className={`px-3 py-1 rounded-md text-xs font-mono transition-all ${
                 server === 'www'
                   ? 'bg-[var(--accent)] text-white font-bold'
@@ -243,7 +256,7 @@ export default function VideoDetailPage() {
               Server 1 (WWW)
             </button>
             <button
-              onClick={() => setServer('es')}
+              onClick={() => changeServer('es')}
               className={`px-3 py-1 rounded-md text-xs font-mono transition-all ${
                 server === 'es'
                   ? 'bg-[var(--accent)] text-white font-bold'

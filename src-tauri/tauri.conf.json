@@ -1,12 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Yolnoma",
-  "version": "1.0.23",
+  "mainBinaryName": "Yolnoma",
+  "version": "1.2.0",
   "identifier": "com.jksoftware.yolnoma-app",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },
   "app": {
@@ -15,11 +16,13 @@
         "title": "Yolnoma",
         "width": 1200,
         "height": 780,
-        "minWidth": 900,
+        "minWidth": 1000,
         "minHeight": 600,
-        "center": true,
-        "visible": true,
         "decorations": true,
+        "transparent": true,
+        "focus": false,
+        "visible": true,
+        "center": true,
         "label": "main"
       }
     ],
@@ -29,13 +32,16 @@
   },
   "bundle": {
     "active": true,
+    "category": "Utility",
+    "copyright": "Copyright © 2026 hexjasur",
     "createUpdaterArtifacts": true,
     "resources": {
-      "resources/steam-utility/*": "./resources/steam-utility/"
+      "resources/steam-utility/*": "./resources/steam-utility/",
+      "LICENSE": "./LICENSE",
+      "THIRD-PARTY-NOTICES.md": "./THIRD-PARTY-NOTICES.md"
     },
-    "targets": [
-      "nsis"
-    ],
+    "targets": ["nsis"],
+    "licenseFile": "LICENSE",
     "publisher": "JK Software",
     "icon": [
       "icons/32x32.png",
@@ -45,14 +51,18 @@
       "icons/icon.ico"
     ],
     "windows": {
+      "certificateThumbprint": "null",
       "digestAlgorithm": "sha256",
+      "timestampUrl": "",
       "nsis": {
         "startMenuFolder": "Yolnoma",
         "installerIcon": "icons/icon.ico",
         "headerImage": "icons/installer-header.bmp",
         "sidebarImage": "icons/installer-sidebar.bmp"
       }
-    }
+    },
+    "longDescription": "Yolnoma App - Ultimate Desktop Utility. All apps in one place. Download and use apps without any hassle. Yolnoma is a desktop utility that allows you to download and use various applications without the need for installation. It provides a convenient way to access and manage your favorite apps, making your desktop experience more efficient and enjoyable.",
+    "shortDescription": "Yolnoma App - Ultimate Desktop Utility"
   },
   "plugins": {
     "updater": {
@@ -66,10 +76,14 @@
     },
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "yolnoma"
-        ]
-      }
+        "schemes": ["yolnoma"]
+      },
+      "mobile": [
+        {
+          "scheme": ["yolnoma"],
+          "appLink": false
+        }
+      ]
     }
   }
 }

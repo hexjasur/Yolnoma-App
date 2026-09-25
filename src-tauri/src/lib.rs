@@ -1,6 +1,4 @@
-#[cfg(not(target_os = "android"))]
 use tauri::Manager;
-#[cfg(not(target_os = "android"))]
 use tauri_plugin_deep_link::DeepLinkExt;
 
 #[cfg(not(target_os = "android"))]
@@ -8,14 +6,17 @@ mod app_commands;
 mod app_state;
 #[cfg(not(target_os = "android"))]
 mod commands;
-#[cfg(not(target_os = "android"))]
 mod deep_link;
 #[cfg(not(target_os = "android"))]
 mod domains;
 #[cfg(target_os = "android")]
 mod mobile_backend;
+#[cfg(target_os = "android")]
+mod mobile_proxy;
 #[cfg(not(target_os = "android"))]
 mod embedded_api_key;
+#[cfg(not(target_os = "android"))]
+mod updater;
 
 // Kept public for feature modules that use the shared authentication state.
 pub use app_state::AuthState;
@@ -76,23 +77,48 @@ pub fn run() {
             };
 
             // Tray menyu
+            let idling_item = MenuItemBuilder::new("Steam: Idle")
+                .id("idle-status")
+                .enabled(true)
+                .build(app)?;
+            let stop_idling_item = MenuItemBuilder::new("⏹ Stop All Idling")
+                .id("idle-stop-all")
+                .enabled(false)
+                .build(app)?;
             let show = MenuItemBuilder::new("Show").id("show").build(app)?;
             let world_show = MenuItemBuilder::new("3D Show")
                 .id("world-3d-show")
                 .build(app)?;
             let quit = MenuItemBuilder::new("Exit").id("quit").build(app)?;
             let menu = MenuBuilder::new(app)
+                .item(&idling_item)
+                .item(&stop_idling_item)
+                .separator()
                 .item(&show)
                 .item(&world_show)
                 .item(&quit)
                 .build()?;
 
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Yolnoma")
                 .menu(&menu)
                 .show_menu_on_left_click(false) // Left click opens window, right click opens menu
                 .on_menu_event(move |app, event| match event.id().as_ref() {
+                    "idle-status" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.unminimize();
+                            let _ = w.set_focus();
+                            let _ = w.eval("window.location.hash = '#/tools/steam/steam-idler'");
+                        }
+                    }
+                    "idle-stop-all" => {
+                        let state = app.state::<domains::steam::IdlingState>();
+                        tauri::async_runtime::block_on(async {
+                            app_commands::stop_idling_processes(&state).await;
+                        });
+                    }
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
@@ -135,6 +161,38 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // Background polling loop to dynamically update Tray tooltip and Idling menu item
+            let app_handle = app.handle().clone();
+            let idling_item_clone = idling_item.clone();
+            let stop_idling_clone = stop_idling_item.clone();
+            let tray_icon = tray.clone();
+
+            tauri::async_runtime::spawn(async move {
+                let mut last_count = usize::MAX;
+                loop {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+                    let count = {
+                        let state = app_handle.state::<domains::steam::IdlingState>();
+                        let guard = state.processes.lock().await;
+                        guard.len()
+                    };
+
+                    if count != last_count {
+                        last_count = count;
+                        if count > 0 {
+                            let text = format!("🟢 Steam: {} games idling", count);
+                            let _ = idling_item_clone.set_text(&text);
+                            let _ = stop_idling_clone.set_enabled(true);
+                            let _ = tray_icon.set_tooltip(Some(&format!("Yolnoma • {} games idling", count)));
+                        } else {
+                            let _ = idling_item_clone.set_text("Steam: No active idling");
+                            let _ = stop_idling_clone.set_enabled(false);
+                            let _ = tray_icon.set_tooltip(Some("Yolnoma"));
+                        }
+                    }
+                }
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -155,6 +213,8 @@ pub fn run() {
             app_commands::write_codebase_file,
             domains::git::get_git_changes,
             domains::git::get_git_history,
+            domains::git::commit_git_changes,
+            domains::git::push_git_changes,
             app_commands::get_idling_count,
             domains::ai_chat::list_ai_chat_sessions,
             domains::ai_chat::get_ai_chat_session,
@@ -218,6 +278,7 @@ pub fn run() {
             domains::steam::lock_all_achievements,
             domains::steam::update_stats,
             domains::steam::reset_all_stats,
+            updater::prepare_for_update,
             // ── Port Scanner ──
             domains::network::scan_ports,
             domains::network::get_common_ports,
@@ -249,9 +310,25 @@ pub fn run() {
     tauri::Builder::default()
         .manage(app_state::AuthState::new())
         .manage(mobile_backend::MobileStorage::new())
+        // Android login opens Google in the system browser through the opener
+        // plugin, then receives the yolnoma://auth callback through deep-link.
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                for parsed_url in event.urls() {
+                    if parsed_url.scheme() == "yolnoma" {
+                        deep_link::handle_url(&handle, &parsed_url);
+                    }
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
+            mobile_proxy::proxy_request,
             mobile_backend::set_current_user,
             mobile_backend::get_account_config,
             mobile_backend::save_account_config,

@@ -25,7 +25,7 @@ The repository also contains a clearly identified Steam integration derived from
 or based on [Steam Game Idler](https://github.com/zevnda/steam-game-idler) by
 **zevnda**. That upstream attribution is preserved because it is required for
 those derived portions; it does not mean that Yolnoma-App is an official Steam
-Game Idler release. See [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) for
+Game Idler release. See [THIRD-PARTY-NOTICES.md](./src-tauri/THIRD-PARTY-NOTICES.md) for
 the detailed license and attribution information.
 
 ## About the author
@@ -40,11 +40,11 @@ reports, and constructive feedback are welcome through the repository.
 
 ## Tools and features
 
-| Tool Name | Description | Image |
-|---|---|---|
-| **Dashboard** | Yolnoma workspace and quick access to application tools. | <img src=".github/images/app/dashboard.png" alt="dashboard" width="100"> |
-| **Developer Tools** | JWT, JSON, Markdown, UUID, IP lookup, QR, and related utilities. | <img src=".github/images/app/workspace.png" alt="workspace" width="100"> |
-| **Background Remover** | Image background-removal workflow. | <img src=".github/images/app/bg_remover.png" alt="background remover" width="100"> |
+| Tool Name              | Description                                                      | Image                                                                              |
+| ---------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Dashboard**          | Yolnoma workspace and quick access to application tools.         | <img src=".github/images/app/dashboard.png" alt="dashboard" width="100">           |
+| **Developer Tools**    | JWT, JSON, Markdown, UUID, IP lookup, QR, and related utilities. | <img src=".github/images/app/workspace.png" alt="workspace" width="100">           |
+| **Background Remover** | Image background-removal workflow.                               | <img src=".github/images/app/bg_remover.png" alt="background remover" width="100"> |
 
 Additional features include:
 
@@ -63,7 +63,7 @@ release notes for the version you are using.
 ## Requirements
 
 - Windows 10 or later for the full desktop feature set.
-- Node.js and npm for frontend development.
+- Bun 1.4 or later for frontend development and dependency management.
 - Rust and the Tauri prerequisites for desktop builds.
 - A Steam account for Steam-related features.
 
@@ -76,20 +76,20 @@ Use local environment variables or GitHub Actions secrets instead.
 Install dependencies and start the development application:
 
 ```bash
-npm install
-npm run tauri dev
+bun install
+bun run tauri dev
 ```
 
 Build the frontend:
 
 ```bash
-npm run build
+bun run build
 ```
 
 Build the Tauri application locally:
 
 ```bash
-npm run tauri build
+bun run tauri build
 ```
 
 The release workflow creates signed updater artifacts. The Tauri updater private

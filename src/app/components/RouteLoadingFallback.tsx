@@ -22,9 +22,7 @@ export default function RouteLoadingFallback() {
           <p className="text-base font-semibold tracking-wide text-[#F2EDE6]">
             Opening tool
           </p>
-          <p className="text-xs text-[#F2EDE6]/40">
-            Preparing this workspace…
-          </p>
+          <p className="text-xs text-[#F2EDE6]/40">Preparing this workspace…</p>
         </div>
       </div>
     </div>

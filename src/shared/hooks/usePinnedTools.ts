@@ -10,7 +10,22 @@ export function usePinnedTools() {
     const next = config.savedTools.includes(toolId)
       ? config.savedTools.filter((id) => id !== toolId)
       : [...config.savedTools, toolId];
-    updateConfig({ savedTools: next });
+    void updateConfig({ savedTools: next });
+  };
+
+  const reorderPinnedTools = (sourceId: string, targetId: string) => {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+
+    const current = [...config.savedTools];
+    const fromIndex = current.indexOf(sourceId);
+    const toIndex = current.indexOf(targetId);
+
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    const [movedItem] = current.splice(fromIndex, 1);
+    current.splice(toIndex, 0, movedItem);
+
+    void updateConfig({ savedTools: current });
   };
 
   const movePinnedTool = (fromIndex: number, toIndex: number) => {
@@ -30,5 +45,10 @@ export function usePinnedTools() {
     void updateConfig({ savedTools: next });
   };
 
-  return { pinnedTools: config.savedTools, togglePinnedTool, movePinnedTool };
+  return {
+    pinnedTools: config.savedTools,
+    togglePinnedTool,
+    movePinnedTool,
+    reorderPinnedTools,
+  };
 }

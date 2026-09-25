@@ -1,6 +1,13 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertOctagon, RefreshCw, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
-import { reportError } from '@/shared/lib/errors';
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import {
+  AlertOctagon,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
+} from "lucide-react";
+import { reportError } from "@/shared/lib/errors";
 
 interface Props {
   children: ReactNode;
@@ -30,7 +37,20 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     this.setState({ errorInfo: info });
-    reportError('ui.render', { error, componentStack: info.componentStack });
+    reportError("ui.render", { error, componentStack: info.componentStack });
+
+    if (import.meta.env.DEV) {
+      import("@/app/turbo/turboStore")
+        .then(({ useTurboStore }) => {
+          useTurboStore.getState().addError({
+            type: "react",
+            message: error.message || "React component render crash",
+            stack: error.stack,
+            componentStack: info.componentStack || undefined,
+          });
+        })
+        .catch(() => {});
+    }
   }
 
   handleReset = () => {
@@ -48,7 +68,7 @@ export class AppErrorBoundary extends Component<Props, State> {
   };
 
   handleCopy = () => {
-    const errorText = `${this.state.error?.name || 'Error'}: ${this.state.error?.message || 'Unknown'}\n\nStack:\n${this.state.error?.stack || ''}\n\nComponent Stack:\n${this.state.errorInfo?.componentStack || ''}`;
+    const errorText = `${this.state.error?.name || "Error"}: ${this.state.error?.message || "Unknown"}\n\nStack:\n${this.state.error?.stack || ""}\n\nComponent Stack:\n${this.state.errorInfo?.componentStack || ""}`;
     navigator.clipboard.writeText(errorText);
     this.setState({ copied: true });
     setTimeout(() => this.setState({ copied: false }), 2000);
@@ -72,9 +92,12 @@ export class AppErrorBoundary extends Component<Props, State> {
               <AlertOctagon size={24} />
             </div>
 
-            <h1 className="font-serif text-2xl font-medium text-white">Something went wrong</h1>
+            <h1 className="font-serif text-2xl font-medium text-white">
+              Something went wrong
+            </h1>
             <p className="mt-2 text-sm text-white/60">
-              An unexpected error occurred in the application. You can try to reset the current view or reload the app.
+              An unexpected error occurred in the application. You can try to
+              reset the current view or reload the app.
             </p>
 
             {error && (
@@ -108,28 +131,42 @@ export class AppErrorBoundary extends Component<Props, State> {
             <div className="mt-6 pt-4 border-t border-white/[0.06]">
               <button
                 type="button"
-                onClick={() => this.setState((prev) => ({ showDetails: !prev.showDetails }))}
+                onClick={() =>
+                  this.setState((prev) => ({ showDetails: !prev.showDetails }))
+                }
                 className="text-xs text-white/40 hover:text-white/70 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                {showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                {showDetails ? 'Hide technical details' : 'Show technical details'}
+                {showDetails ? (
+                  <ChevronUp size={14} />
+                ) : (
+                  <ChevronDown size={14} />
+                )}
+                {showDetails
+                  ? "Hide technical details"
+                  : "Show technical details"}
               </button>
 
               {showDetails && (
                 <div className="mt-3 text-left">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-mono text-white/40 uppercase tracking-wider">Stack Trace</span>
+                    <span className="text-[11px] font-mono text-white/40 uppercase tracking-wider">
+                      Stack Trace
+                    </span>
                     <button
                       type="button"
                       onClick={this.handleCopy}
                       className="text-[11px] text-white/50 hover:text-white inline-flex items-center gap-1 cursor-pointer"
                     >
-                      {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                      {copied ? 'Copied' : 'Copy'}
+                      {copied ? (
+                        <Check size={12} className="text-emerald-400" />
+                      ) : (
+                        <Copy size={12} />
+                      )}
+                      {copied ? "Copied" : "Copy"}
                     </button>
                   </div>
                   <pre className="max-h-48 overflow-y-auto text-[11px] font-mono text-white/50 bg-black/60 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-all select-all">
-                    {error?.stack || 'No stack trace available.'}
+                    {error?.stack || "No stack trace available."}
                   </pre>
                 </div>
               )}

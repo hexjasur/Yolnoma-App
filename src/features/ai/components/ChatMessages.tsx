@@ -1,6 +1,6 @@
-import { Loader2, MessageSquare, Pencil, RotateCcw } from 'lucide-react';
-import type { ChatMessage, OpenRouterModel } from '../types';
-import MarkdownContent from './MarkdownContent';
+import { Loader2, MessageSquare, Pencil, RotateCcw } from "lucide-react";
+import type { ChatMessage, OpenRouterModel } from "../types";
+import MarkdownContent from "./MarkdownContent";
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -42,13 +42,13 @@ export default function ChatMessages({
           {messages.map((message, index) => (
             <div
               key={`${message.role}-${index}`}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={
-                  message.role === 'user'
-                    ? 'group w-fit max-w-[72%] rounded-2xl bg-[var(--accent-dim)] px-3.5 py-2.5 text-sm leading-relaxed text-white [&_p]:m-0 [&_p]:break-words'
-                    : 'group max-w-[85%] px-1 py-2 text-sm leading-relaxed text-white/80'
+                  message.role === "user"
+                    ? "group w-fit max-w-[72%] rounded-2xl bg-[var(--accent-dim)] px-3.5 py-2.5 text-sm leading-relaxed text-white [&_p]:m-0 [&_p]:break-words"
+                    : "group max-w-[85%] px-1 py-2 text-sm leading-relaxed text-white/80"
                 }
               >
                 <MarkdownContent content={message.content} />
@@ -58,8 +58,10 @@ export default function ChatMessages({
                       message.model}
                   </p>
                 )}
-                <div className={`mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {message.role === 'user' ? (
+                <div
+                  className={`mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {message.role === "user" ? (
                     <button
                       type="button"
                       title="Edit and resend"
@@ -78,7 +80,14 @@ export default function ChatMessages({
                       onClick={() => onRegenerateAssistantMessage(message)}
                       className="rounded-md p-1.5 text-white/35 hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
                     >
-                      <RotateCcw size={13} className={regeneratingMessageId === message.id ? 'animate-spin' : ''} />
+                      <RotateCcw
+                        size={13}
+                        className={
+                          regeneratingMessageId === message.id
+                            ? "animate-spin"
+                            : ""
+                        }
+                      />
                     </button>
                   )}
                 </div>
@@ -87,9 +96,9 @@ export default function ChatMessages({
           ))}
           {loading && (
             <div className="flex items-center gap-2 text-xs text-white/40">
-              <Loader2 size={14} className="animate-spin" />{' '}
+              <Loader2 size={14} className="animate-spin" />{" "}
               {models.find((model) => model.id === activeModel)?.name ??
-                'Model'}{' '}
+                "Model"}{" "}
               is preparing a response...
             </div>
           )}

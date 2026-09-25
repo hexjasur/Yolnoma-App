@@ -1,5 +1,5 @@
 export type ChatMessage = {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   model?: string;
   id?: string;
@@ -27,11 +27,11 @@ export type OpenRouterModel = {
   pricing?: { prompt?: string; completion?: string };
 };
 
-export type ModelCategory = 'all' | 'free' | 'paid';
+export type ModelCategory = "all" | "free" | "paid";
 
 export type ToolCall = {
   id: string;
-  type: 'function';
+  type: "function";
   function: { name: string; arguments: string };
 };
 
@@ -55,12 +55,10 @@ export type ProxyResponse = {
   body: OpenRouterResponse;
 };
 
-export const API_KEY_STORAGE = 'yolnoma.openrouter.api-key';
-export const CHAT_STORAGE = 'yolnoma.ai-chat.messages';
+export const API_KEY_STORAGE = "yolnoma.openrouter.api-key";
+export const CHAT_STORAGE = "yolnoma.ai-chat.messages";
 
 export const DEFAULT_MODELS: OpenRouterModel[] = [
-  { id: 'google/gemma-3-27b-it', name: 'Gemma 3 27B IT' },
-  { id: 'qwen/qwen3-8b', name: 'Qwen 3 8B' },
-  { id: 'meta-llama/llama-3.3-8b-instruct', name: 'Llama 3.3 8B Instruct' },
-  { id: 'laguna-s-2.1', name: 'Poolside: Laguna S 2.1' },
+  { id: "google/gemma-3-27b-it", name: "Gemma 3 27B IT" },
+  { id: "laguna-s-2.1", name: "Poolside: Laguna S 2.1" },
 ];
