@@ -485,14 +485,18 @@ jobs:
           # updates-branch endpoint. Keep its manifest pointing at the newest
           # release so those installed clients can migrate to release assets.
           $legacyManifest = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($jsonContent))
-          $legacySha = gh api "repos/$repoSlug/contents/latest.json?ref=updates" --jq ".sha"
-          if ($LASTEXITCODE -eq 0 -and $legacySha) {
-            $payload = @{ message = "chore: sync legacy updater manifest to $tag"; content = $legacyManifest; sha = $legacySha; branch = "updates" } | ConvertTo-Json -Compress
-            $payload | gh api --method PUT "repos/$repoSlug/contents/latest.json" --input - | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize the legacy updates manifest." }
-            Write-Host "Synchronized legacy updates manifest to $tag."
+          $hasUpdatesBranch = git ls-remote --heads origin updates
+          if ($hasUpdatesBranch) {
+            $legacySha = gh api "repos/$repoSlug/contents/latest.json?ref=updates" --jq ".sha" 2>$null
+            if ($LASTEXITCODE -eq 0 -and $legacySha) {
+              $payload = @{ message = "chore: sync legacy updater manifest to $tag"; content = $legacyManifest; sha = $legacySha; branch = "updates" } | ConvertTo-Json -Compress
+              $payload | gh api --method PUT "repos/$repoSlug/contents/latest.json" --input - | Out-Null
+              if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize the legacy updates manifest." }
+              Write-Host "Synchronized legacy updates manifest to $tag."
+            }
           } else {
             Write-Host "Legacy updates branch not found; skipping compatibility sync."
           }
 
+          $global:LASTEXITCODE = 0
           Write-Host "Successfully published updater assets to GitHub Release $tag!"
