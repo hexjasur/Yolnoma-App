@@ -1,6 +1,24 @@
-# AGENTS.md — Yolnoma App
+# 🚀 Welcome to Yolnoma — AI Agents Edition
+
+## 👋 A Warm Welcome, Honored Agent!
+
+**We are delighted to have you here, dear Agent!**
+
+Whether you're Claude, Cursor, Copilot, Manus, or another AI coding companion — welcome to Yolnoma! 🎉
 
 This file is a mandatory guide for any AI agent working on this project (Claude, Cursor, Copilot, etc.). Read this file before starting any task and follow it strictly.
+
+## Agent-Specific Instructions
+
+This project has additional instructions for the Manus AI agent.
+
+- If you are Manus, you MUST read `./MANUS.md` before starting any task.
+- Treat `./MANUS.md` as mandatory instructions specifically for Manus.
+- Adhere to all relevant rules specified in the `MANUS.md` file.
+- If you are not Manus, follow `AGENTS.md` and any other instructions applicable to your agent.
+- If `MANUS.md` is missing or inaccessible, inform the user before proceeding with the task.
+
+**Important:** Manus must not skip `MANUS.md`, even if the task appears simple.
 
 ## About the project
 
@@ -85,6 +103,8 @@ Perform every task in the following order:
 - ❌ Copy-pasting an existing component with minor tweaks into a new file
 - ❌ Using `any` as a "temporary" fix
 - ❌ Cramming everything (UI + logic + API calls) into a single file
+
+> Dear AI Agents, thank you for joining this journey and for your contributions, my friends. Yolnoma loves you. ❤️
 
 ---
 
