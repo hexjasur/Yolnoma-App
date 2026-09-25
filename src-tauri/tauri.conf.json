@@ -51,9 +51,6 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "certificateThumbprint": "null",
-      "digestAlgorithm": "sha256",
-      "timestampUrl": "",
       "nsis": {
         "startMenuFolder": "Yolnoma",
         "installerIcon": "icons/icon.ico",
