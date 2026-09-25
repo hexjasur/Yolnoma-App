@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   AlertCircle,
-  Check,
   Clock,
+  Copy,
   FileCode2,
   FolderOpen,
   GitCommitHorizontal,
@@ -375,9 +375,9 @@ export default function CommitGenerator({
         </p>
       )}
 
-      {/* Main two-column layout: tool on the left, recent folders on the right */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_200px]">
-        <div className="min-w-0">
+      {/* Recent folders on the left, generated commit workspace on the right. */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <div className="min-w-0 lg:col-start-2 lg:row-start-1">
           {loadingChanges && (
             <div className="flex items-center gap-2 text-xs text-white/45">
               <Loader2 size={14} className="animate-spin" /> Git changes
@@ -472,36 +472,39 @@ export default function CommitGenerator({
                   key={variant.title}
                   className="border border-white/[0.08] bg-black/20 p-4"
                 >
-                  <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="mb-2 flex items-center justify-between gap-3">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
                       {variant.title}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => void copyMessage(variant.message)}
-                      className="inline-flex items-center gap-1 text-[11px] text-white/45 hover:text-white"
-                    >
-                      <Check size={12} /> Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCommittedVariant(null);
-                        setPushedVariant(null);
-                        setEditingCommit(null);
-                        setPendingCommit(variant);
-                      }}
-                      disabled={
-                        !folderPath ||
-                        !changes.length ||
-                        committedVariant === variant.title ||
-                        committing ||
-                        pushing
-                      }
-                      className="inline-flex items-center gap-1 border border-emerald-400/20 px-2 py-1 text-[11px] text-emerald-200/75 transition hover:border-emerald-300/50 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-35"
-                    >
-                      <GitCommitHorizontal size={12} /> Commit
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => void copyMessage(variant.message)}
+                        aria-label={`Copy ${variant.title} commit message`}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1 text-[11px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.05] hover:text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      >
+                        <Copy size={12} /> Copy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCommittedVariant(null);
+                          setPushedVariant(null);
+                          setEditingCommit(null);
+                          setPendingCommit(variant);
+                        }}
+                        disabled={
+                          !folderPath ||
+                          !changes.length ||
+                          committedVariant === variant.title ||
+                          committing ||
+                          pushing
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/20 px-2.5 py-1 text-[11px] font-medium text-emerald-200/75 transition hover:border-emerald-300/50 hover:bg-emerald-400/[0.06] hover:text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300/25 disabled:cursor-not-allowed disabled:opacity-35"
+                      >
+                        <GitCommitHorizontal size={12} /> Commit
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     readOnly
@@ -584,7 +587,7 @@ export default function CommitGenerator({
         </div>
 
         {/* Recent folders — separate grid on the right */}
-        <aside className="lg:border-l lg:border-white/[0.08] lg:pl-5">
+        <aside className="lg:col-start-1 lg:row-start-1 lg:border-r lg:border-white/[0.08] lg:pr-5">
           <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
             <Clock size={12} /> Recent folders
           </div>
