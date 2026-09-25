@@ -3,7 +3,7 @@ import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
 const STORAGE_FILE = "yolnoma-git-recent-folders.json";
 const LOCAL_STORAGE_KEY = "yolnoma.git.recent-folders.v1";
-const MAX_RECENT_FOLDERS = 8;
+const MAX_RECENT_FOLDERS = 10;
 
 function readLocalFolders(): string[] {
   try {
