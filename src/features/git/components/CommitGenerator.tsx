@@ -366,7 +366,7 @@ export default function CommitGenerator({
 
           {!loadingChanges && folderPath && !changes.length && !error && (
             <div className="border border-dashed border-white/10 p-6 text-center text-xs text-white/40">
-              Working tree toza — no change.
+              Working tree clean — no change.
             </div>
           )}
 

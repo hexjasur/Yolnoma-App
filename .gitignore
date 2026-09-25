@@ -22,7 +22,6 @@ coverage
 
 .env
 src-tauri/.env
-libs/
 resources
 
 secret
@@ -31,4 +30,3 @@ secret
 *.pem
 *.p12
 *.pfx
-docs/Tauri_Signer.txt
