@@ -6,12 +6,15 @@ import {
   Clock,
   FileCode2,
   FolderOpen,
+  GitCommitHorizontal,
   KeyRound,
   Loader2,
   RefreshCw,
   Sparkles,
+  Upload,
   X,
 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { useAuth } from "@/features/auth/AuthContext";
 import ApiKeyModal from "@/features/ai/components/ApiKeyModal";
 import { getApiKey, saveApiKey } from "@/features/ai/storage";
@@ -30,14 +33,19 @@ import {
   ToolCard,
   ToolTitle,
 } from "@/features/developer-tools/components/ToolShell";
+import { ConfirmModal, SelectMenu } from "@/shared/ui";
 import { SYSTEM_CONTEXT } from "../context/systemContext";
+import {
+  listRecentGitFolders,
+  rememberGitFolder,
+  removeRecentGitFolder,
+} from "../storage/recentFolders";
 
 type GitChange = { path: string; status: string; diff: string };
 type CommitVariant = { title: string; message: string };
+type CommitDraft = CommitVariant;
 
 const MAX_CONTEXT_CHARS = 100_000;
-const RECENT_FOLDERS_KEY = "yolnoma:commit-generator:recent-folders";
-const MAX_RECENT_FOLDERS = 8;
 
 const VARIANT_TITLES = [
   "Simple summary",
@@ -94,27 +102,6 @@ function folderName(path: string) {
   return parts[parts.length - 1] ?? path;
 }
 
-function loadRecentFolders(): string[] {
-  try {
-    const raw = localStorage.getItem(RECENT_FOLDERS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((p) => typeof p === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRecentFolders(folders: string[]) {
-  try {
-    localStorage.setItem(RECENT_FOLDERS_KEY, JSON.stringify(folders));
-  } catch {
-    /* storage unavailable, ignore */
-  }
-}
-
 export default function CommitGenerator({
   folderPath,
   changes,
@@ -139,11 +126,13 @@ export default function CommitGenerator({
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODELS[0].id);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [fallbackNote, setFallbackNote] = useState("");
-  const [recentFolders, setRecentFolders] = useState<string[]>([]);
-
-  useEffect(() => {
-    setRecentFolders(loadRecentFolders());
-  }, []);
+  const [recentFolders, setRecentFolders] = useState(listRecentGitFolders);
+  const [pendingCommit, setPendingCommit] = useState<CommitDraft | null>(null);
+  const [editingCommit, setEditingCommit] = useState<CommitDraft | null>(null);
+  const [committedVariant, setCommittedVariant] = useState<string | null>(null);
+  const [pushedVariant, setPushedVariant] = useState<string | null>(null);
+  const [committing, setCommitting] = useState(false);
+  const [pushing, setPushing] = useState(false);
 
   useEffect(() => {
     getApiKey(user?.id ?? "").then((key) => {
@@ -194,14 +183,7 @@ export default function CommitGenerator({
   }, [apiKey, apiKeyReady]);
 
   const rememberFolder = (path: string) => {
-    setRecentFolders((prev) => {
-      const next = [path, ...prev.filter((p) => p !== path)].slice(
-        0,
-        MAX_RECENT_FOLDERS,
-      );
-      saveRecentFolders(next);
-      return next;
-    });
+    setRecentFolders(rememberGitFolder(path));
   };
 
   const selectFolder = async (path: string) => {
@@ -210,6 +192,9 @@ export default function CommitGenerator({
     setLoadingChanges(true);
     setVariants([]);
     setError("");
+    setEditingCommit(null);
+    setCommittedVariant(null);
+    setPushedVariant(null);
     await onRefresh(path);
     setLoadingChanges(false);
   };
@@ -222,11 +207,47 @@ export default function CommitGenerator({
 
   const removeRecentFolder = (path: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    setRecentFolders((prev) => {
-      const next = prev.filter((p) => p !== path);
-      saveRecentFolders(next);
-      return next;
-    });
+    setRecentFolders(removeRecentGitFolder(path));
+  };
+
+  const commitMessage = async () => {
+    if (!editingCommit || !folderPath || !changes.length) return;
+    const message = editingCommit.message.trim();
+    if (!message) {
+      toast.error("Commit message cannot be empty");
+      return;
+    }
+    setCommitting(true);
+    try {
+      await invoke("commit_git_changes", {
+        rootPath: folderPath,
+        message,
+        paths: changes.map((change) => change.path),
+      });
+      setCommittedVariant(editingCommit.title);
+      setPushedVariant(null);
+      setEditingCommit(null);
+      toast.success("Git commit created");
+      await onRefresh(folderPath);
+    } catch (value) {
+      toast.error(value instanceof Error ? value.message : String(value));
+    } finally {
+      setCommitting(false);
+    }
+  };
+
+  const pushCommit = async (variantTitle: string) => {
+    if (!folderPath) return;
+    setPushing(true);
+    try {
+      await invoke("push_git_changes", { rootPath: folderPath });
+      setPushedVariant(variantTitle);
+      toast.success("Git commit pushed");
+    } catch (value) {
+      toast.error(value instanceof Error ? value.message : String(value));
+    } finally {
+      setPushing(false);
+    }
   };
 
   const saveKey = async () => {
@@ -409,24 +430,26 @@ export default function CommitGenerator({
           )}
 
           <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/[0.08] pt-4">
-            <select
+            <SelectMenu
               value={selectedModel}
-              onChange={(event) => setSelectedModel(event.target.value)}
-              className="border border-white/10 bg-black/30 px-2.5 py-2 text-xs text-white outline-none"
+              onChange={setSelectedModel}
+              options={models.map((model) => ({
+                value: model.id,
+                label: model.name ?? model.id,
+              }))}
+              ariaLabel="Select AI model"
+              className="min-w-40"
               disabled={modelsLoading}
-            >
-              {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name ?? model.id}
-                </option>
-              ))}
-            </select>
+            />
             <button
               type="button"
               onClick={() => void generateCommit()}
               disabled={generating || !changes.length}
-              className="inline-flex items-center gap-2 bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+              className={`group/generate relative inline-flex items-center gap-2 overflow-hidden bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-black shadow-[0_4px_18px_-5px_var(--accent)] transition duration-200 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${generating ? "animate-pulse" : ""}`}
             >
+              {generating && (
+                <span className="pointer-events-none absolute inset-0 animate-pulse bg-white/15" />
+              )}
               {generating ? (
                 <Loader2 size={15} className="animate-spin" />
               ) : (
@@ -460,12 +483,98 @@ export default function CommitGenerator({
                     >
                       <Check size={12} /> Copy
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCommittedVariant(null);
+                        setPushedVariant(null);
+                        setEditingCommit(null);
+                        setPendingCommit(variant);
+                      }}
+                      disabled={
+                        !folderPath ||
+                        !changes.length ||
+                        committedVariant === variant.title ||
+                        committing ||
+                        pushing
+                      }
+                      className="inline-flex items-center gap-1 border border-emerald-400/20 px-2 py-1 text-[11px] text-emerald-200/75 transition hover:border-emerald-300/50 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      <GitCommitHorizontal size={12} /> Commit
+                    </button>
                   </div>
                   <textarea
                     readOnly
                     value={variant.message}
                     className="min-h-36 w-full resize-y border border-white/[0.08] bg-[#0d0d0a] p-3 font-mono text-[11px] leading-5 text-emerald-100/80 outline-none"
                   />
+                  {editingCommit?.title === variant.title && (
+                    <div className="mt-3 border-t border-white/[0.08] pt-3">
+                      <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
+                        Review and edit before committing
+                      </label>
+                      <textarea
+                        autoFocus
+                        value={editingCommit.message}
+                        onChange={(event) =>
+                          setEditingCommit((current) =>
+                            current
+                              ? { ...current, message: event.target.value }
+                              : current,
+                          )
+                        }
+                        rows={4}
+                        className="w-full resize-y border border-white/[0.1] bg-[#0d0d0a] p-3 font-mono text-xs leading-5 text-white outline-none focus:border-[var(--accent)]/50"
+                      />
+                      <div className="mt-2 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingCommit(null)}
+                          disabled={committing}
+                          className="px-3 py-1.5 text-[11px] text-white/45 hover:text-white disabled:opacity-40"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void commitMessage()}
+                          disabled={committing || !editingCommit.message.trim()}
+                          className="inline-flex items-center gap-1.5 bg-emerald-400 px-3 py-1.5 text-[11px] font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {committing ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <GitCommitHorizontal size={12} />
+                          )}
+                          {committing ? "Committing…" : "Commit changes"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {committedVariant === variant.title && (
+                    <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-3">
+                      <span className="text-[11px] text-emerald-200/70">
+                        Commit created locally
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void pushCommit(variant.title)}
+                        disabled={pushing || pushedVariant === variant.title}
+                        className="inline-flex items-center gap-1.5 border border-sky-300/25 px-3 py-1.5 text-[11px] font-semibold text-sky-200 transition hover:border-sky-200/60 hover:bg-sky-300/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {pushing ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Upload size={12} />
+                        )}
+                        {pushing
+                          ? "Pushing…"
+                          : pushedVariant === variant.title
+                            ? "Pushed"
+                            : "Push"}
+                      </button>
+                    </div>
+                  )}
                 </article>
               ))}
             </div>
@@ -484,24 +593,32 @@ export default function CommitGenerator({
           ) : (
             <div className="grid grid-cols-1 gap-1.5">
               {recentFolders.map((path) => (
-                <button
+                <div
                   key={path}
-                  type="button"
-                  onClick={() => void selectFolder(path)}
-                  title={path}
-                  className={`group flex items-center justify-between gap-2 border px-2.5 py-2 text-left text-[11px] transition ${
+                  className={`group flex items-center gap-2 border px-2.5 py-2 text-left text-[11px] transition ${
                     path === folderPath
                       ? "border-[var(--accent)] bg-[var(--accent-glow)] text-[var(--accent)]"
                       : "border-white/[0.08] bg-black/20 text-white/60 hover:border-white/20 hover:text-white"
                   }`}
                 >
-                  <span className="truncate font-mono">{folderName(path)}</span>
-                  <X
-                    size={12}
-                    className="shrink-0 opacity-0 transition group-hover:opacity-60 hover:!opacity-100"
+                  <button
+                    type="button"
+                    onClick={() => void selectFolder(path)}
+                    title={path}
+                    className="min-w-0 flex-1 truncate text-left font-mono"
+                  >
+                    {folderName(path)}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${path} from recent folders`}
+                    title="Remove from recent folders"
+                    className="shrink-0 opacity-0 transition hover:text-red-300 group-hover:opacity-70 hover:!opacity-100"
                     onClick={(event) => removeRecentFolder(path, event)}
-                  />
-                </button>
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -516,6 +633,19 @@ export default function CommitGenerator({
           onDismiss={() => setShowKeyModal(false)}
         />
       )}
+      <ConfirmModal
+        open={pendingCommit !== null}
+        onClose={() => setPendingCommit(null)}
+        onConfirm={() => {
+          if (pendingCommit) setEditingCommit(pendingCommit);
+          setPendingCommit(null);
+        }}
+        title="Create this Git commit?"
+        description={`This will prepare “${pendingCommit?.title ?? "selected variant"}” for the selected local repository. You can review and edit the message before the commit is created.`}
+        confirmText="Yes, continue"
+        cancelText="Cancel"
+        variant="warning"
+      />
     </ToolCard>
   );
 }
