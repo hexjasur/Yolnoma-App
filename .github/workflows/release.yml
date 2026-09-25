@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing version tag to build and publish (for example v1.2.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -12,7 +17,7 @@ permissions:
 # Only one release workflow runs per tag at a time.
 # A second push of the same tag is extremely unlikely but guarded here.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.event.inputs.release_tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -23,12 +28,15 @@ jobs:
     name: Build & Release Tauri App
     runs-on: windows-2022
     timeout-minutes: 60
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -120,7 +128,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $tag = "${{ github.ref_name }}"
+          $tag = "$env:RELEASE_TAG"
           $expectedVersion = $tag -replace "^v", ""
 
           Write-Host "Git release tag  : $tag"
@@ -262,12 +270,15 @@ jobs:
     needs: build
     runs-on: windows-2022
     timeout-minutes: 10
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
 
       - name: Download updater artifacts
         uses: actions/download-artifact@v4
@@ -308,7 +319,7 @@ jobs:
           }
 
           # 3. Format release version (e.g. v0.9.53 -> 0.9.53)
-          $tag = "${{ github.ref_name }}"
+          $tag = "$env:RELEASE_TAG"
           $version = $tag -replace "^v", ""
           Write-Host "Releasing version: $version (Git tag: $tag)"
 

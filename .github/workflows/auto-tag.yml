@@ -138,7 +138,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v${{ steps.current.outputs.pkg }}"
-          gh workflow run release.yml --repo "${{ github.repository }}" --ref "$TAG"
+          gh workflow run release.yml --repo "${{ github.repository }}" --ref master --field release_tag="$TAG"
 
       # ── 9. Human-readable summary ─────────────────────────────────────────────
       - name: Summary
