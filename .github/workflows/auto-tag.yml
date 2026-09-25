@@ -18,6 +18,9 @@ permissions:
 jobs:
   tag:
     name: Create version tag if version changed
+    permissions:
+      actions: write # required to dispatch the release workflow
+      contents: write # required to create and push the version tag
     runs-on: ubuntu-24.04
     timeout-minutes: 5
 
@@ -128,7 +131,16 @@ jobs:
 
           echo "✓ Tag $TAG created and pushed to origin."
 
-      # ── 8. Human-readable summary ─────────────────────────────────────────────
+      # ── 8. Start the release build (GITHUB_TOKEN tag pushes do not trigger workflows) ──
+      - name: Dispatch Windows release build
+        if: steps.changed.outputs.skip == 'false' && steps.tag_exists.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.current.outputs.pkg }}"
+          gh workflow run release.yml --repo "${{ github.repository }}" --ref "$TAG"
+
+      # ── 9. Human-readable summary ─────────────────────────────────────────────
       - name: Summary
         if: always()
         run: |
