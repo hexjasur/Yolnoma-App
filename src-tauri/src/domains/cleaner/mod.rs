@@ -3,14 +3,28 @@ use serde::Serialize;
 use std::os::windows::process::CommandExt;
 use std::process::Command;
 
-const CLEAR_WINDOWS_TEMP: &str = include_str!("../../../../scripts/cleaner/temp-files.ps1");
-const EMPTY_RECYCLE_BIN: &str = include_str!("../../../../scripts/cleaner/recycle-bin.ps1");
-const CLEAR_DIRECTX_SHADER_CACHE: &str =
-    include_str!("../../../../scripts/cleaner/directx-shader-cache.ps1");
-const CLEAN_NPM_CACHE: &str = include_str!("../../../../scripts/cleaner/npm-cache.ps1");
-const CLEAN_PNPM_CACHE: &str = include_str!("../../../../scripts/cleaner/pnpm-cache.ps1");
-const CLEAN_YARN_CACHE: &str = include_str!("../../../../scripts/cleaner/yarn-cache.ps1");
-const CLEAN_CARGO_CACHE: &str = include_str!("../../../../scripts/cleaner/cargo-cache.ps1");
+macro_rules! include_script {
+    ($name:literal) => {
+        include_str!(concat!(
+            "../../../../src/features/cleaner/scripts/",
+            $name
+        ))
+    };
+}
+
+const CLEAR_WINDOWS_TEMP: &str = include_script!("temp-files.ps1");
+
+const EMPTY_RECYCLE_BIN: &str = include_script!("recycle-bin.ps1");
+
+const CLEAR_DIRECTX_SHADER_CACHE: &str = include_script!("directx-shader-cache.ps1");
+
+const CLEAN_NPM_CACHE: &str = include_script!("npm-cache.ps1");
+
+const CLEAN_PNPM_CACHE: &str = include_script!("pnpm-cache.ps1");
+
+const CLEAN_YARN_CACHE: &str = include_script!("yarn-cache.ps1");
+
+const CLEAN_CARGO_CACHE: &str = include_script!("cargo-cache.ps1");
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -41,8 +55,8 @@ pub async fn run_cleaner(actions: Vec<String>) -> Result<CleanerRunResult, Strin
     }
 
     let completed_actions = selected.len();
-    tauri::async_runtime::spawn_blocking(move || execute_cleaner(selected))
-        .await
+    tauri::async_runtime
+        ::spawn_blocking(move || execute_cleaner(selected)).await
         .map_err(|_| "The cleanup task could not be started.".to_string())?
         .map(|message| CleanerRunResult {
             completed_actions,
@@ -66,8 +80,9 @@ fn script_for_action(action: &str) -> Option<&'static str> {
 fn execute_cleaner(selected: Vec<String>) -> Result<String, String> {
     let mut script = String::from("$ErrorActionPreference = 'Stop'\n\n");
     for action in selected {
-        let task_script = script_for_action(&action)
-            .ok_or_else(|| "An unknown cleanup task was requested.".to_string())?;
+        let task_script = script_for_action(&action).ok_or_else(||
+            "An unknown cleanup task was requested.".to_string()
+        )?;
         script.push_str(task_script);
         script.push('\n');
     }
@@ -90,11 +105,7 @@ fn execute_cleaner(selected: Vec<String>) -> Result<String, String> {
 
     if output.status.success() {
         let detail = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        Ok(if detail.is_empty() {
-            "Cleanup completed.".to_string()
-        } else {
-            detail
-        })
+        Ok(if detail.is_empty() { "Cleanup completed.".to_string() } else { detail })
     } else {
         let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
         if detail.is_empty() {
