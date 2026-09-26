@@ -213,8 +213,6 @@ pub fn run() {
             app_commands::write_codebase_file,
             domains::git::get_git_changes,
             domains::git::get_git_history,
-            domains::git::commit_git_changes,
-            domains::git::push_git_changes,
             app_commands::get_idling_count,
             domains::ai_chat::list_ai_chat_sessions,
             domains::ai_chat::get_ai_chat_session,

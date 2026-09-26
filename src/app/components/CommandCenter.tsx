@@ -4,6 +4,8 @@ import {
   Blocks,
   Clock3,
   Command,
+  Database,
+  FileText,
   GitBranch,
   History,
   Keyboard,
@@ -125,6 +127,24 @@ const WORKSPACE_ITEMS: CommandItem[] = [
     group: 'Developer workspace',
     icon: Sparkles,
     keywords: 'ai tools workspace project readme image code',
+  },
+  {
+    id: 'ai-database-generator',
+    label: 'AI Tools · Database Generator',
+    description: 'Open the AI database schema and relationship diagram workspace',
+    path: '/tools/ai-tools?tab=database-gen',
+    group: 'Developer workspace',
+    icon: Database,
+    keywords: 'ai tools database generator schema sql tables relationships er diagram',
+  },
+  {
+    id: 'ai-readme-generator',
+    label: 'AI Tools · README Generator',
+    description: 'Open the AI project README writing workspace',
+    path: '/tools/ai-tools?tab=readme-generator',
+    group: 'Developer workspace',
+    icon: FileText,
+    keywords: 'ai tools readme read me documentation project docs markdown generator',
   },
 ];
 
