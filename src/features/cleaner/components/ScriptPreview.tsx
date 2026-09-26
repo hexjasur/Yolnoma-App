@@ -84,20 +84,20 @@ export function ScriptPreview({ script }: { script: string }) {
     <details className="cleaner-preview">
       <summary>
         <span>
-          <Code2 size={16} /> Tanlangan vazifalar skriptini ko‘rish
+          <Code2 size={16} /> View selected machine script
         </span>
-        <span>{lines.length} qator</span>
+        <span>{lines.length} lines</span>
       </summary>
       <div className="preview-toolbar">
-        <span>PowerShell · Ishga tushadigan kod bilan bir xil</span>
+        <span>PowerShell · Same as the executable code</span>
         <Button
           variant="ghost"
           size="sm"
           onClick={copyScript}
-          title="Skriptni nusxalash"
+          title="Copy the script"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? "Nusxalandi" : "Nusxalash"}
+          {copied ? "Copied" : "Copy"}
         </Button>
       </div>
       <pre aria-label="PowerShell script preview">

@@ -106,7 +106,7 @@ function CleanerPage() {
           <p className="cleaner-eyebrow">
             <Sparkles size={12} /> System care
           </p>
-          <h1>Cleaner</h1>
+          <h1>Cleaner v0.2</h1>
           <p className="cleaner-subtitle">
             Choose what to clean. Review the script, then run it.
           </p>

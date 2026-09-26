@@ -1,11 +1,11 @@
 import { Broom, Box, Code2, Sparkles, Trash2 } from "lucide-react";
-import tempFilesScript from "../../../../scripts/cleaner/temp-files.ps1?raw";
-import recycleBinScript from "../../../../scripts/cleaner/recycle-bin.ps1?raw";
-import directxShaderCacheScript from "../../../../scripts/cleaner/directx-shader-cache.ps1?raw";
-import npmCacheScript from "../../../../scripts/cleaner/npm-cache.ps1?raw";
-import pnpmCacheScript from "../../../../scripts/cleaner/pnpm-cache.ps1?raw";
-import yarnCacheScript from "../../../../scripts/cleaner/yarn-cache.ps1?raw";
-import cargoCacheScript from "../../../../scripts/cleaner/cargo-cache.ps1?raw";
+import tempFilesScript from "../scripts/temp-files.ps1?raw";
+import recycleBinScript from "../scripts/recycle-bin.ps1?raw";
+import directxShaderCacheScript from "../scripts/directx-shader-cache.ps1?raw";
+import npmCacheScript from "../scripts/npm-cache.ps1?raw";
+import pnpmCacheScript from "../scripts/pnpm-cache.ps1?raw";
+import yarnCacheScript from "../scripts/yarn-cache.ps1?raw";
+import cargoCacheScript from "../scripts/cargo-cache.ps1?raw";
 import type { CleanupCategory, CleanupTask } from "../types";
 
 export const CLEANUP_GROUPS: Array<{
