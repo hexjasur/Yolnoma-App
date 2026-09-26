@@ -24,7 +24,7 @@ describe("CleanerPage", () => {
         actions: ["temp-files"],
       });
       expect(screen.getByRole("status")).toHaveTextContent(
-        "1 task completed successfully.",
+        "1 task completed successfully. Cleanup completed.",
       );
     });
   });
@@ -65,7 +65,7 @@ describe("CleanerPage", () => {
     finishTask?.({ completedActions: 1, message: "Cleanup completed." });
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(
-        "1 task completed successfully.",
+        "1 task completed successfully. Cleanup completed.",
       ),
     );
   });
