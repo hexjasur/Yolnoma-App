@@ -30,6 +30,7 @@ import {
   type ChatSession,
   type ChatSessionSummary,
 } from "../types";
+import { useChatImages } from "../hooks/useChatImages";
 import ChatComposer from "../components/ChatComposer";
 import ChatMessages from "../components/ChatMessages";
 import ApiKeyModal from "../components/ApiKeyModal";
@@ -80,6 +81,13 @@ export default function AiChatPage() {
   const [limitCheckedAt, setLimitCheckedAt] = useState("");
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
+  const {
+    images: pendingImages,
+    setImages: setPendingImages,
+    addFiles: addImageFiles,
+    addUrl: addImageUrl,
+    remove: removePendingImage,
+  } = useChatImages(setError);
 
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -319,6 +327,7 @@ export default function AiChatPage() {
     setActiveSession(null);
     setMessages([]);
     setPrompt("");
+    setPendingImages([]);
     setSidebarTab("sessions");
     setSidebarOpenMobile(false);
     setSearchParams({}, { replace: false });
@@ -332,6 +341,7 @@ export default function AiChatPage() {
     hydratedMessagesRef.current = JSON.stringify(session.messages);
     setMessages(session.messages);
     setPrompt("");
+    setPendingImages([]);
     setSearchParams({ sessionId: id });
     setOpenSessionMenu(null);
     setSidebarOpenMobile(false);
@@ -368,11 +378,27 @@ export default function AiChatPage() {
     setOpenSessionMenu(null);
   };
 
-  const sendPrompt = async (text: string, conversationMessages = messages) => {
-    if (!text || loading) return;
+  const sendPrompt = async (
+    text: string,
+    conversationMessages = messages,
+    images = pendingImages,
+  ) => {
+    if ((!text.trim() && !images.length) || loading) return;
     if (!apiKey) {
       setError("Enter and save your OpenRouter API key first.");
       setShowKeyModal(true);
+      return;
+    }
+
+    const requestModels = selectedModels.filter((modelId) => {
+      if (!images.length) return true;
+      const model = models.find((candidate) => candidate.id === modelId);
+      return model?.architecture?.input_modalities?.includes("image") ?? false;
+    });
+    if (!requestModels.length) {
+      setError(
+        "Choose an OpenRouter model that supports image input, such as Gemma 3.",
+      );
       return;
     }
 
@@ -388,18 +414,20 @@ export default function AiChatPage() {
     const userMessage: ChatMessage = {
       role: "user",
       content: text,
+      ...(images.length ? { images } : {}),
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
     };
     const nextMessages = [...conversationMessages, userMessage];
     setMessages(nextMessages);
     setPrompt("");
+    setPendingImages([]);
     if (promptInputRef.current) promptInputRef.current.style.height = "";
     setError("");
     setLimitCheckedAt("");
     setLoading(true);
 
-    if (session.title === "New chat") {
+    if (session.title === "New chat" && text.trim()) {
       setTitleGenerating(true);
       void generateChatTitle(apiKey, selectedModels[0], text)
         .then((title) => {
@@ -420,7 +448,7 @@ export default function AiChatPage() {
     }
 
     try {
-      for (const model of selectedModels) {
+      for (const model of requestModels) {
         setActiveModel(model);
         const response = await requestChatCompletion(
           apiKey,
@@ -462,6 +490,7 @@ export default function AiChatPage() {
       // Keep the user's message visible on failure — only restore the draft
       // text so they can retry, don't erase what they already sent.
       setPrompt(text);
+      setPendingImages(images);
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -476,8 +505,8 @@ export default function AiChatPage() {
   const sendMessage = (event: React.SyntheticEvent) => {
     event.preventDefault();
     const text = prompt.trim();
-    if (!text || loading) return;
-    void sendPrompt(text);
+    if ((!text && !pendingImages.length) || loading) return;
+    void sendPrompt(text, messages, pendingImages);
   };
 
   const editUserMessage = (message: ChatMessage) => {
@@ -485,6 +514,7 @@ export default function AiChatPage() {
     if (index < 0) return;
     setMessages(messages.slice(0, index));
     setPrompt(message.content);
+    setPendingImages(message.images ?? []);
     requestAnimationFrame(() => promptInputRef.current?.focus());
   };
 
@@ -497,9 +527,11 @@ export default function AiChatPage() {
     if (!previousUser || loading) return;
     setMessages(messages.slice(0, index));
     setRegeneratingMessageId(message.id ?? null);
-    void sendPrompt(previousUser.content, messages.slice(0, index)).finally(
-      () => setRegeneratingMessageId(null),
-    );
+    void sendPrompt(
+      previousUser.content,
+      messages.slice(0, index),
+      previousUser.images ?? [],
+    ).finally(() => setRegeneratingMessageId(null));
   };
 
   const filteredSessions = sessions.filter((session) =>
@@ -517,7 +549,7 @@ export default function AiChatPage() {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">
-                Yolnoma Assistant
+                Yolnoma AI
               </p>
               <p className="truncate text-xs text-white/35">
                 {selectedModelLabels.join(" → ")}
@@ -570,8 +602,12 @@ export default function AiChatPage() {
         <ChatComposer
           prompt={prompt}
           loading={loading}
+          images={pendingImages}
           promptInputRef={promptInputRef}
           onPromptChange={setPrompt}
+          onAddImages={(files) => void addImageFiles(files)}
+          onAddImageUrl={addImageUrl}
+          onRemoveImage={removePendingImage}
           onSubmit={sendMessage}
         />
       </main>

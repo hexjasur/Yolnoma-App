@@ -280,6 +280,7 @@ pub fn run() {
             // ── Port Scanner ──
             domains::network::scan_ports,
             domains::network::get_common_ports,
+            domains::network::diagnose_dns,
             // ── Archive Explorer ──
             domains::archive::list_archive_entries,
             domains::archive::read_archive_entry_content,

@@ -1,9 +1,15 @@
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  images?: ChatImage[];
   model?: string;
   id?: string;
   createdAt?: string;
+};
+
+export type ChatImage = {
+  url: string;
+  name: string;
 };
 
 export type ChatSessionSummary = {
@@ -25,6 +31,7 @@ export type OpenRouterModel = {
   name?: string;
   context_length?: number;
   pricing?: { prompt?: string; completion?: string };
+  architecture?: { input_modalities?: string[] };
 };
 
 export type ModelCategory = "all" | "free" | "paid";
@@ -59,6 +66,10 @@ export const API_KEY_STORAGE = "yolnoma.openrouter.api-key";
 export const CHAT_STORAGE = "yolnoma.ai-chat.messages";
 
 export const DEFAULT_MODELS: OpenRouterModel[] = [
-  { id: "google/gemma-3-27b-it", name: "Gemma 3 27B IT" },
+  {
+    id: "google/gemma-3-27b-it",
+    name: "Gemma 3 27B IT",
+    architecture: { input_modalities: ["text", "image"] },
+  },
   { id: "laguna-s-2.1", name: "Poolside: Laguna S 2.1" },
 ];

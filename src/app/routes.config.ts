@@ -9,6 +9,7 @@ import {
   Download,
   Gamepad,
   Gamepad2,
+  Globe,
   ImageIcon,
   GitBranch,
   Radar,
@@ -116,6 +117,9 @@ const CrosshairPage = lazyPage(
 const ImagePage = lazyPage(() => import("@/features/image/pages/ImagePage"));
 const PortScannerPage = lazyPage(
   () => import("@/features/port-scanner/pages/PortScannerPage"),
+);
+const DnsDiagnosticsPage = lazyPage(
+  () => import("@/features/dns-diagnostics/pages/DnsDiagnosticsPage"),
 );
 const ArchiveExplorerPage = lazyPage(
   () => import("@/features/archive-explorer/pages/ArchiveExplorerPage"),
@@ -334,6 +338,16 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
     pinnable: true,
   },
   {
+    id: "dns-diagnostics",
+    path: "/tools/dns-diagnostics",
+    component: DnsDiagnosticsPage,
+    label: "DNS Diagnostics",
+    description: "Inspect public DNS records and resolver response times",
+    icon: Globe,
+    navGroup: "tools",
+    pinnable: true,
+  },
+  {
     id: "archive-explorer",
     path: "/tools/archive-explorer",
     component: ArchiveExplorerPage,
@@ -348,8 +362,8 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
     path: "/tools/ai-chat",
     component: AiChatPage,
     mobile: true,
-    label: "AI Chat",
-    description: "Chat with OpenRouter models",
+    label: "Yolnoma AI",
+    description: "Chat with OpenRouter models and analyze images",
     icon: Bot,
     navGroup: "tools",
     pinnable: true,
