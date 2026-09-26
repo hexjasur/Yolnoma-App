@@ -2,10 +2,12 @@ import { Broom, Box, Code2, Sparkles, Trash2 } from "lucide-react";
 import tempFilesScript from "../scripts/temp-files.ps1?raw";
 import recycleBinScript from "../scripts/recycle-bin.ps1?raw";
 import directxShaderCacheScript from "../scripts/directx-shader-cache.ps1?raw";
+import amdCacheScript from "../scripts/amd-cache.ps1?raw";
 import npmCacheScript from "../scripts/npm-cache.ps1?raw";
 import pnpmCacheScript from "../scripts/pnpm-cache.ps1?raw";
 import yarnCacheScript from "../scripts/yarn-cache.ps1?raw";
 import cargoCacheScript from "../scripts/cargo-cache.ps1?raw";
+import bunCacheScript from "../scripts/bun-cache.ps1?raw";
 import type { CleanupCategory, CleanupTask } from "../types";
 
 export const CLEANUP_GROUPS: Array<{
@@ -55,6 +57,15 @@ export const CLEANUP_TASKS: CleanupTask[] = [
     script: directxShaderCacheScript,
   },
   {
+    id: "amd-cache",
+    category: "windows",
+    name: "AMD graphics cache",
+    description: "Clears AMD DxCache, DxcCache, OglCache and VkCache.",
+    note: "Graphics caches are recreated; in-use files are skipped.",
+    icon: Sparkles,
+    script: amdCacheScript,
+  },
+  {
     id: "npm-cache",
     category: "developer",
     name: "npm cache",
@@ -89,5 +100,14 @@ export const CLEANUP_TASKS: CleanupTask[] = [
     note: "Dependencies are downloaded again when needed.",
     icon: Box,
     script: cargoCacheScript,
+  },
+  {
+    id: "bun-cache",
+    category: "developer",
+    name: "Bun cache",
+    description: "Removes downloaded packages from Bun's shared cache.",
+    note: "Packages are downloaded again when needed.",
+    icon: Box,
+    script: bunCacheScript,
   },
 ];

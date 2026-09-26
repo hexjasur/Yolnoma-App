@@ -4,10 +4,12 @@ export type CleanupId =
   | "temp-files"
   | "recycle-bin"
   | "directx-shader-cache"
+  | "amd-cache"
   | "npm-cache"
   | "pnpm-cache"
   | "yarn-cache"
-  | "cargo-cache";
+  | "cargo-cache"
+  | "bun-cache";
 export type CleanupCategory = "windows" | "developer";
 export type RunState = "idle" | "running" | "success" | "error";
 
