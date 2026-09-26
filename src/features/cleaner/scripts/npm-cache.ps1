@@ -1,20 +1,8 @@
-# Remove npm's default Windows cache directly, without invoking npm.ps1 or npm.cmd.
-$path = Join-Path $env:LOCALAPPDATA 'npm-cache'
-$removed = 0
-$skipped = 0
-try {
-    if (Test-Path -LiteralPath $path -PathType Container -ErrorAction Stop) {
-        $items = @(Get-ChildItem -LiteralPath $path -Force -ErrorAction Stop)
-        foreach ($item in $items) {
-            try {
-                Remove-Item -LiteralPath $item.FullName -Force -Recurse -ErrorAction Stop
-                $removed++
-            } catch {
-                $skipped++
-            }
-        }
-    }
-} catch {
-    $skipped++
+# Use npm.cmd directly so PowerShell execution policy does not block the npm.ps1 shim.
+$npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
+if ($null -eq $npm) {
+    Write-Output 'npm is not installed; cache cleanup skipped.'
+} else {
+    & npm.cmd cache clean --force
+    if ($LASTEXITCODE -ne 0) { throw "npm cache cleanup failed (exit code $LASTEXITCODE)." }
 }
-Write-Output "npm cache: $removed item(s) removed; $skipped skipped (in use or access denied)."

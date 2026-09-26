@@ -29,13 +29,12 @@ describe("Cleaner task registry", () => {
     }
   });
 
-  it("removes npm cache files directly without invoking npm or PowerShell shims", () => {
+  it("runs npm through its command shim, not the policy-blocked PowerShell script", () => {
     const script =
       CLEANUP_TASKS.find((task) => task.id === "npm-cache")?.script ?? "";
-    expect(script).toContain("$env:LOCALAPPDATA");
-    expect(script).toContain("npm-cache");
-    expect(script).toContain("Remove-Item");
-    expect(script).not.toMatch(/^\s*&\s*npm\.cmd\b/m);
+    expect(script).toContain("Get-Command npm.cmd");
+    expect(script).toContain("& npm.cmd cache clean --force");
+    expect(script).not.toContain("npm cache clean --force");
   });
 
   it("includes Bun cache and the four AMD cache directories from the screenshot", () => {
