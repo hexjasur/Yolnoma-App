@@ -34,6 +34,7 @@ export function useCleaner() {
     setStatusMessage(
       `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"} queued.`,
     );
+    const details: string[] = [];
 
     for (const [index, task] of tasks.entries()) {
       setActiveTask(task.name);
@@ -41,7 +42,10 @@ export function useCleaner() {
         `${index + 1}/${tasks.length} · ${task.name} is running…`,
       );
       try {
-        await invoke<CleanerRunResult>("run_cleaner", { actions: [task.id] });
+        const result = await invoke<CleanerRunResult>("run_cleaner", {
+          actions: [task.id],
+        });
+        if (result.message.trim()) details.push(result.message.trim());
         setCompletedCount(index + 1);
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
@@ -59,7 +63,7 @@ export function useCleaner() {
     setRunState("success");
     setActiveTask("");
     setStatusMessage(
-      `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"} completed successfully.`,
+      `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"} completed successfully.${details.length ? ` ${details.join(" ")}` : ""}`,
     );
   };
 

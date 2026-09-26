@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const MAX_FILES: usize = 60;
@@ -47,15 +47,6 @@ fn canonical_git_folder(root_path: String) -> Result<PathBuf, String> {
         return Err("The selected path is not a folder.".to_string());
     }
     Ok(root)
-}
-
-fn git_error(output: &std::process::Output, fallback: &str) -> String {
-    let message = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    if message.is_empty() {
-        fallback.to_string()
-    } else {
-        message
-    }
 }
 
 fn truncate_diff(value: String) -> String {
@@ -202,62 +193,4 @@ pub fn get_git_history(root_path: String, limit: Option<u32>) -> Result<Vec<GitC
         });
     }
     Ok(commits)
-}
-
-#[tauri::command]
-pub fn commit_git_changes(
-    root_path: String,
-    message: String,
-    paths: Vec<String>,
-) -> Result<(), String> {
-    let root = canonical_git_folder(root_path)?;
-    let message = message.trim();
-    if message.is_empty() {
-        return Err("Commit message cannot be empty.".to_string());
-    }
-    if paths.is_empty() {
-        return Err("No changed files were selected for this commit.".to_string());
-    }
-
-    let mut add_args = vec!["add".to_string(), "--all".to_string(), "--".to_string()];
-    let mut commit_paths = Vec::with_capacity(paths.len());
-    for path in paths {
-        let relative_path = Path::new(&path);
-        if path.trim().is_empty()
-            || relative_path.is_absolute()
-            || relative_path
-                .components()
-                .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
-        {
-            return Err("A changed file path is not a valid repository-relative path.".to_string());
-        }
-        // Treat file names as literal paths, not Git pathspec expressions.
-        let literal_path = format!(":(literal){path}");
-        add_args.push(literal_path.clone());
-        commit_paths.push(literal_path);
-    }
-    let add_args: Vec<&str> = add_args.iter().map(String::as_str).collect();
-    let add_output = run_git(&root, &add_args)?;
-    if !add_output.status.success() {
-        return Err(git_error(&add_output, "Could not stage the selected Git changes."));
-    }
-
-    let mut commit_args = vec!["commit".to_string(), "-m".to_string(), message.to_string()];
-    commit_args.extend(commit_paths);
-    let commit_args: Vec<&str> = commit_args.iter().map(String::as_str).collect();
-    let commit_output = run_git(&root, &commit_args)?;
-    if !commit_output.status.success() {
-        return Err(git_error(&commit_output, "Could not create the Git commit."));
-    }
-    Ok(())
-}
-
-#[tauri::command]
-pub fn push_git_changes(root_path: String) -> Result<(), String> {
-    let root = canonical_git_folder(root_path)?;
-    let output = run_git(&root, &["push"])?;
-    if !output.status.success() {
-        return Err(git_error(&output, "Could not push the Git commit."));
-    }
-    Ok(())
 }

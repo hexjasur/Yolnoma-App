@@ -78,7 +78,9 @@ fn script_for_action(action: &str) -> Option<&'static str> {
 }
 
 fn execute_cleaner(selected: Vec<String>) -> Result<String, String> {
-    let mut script = String::from("$ErrorActionPreference = 'Stop'\n\n");
+    // Per-file cleanup scripts handle expected failures; non-terminating errors
+    // and native command stderr must not abort otherwise-successful tasks.
+    let mut script = String::from("$ErrorActionPreference = 'Continue'\n\n");
     for action in selected {
         let task_script = script_for_action(&action).ok_or_else(||
             "An unknown cleanup task was requested.".to_string()

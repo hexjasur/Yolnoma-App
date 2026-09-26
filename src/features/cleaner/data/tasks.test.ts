@@ -20,4 +20,20 @@ describe("Cleaner task registry", () => {
       CLEANUP_TASKS.find((task) => task.id === "recycle-bin")?.warning,
     ).toBe(true);
   });
+
+  it("skips locked temporary and shader files instead of failing the whole task", () => {
+    for (const id of ["temp-files", "directx-shader-cache"] as const) {
+      const script = CLEANUP_TASKS.find((task) => task.id === id)?.script ?? "";
+      expect(script).toContain("catch");
+      expect(script).toContain("skipped");
+    }
+  });
+
+  it("runs npm through its command shim, not the policy-blocked PowerShell script", () => {
+    const script =
+      CLEANUP_TASKS.find((task) => task.id === "npm-cache")?.script ?? "";
+    expect(script).toContain("Get-Command npm.cmd");
+    expect(script).toContain("& npm.cmd cache clean --force");
+    expect(script).not.toContain("npm cache clean --force");
+  });
 });

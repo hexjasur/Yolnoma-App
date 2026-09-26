@@ -1,7 +1,8 @@
-# Prune unreferenced packages from pnpm's shared content-addressable store.
-if ($null -eq (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+# Use the Windows command shim to avoid PowerShell script execution-policy restrictions.
+$pnpm = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
+if ($null -eq $pnpm) {
     Write-Output 'pnpm is not installed; cache cleanup skipped.'
 } else {
-    pnpm store prune
-    if ($LASTEXITCODE -ne 0) { throw 'pnpm cache cleanup failed.' }
+    & pnpm.cmd store prune
+    if ($LASTEXITCODE -ne 0) { throw "pnpm store cleanup failed (exit code $LASTEXITCODE)." }
 }
