@@ -6,15 +6,12 @@ import {
   Copy,
   FileCode2,
   FolderOpen,
-  GitCommitHorizontal,
   KeyRound,
   Loader2,
   RefreshCw,
   Sparkles,
-  Upload,
   X,
 } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
 import { useAuth } from "@/features/auth/AuthContext";
 import ApiKeyModal from "@/features/ai/components/ApiKeyModal";
 import { getApiKey, saveApiKey } from "@/features/ai/storage";
@@ -33,7 +30,7 @@ import {
   ToolCard,
   ToolTitle,
 } from "@/features/developer-tools/components/ToolShell";
-import { ConfirmModal, SelectMenu } from "@/shared/ui";
+import { SelectMenu } from "@/shared/ui";
 import { SYSTEM_CONTEXT } from "../context/systemContext";
 import {
   listRecentGitFolders,
@@ -43,7 +40,6 @@ import {
 
 type GitChange = { path: string; status: string; diff: string };
 type CommitVariant = { title: string; message: string };
-type CommitDraft = CommitVariant;
 
 const MAX_CONTEXT_CHARS = 100_000;
 
@@ -127,12 +123,6 @@ export default function CommitGenerator({
   const [modelsLoading, setModelsLoading] = useState(false);
   const [fallbackNote, setFallbackNote] = useState("");
   const [recentFolders, setRecentFolders] = useState(listRecentGitFolders);
-  const [pendingCommit, setPendingCommit] = useState<CommitDraft | null>(null);
-  const [editingCommit, setEditingCommit] = useState<CommitDraft | null>(null);
-  const [committedVariant, setCommittedVariant] = useState<string | null>(null);
-  const [pushedVariant, setPushedVariant] = useState<string | null>(null);
-  const [committing, setCommitting] = useState(false);
-  const [pushing, setPushing] = useState(false);
 
   useEffect(() => {
     getApiKey(user?.id ?? "").then((key) => {
@@ -192,9 +182,6 @@ export default function CommitGenerator({
     setLoadingChanges(true);
     setVariants([]);
     setError("");
-    setEditingCommit(null);
-    setCommittedVariant(null);
-    setPushedVariant(null);
     await onRefresh(path);
     setLoadingChanges(false);
   };
@@ -208,46 +195,6 @@ export default function CommitGenerator({
   const removeRecentFolder = (path: string, event: React.MouseEvent) => {
     event.stopPropagation();
     setRecentFolders(removeRecentGitFolder(path));
-  };
-
-  const commitMessage = async () => {
-    if (!editingCommit || !folderPath || !changes.length) return;
-    const message = editingCommit.message.trim();
-    if (!message) {
-      toast.error("Commit message cannot be empty");
-      return;
-    }
-    setCommitting(true);
-    try {
-      await invoke("commit_git_changes", {
-        rootPath: folderPath,
-        message,
-        paths: changes.map((change) => change.path),
-      });
-      setCommittedVariant(editingCommit.title);
-      setPushedVariant(null);
-      setEditingCommit(null);
-      toast.success("Git commit created");
-      await onRefresh(folderPath);
-    } catch (value) {
-      toast.error(value instanceof Error ? value.message : String(value));
-    } finally {
-      setCommitting(false);
-    }
-  };
-
-  const pushCommit = async (variantTitle: string) => {
-    if (!folderPath) return;
-    setPushing(true);
-    try {
-      await invoke("push_git_changes", { rootPath: folderPath });
-      setPushedVariant(variantTitle);
-      toast.success("Git commit pushed");
-    } catch (value) {
-      toast.error(value instanceof Error ? value.message : String(value));
-    } finally {
-      setPushing(false);
-    }
   };
 
   const saveKey = async () => {
@@ -328,7 +275,7 @@ export default function CommitGenerator({
       <ToolTitle
         icon={Sparkles}
         text="Git Commit Generator"
-        subtitle="It creates 4 commit variants based only on currently modified and new files."
+        subtitle="Generate commit message options from your current changes. Copy is available; direct commit and push are temporarily disabled."
       />
 
       {/* Compact top toolbar */}
@@ -485,25 +432,6 @@ export default function CommitGenerator({
                       >
                         <Copy size={12} /> Copy
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCommittedVariant(null);
-                          setPushedVariant(null);
-                          setEditingCommit(null);
-                          setPendingCommit(variant);
-                        }}
-                        disabled={
-                          !folderPath ||
-                          !changes.length ||
-                          committedVariant === variant.title ||
-                          committing ||
-                          pushing
-                        }
-                        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/20 px-2.5 py-1 text-[11px] font-medium text-emerald-200/75 transition hover:border-emerald-300/50 hover:bg-emerald-400/[0.06] hover:text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300/25 disabled:cursor-not-allowed disabled:opacity-35"
-                      >
-                        <GitCommitHorizontal size={12} /> Commit
-                      </button>
                     </div>
                   </div>
                   <textarea
@@ -511,73 +439,6 @@ export default function CommitGenerator({
                     value={variant.message}
                     className="min-h-36 w-full resize-y border border-white/[0.08] bg-[#0d0d0a] p-3 font-mono text-[11px] leading-5 text-emerald-100/80 outline-none"
                   />
-                  {editingCommit?.title === variant.title && (
-                    <div className="mt-3 border-t border-white/[0.08] pt-3">
-                      <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
-                        Review and edit before committing
-                      </label>
-                      <textarea
-                        autoFocus
-                        value={editingCommit.message}
-                        onChange={(event) =>
-                          setEditingCommit((current) =>
-                            current
-                              ? { ...current, message: event.target.value }
-                              : current,
-                          )
-                        }
-                        rows={4}
-                        className="w-full resize-y border border-white/[0.1] bg-[#0d0d0a] p-3 font-mono text-xs leading-5 text-white outline-none focus:border-[var(--accent)]/50"
-                      />
-                      <div className="mt-2 flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditingCommit(null)}
-                          disabled={committing}
-                          className="px-3 py-1.5 text-[11px] text-white/45 hover:text-white disabled:opacity-40"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void commitMessage()}
-                          disabled={committing || !editingCommit.message.trim()}
-                          className="inline-flex items-center gap-1.5 bg-emerald-400 px-3 py-1.5 text-[11px] font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          {committing ? (
-                            <Loader2 size={12} className="animate-spin" />
-                          ) : (
-                            <GitCommitHorizontal size={12} />
-                          )}
-                          {committing ? "Committing…" : "Commit changes"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {committedVariant === variant.title && (
-                    <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-3">
-                      <span className="text-[11px] text-emerald-200/70">
-                        Commit created locally
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => void pushCommit(variant.title)}
-                        disabled={pushing || pushedVariant === variant.title}
-                        className="inline-flex items-center gap-1.5 border border-sky-300/25 px-3 py-1.5 text-[11px] font-semibold text-sky-200 transition hover:border-sky-200/60 hover:bg-sky-300/10 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {pushing ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <Upload size={12} />
-                        )}
-                        {pushing
-                          ? "Pushing…"
-                          : pushedVariant === variant.title
-                            ? "Pushed"
-                            : "Push"}
-                      </button>
-                    </div>
-                  )}
                 </article>
               ))}
             </div>
@@ -636,19 +497,6 @@ export default function CommitGenerator({
           onDismiss={() => setShowKeyModal(false)}
         />
       )}
-      <ConfirmModal
-        open={pendingCommit !== null}
-        onClose={() => setPendingCommit(null)}
-        onConfirm={() => {
-          if (pendingCommit) setEditingCommit(pendingCommit);
-          setPendingCommit(null);
-        }}
-        title="Create this Git commit?"
-        description={`This will prepare “${pendingCommit?.title ?? "selected variant"}” for the selected local repository. You can review and edit the message before the commit is created.`}
-        confirmText="Yes, continue"
-        cancelText="Cancel"
-        variant="warning"
-      />
     </ToolCard>
   );
 }
