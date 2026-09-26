@@ -52,6 +52,14 @@ export default function ChatMessages({
                 }
               >
                 <MarkdownContent content={message.content} />
+                {message.images?.map((image, imageIndex) => (
+                  <img
+                    key={`${message.id ?? index}-${imageIndex}`}
+                    src={image.url}
+                    alt={image.name}
+                    className="mt-2 max-h-64 max-w-full rounded-lg border border-white/10 object-contain"
+                  />
+                ))}
                 {message.model && (
                   <p className="mt-2 text-[10px] text-white/30">
                     {models.find((model) => model.id === message.model)?.name ??

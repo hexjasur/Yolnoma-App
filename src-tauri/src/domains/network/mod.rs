@@ -4,6 +4,217 @@ use std::time::{Duration, Instant};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 
+const DNS_RECORD_TYPES: &[(&str, u16)] = &[
+    ("A", 1),
+    ("AAAA", 28),
+    ("CNAME", 5),
+    ("MX", 15),
+    ("NS", 2),
+    ("TXT", 16),
+    ("CAA", 257),
+    ("SOA", 6),
+];
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsRecord {
+    pub name: String,
+    pub record_type: String,
+    pub ttl: u32,
+    pub data: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsQueryResult {
+    pub resolver: String,
+    pub record_type: String,
+    pub status: String,
+    pub status_code: u8,
+    pub duration_ms: u64,
+    pub answers: Vec<DnsRecord>,
+    pub error: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct DohResponse {
+    status: u8,
+    #[serde(default)]
+    answer: Vec<DohAnswer>,
+}
+
+#[derive(Deserialize)]
+struct DohAnswer {
+    name: String,
+    #[serde(rename = "type")]
+    type_code: u16,
+    #[serde(rename = "TTL")]
+    ttl: u32,
+    data: String,
+}
+
+fn dns_status_name(code: u8) -> &'static str {
+    match code {
+        0 => "NOERROR",
+        1 => "FORMERR",
+        2 => "SERVFAIL",
+        3 => "NXDOMAIN",
+        4 => "NOTIMP",
+        5 => "REFUSED",
+        _ => "UNKNOWN",
+    }
+}
+
+fn dns_record_type_name(code: u16) -> &'static str {
+    DNS_RECORD_TYPES
+        .iter()
+        .find_map(|(name, value)| (*value == code).then_some(*name))
+        .unwrap_or("UNKNOWN")
+}
+
+fn validate_dns_domain(value: &str) -> Result<String, String> {
+    let domain = value.trim().trim_end_matches('.').to_ascii_lowercase();
+    if domain.is_empty() || domain.len() > 253 {
+        return Err("Enter a valid domain name.".to_string());
+    }
+    if domain.split('.').any(|label| {
+        label.is_empty()
+            || label.len() > 63
+            || label.starts_with('-')
+            || label.ends_with('-')
+            || !label.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+    }) {
+        return Err("Domain names may only contain letters, numbers, and hyphens.".to_string());
+    }
+    Ok(domain)
+}
+
+async fn query_dns_record(
+    client: reqwest::Client,
+    resolver: String,
+    endpoint: String,
+    domain: String,
+    record_type: String,
+) -> DnsQueryResult {
+    let started = Instant::now();
+    let response = client
+        .get(endpoint)
+        .query(&[("name", domain.as_str()), ("type", record_type.as_str())])
+        .header(reqwest::header::ACCEPT, "application/dns-json")
+        .send()
+        .await;
+    let response = match response {
+        Ok(response) if response.status().is_success() => response,
+        Ok(response) => {
+            return DnsQueryResult {
+                resolver,
+                record_type,
+                status: "ERROR".to_string(),
+                status_code: 0,
+                duration_ms: started.elapsed().as_millis() as u64,
+                answers: Vec::new(),
+                error: Some(format!("DNS resolver returned HTTP {}.", response.status())),
+            };
+        }
+        Err(error) => {
+            return DnsQueryResult {
+                resolver,
+                record_type,
+                status: "ERROR".to_string(),
+                status_code: 0,
+                duration_ms: started.elapsed().as_millis() as u64,
+                answers: Vec::new(),
+                error: Some(error.to_string()),
+            };
+        }
+    };
+
+    match response.json::<DohResponse>().await {
+        Ok(payload) => DnsQueryResult {
+            resolver,
+            record_type,
+            status: dns_status_name(payload.status).to_string(),
+            status_code: payload.status,
+            duration_ms: started.elapsed().as_millis() as u64,
+            answers: payload
+                .answer
+                .into_iter()
+                .map(|answer| DnsRecord {
+                    name: answer.name,
+                    record_type: dns_record_type_name(answer.type_code).to_string(),
+                    ttl: answer.ttl,
+                    data: answer.data,
+                })
+                .collect(),
+            error: None,
+        },
+        Err(error) => DnsQueryResult {
+            resolver,
+            record_type,
+            status: "ERROR".to_string(),
+            status_code: 0,
+            duration_ms: started.elapsed().as_millis() as u64,
+            answers: Vec::new(),
+            error: Some(format!("Could not parse DNS response: {error}")),
+        },
+    }
+}
+
+#[tauri::command]
+pub async fn diagnose_dns(
+    domain: String,
+    record_types: Vec<String>,
+    resolver: String,
+) -> Result<Vec<DnsQueryResult>, String> {
+    let domain = validate_dns_domain(&domain)?;
+    let (resolver_name, endpoint) = match resolver.as_str() {
+        "cloudflare" => ("Cloudflare", "https://cloudflare-dns.com/dns-query"),
+        "google" => ("Google", "https://dns.google/resolve"),
+        _ => return Err("Choose Cloudflare or Google DNS.".to_string()),
+    };
+    let mut selected_types = Vec::new();
+    for record_type in record_types {
+        let record_type = record_type.trim().to_ascii_uppercase();
+        if !DNS_RECORD_TYPES.iter().any(|(name, _)| *name == record_type) {
+            return Err(format!("Unsupported DNS record type: {record_type}"));
+        }
+        if !selected_types.contains(&record_type) {
+            selected_types.push(record_type);
+        }
+    }
+    if selected_types.is_empty() {
+        return Err("Select at least one DNS record type.".to_string());
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(8))
+        .build()
+        .map_err(|error| format!("Could not create DNS client: {error}"))?;
+    let mut queries = tokio::task::JoinSet::new();
+    for record_type in selected_types {
+        queries.spawn(query_dns_record(
+            client.clone(),
+            resolver_name.to_string(),
+            endpoint.to_string(),
+            domain.clone(),
+            record_type,
+        ));
+    }
+
+    let mut results = Vec::new();
+    while let Some(result) = queries.join_next().await {
+        results.push(result.map_err(|error| format!("DNS query task failed: {error}"))?);
+    }
+    results.sort_by_key(|result| {
+        DNS_RECORD_TYPES
+            .iter()
+            .position(|(name, _)| *name == result.record_type)
+            .unwrap_or(usize::MAX)
+    });
+    Ok(results)
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PortScanResult {
     pub port: u16,

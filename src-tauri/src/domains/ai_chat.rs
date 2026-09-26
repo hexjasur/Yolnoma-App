@@ -7,9 +7,18 @@ use std::path::{Path, PathBuf};
 pub struct ChatSessionMessage {
     pub role: String,
     pub content: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub images: Vec<ChatSessionImage>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatSessionImage {
+    pub url: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,4 +149,13 @@ mod tests {
     use super::*;
     #[test]
     fn generated_ids_are_safe() { let id = make_id(); assert_eq!(id.len(), 32); assert!(validate_session_id(&id).is_ok()); }
+
+    #[test]
+    fn legacy_messages_deserialize_without_images() {
+        let message: ChatSessionMessage = serde_json::from_str(
+            r#"{"role":"user","content":"hello","createdAt":"1"}"#,
+        )
+        .unwrap();
+        assert!(message.images.is_empty());
+    }
 }
