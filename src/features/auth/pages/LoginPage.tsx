@@ -60,7 +60,7 @@ export default function LoginPage({
       onClosePreview?.();
       return;
     }
-    navigate(from === "/login" ? "/" : from, { replace: true });
+    navigate(from === "/login" ? "/dashboard" : from, { replace: true });
   };
 
   const handleBackendChange = (url: string) => {

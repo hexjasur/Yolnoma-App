@@ -66,10 +66,7 @@ export async function refreshToken(): Promise<string | null> {
 
   refreshInFlight = (async () => {
     const storedRefreshToken = localStorage.getItem('yolnoma_refresh_token');
-    if (!storedRefreshToken) {
-      handleAuthFailure('No refresh token available');
-      return null;
-    }
+    if (!storedRefreshToken) return null;
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${storedRefreshToken}`,
@@ -157,9 +154,6 @@ function handleAuthFailure(reason: string) {
       useAuthStore.setState({ isAuthenticated: false, user: null });
     }
   } catch {}
-  if (window.location.hash !== '#/login') {
-    window.location.hash = '#/login';
-  }
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -192,7 +186,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     let response = await sendRequest(url, options, headers);
 
     // 2. Reactive 401 Interceptor: If backend returns 401, refresh token and retry once
-    if (response.status === 401 && !options.skipAuth) {
+    if (
+      response.status === 401 &&
+      !options.skipAuth &&
+      Boolean(localStorage.getItem('yolnoma_refresh_token'))
+    ) {
       const newAccessToken = await refreshToken();
       if (!newAccessToken) {
         throw new AppError('Your session has expired. Please sign in again.', { status: 401 });
