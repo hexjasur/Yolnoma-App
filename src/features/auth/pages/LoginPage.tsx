@@ -51,6 +51,18 @@ export default function LoginPage({
 
   const from = (location.state as any)?.from?.pathname || "/";
 
+  const handleContinueAsGuest = () => {
+    setError("");
+    setSuccessMsg("");
+    // Turbo opens this page as an isolated preview. Guest continuation must
+    // never touch the auth service or change the real application route.
+    if (preview) {
+      onClosePreview?.();
+      return;
+    }
+    navigate(from === "/login" ? "/" : from, { replace: true });
+  };
+
   const handleBackendChange = (url: string) => {
     setSelectedBackend(url);
     setBackendUrl(url);
@@ -311,10 +323,10 @@ export default function LoginPage({
               </span>
             </div>
             <h1 className="font-serif text-3xl font-medium tracking-tight mb-2 text-[#F2EDE6]">
-              Login
+              {t("auth.loginTitle")}
             </h1>
             <p className="text-white/45 text-xs leading-relaxed max-w-xs mx-auto">
-              Sign in with your Google account to get the most out of it.
+              {t("auth.loginDescription")}
             </p>
           </div>
 
@@ -434,6 +446,29 @@ export default function LoginPage({
                 </form>
               )}
             </div>
+            <div className="relative flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-white/[0.08]" />
+              <span className="text-[10px] uppercase tracking-[0.16em] text-white/25">
+                {t("auth.or")}
+              </span>
+              <div className="h-px flex-1 bg-white/[0.08]" />
+            </div>
+            <button
+              type="button"
+              onClick={handleContinueAsGuest}
+              disabled={isLoading || isWaitingForBrowser}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/[0.12]
+                         bg-white/[0.03] py-3 px-4 text-sm font-medium text-white/80
+                         hover:border-[#D97757]/50 hover:bg-[#D97757]/10 hover:text-white
+                         active:scale-[0.99] transition-all duration-300
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>{t("auth.continueAsGuest")}</span>
+              <ArrowRight size={14} />
+            </button>
+            <p className="text-center text-[11px] leading-relaxed text-white/30">
+              {t("auth.guestDescription")}
+            </p>
           </div>
 
           {import.meta.env.DEV && (

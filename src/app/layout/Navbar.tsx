@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   Globe,
   Settings,
+  CircleUser,
+  LogIn,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -180,6 +182,25 @@ export default function Navbar() {
           aria-label={t("navbar.settings")}
         >
           <Settings size={15} strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate(user ? "/profile" : "/login")}
+          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/[0.10] bg-white/[0.04] text-white/55 transition-colors hover:border-[#D97757]/50 hover:bg-[#D97757]/10 hover:text-white"
+          title={user ? t("navigation.routes.profile") : t("auth.login")}
+          aria-label={user ? t("navigation.routes.profile") : t("auth.login")}
+        >
+          {user?.avatarUrl || user?.avatar_url ? (
+            <img
+              src={user.avatarUrl || user.avatar_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : user ? (
+            <CircleUser size={17} strokeWidth={1.75} />
+          ) : (
+            <LogIn size={16} strokeWidth={1.75} />
+          )}
         </button>
       </div>
     </header>

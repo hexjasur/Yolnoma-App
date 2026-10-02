@@ -158,7 +158,7 @@ const roleGuard = (page: string, message: string): RouteRoleGuard => ({
 export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   {
     id: "dashboard",
-    path: "/",
+    path: "/dashboard",
     component: DashboardPage,
     mobile: true,
     label: "Dashboard",

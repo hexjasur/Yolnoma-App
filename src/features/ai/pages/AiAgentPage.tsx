@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAuth } from "@/features/auth/AuthContext";
+import { getStorageScope } from "@/shared/hooks/useAccountStorage";
 import {
   getApiKey,
   saveApiKey,
@@ -445,7 +446,7 @@ export default function AiAgentPage() {
   }, [loadProjectByPath]);
 
   useEffect(() => {
-    void getApiKey(user?.id ?? "").then((k) => {
+    void getApiKey(getStorageScope(user?.id)).then((k) => {
       setApiKey(k ?? "");
       setDraftKey(k ?? "");
     });
@@ -864,7 +865,7 @@ export default function AiAgentPage() {
 
   const saveKey = async () => {
     const clean = draftKey.trim();
-    await saveApiKey(user?.id ?? "", clean);
+    await saveApiKey(getStorageScope(user?.id), clean);
     setApiKey(clean);
     setAgentError("");
   };
