@@ -65,7 +65,9 @@
   },
   "language": {
     "english": "English",
-    "russian": "Русский"
+    "russian": "Русский",
+    "spanish": "Español (test)",
+    "chinese": "中文 (test)"
   },
   "appShell": {
     "loading": "Opening tool",
@@ -1168,6 +1170,9 @@
     "emailPlaceholder": "you@example.com",
     "passwordPlaceholder": "Enter your password",
     "login": "Sign in",
+    "or": "or",
+    "continueAsGuest": "Continue without an account",
+    "guestDescription": "Use public tools without signing in. Sign in later to unlock your profile and private features.",
     "loggingIn": "Signing in…",
     "logout": "Sign out",
     "sessionManagement": "Session management",
@@ -1290,6 +1295,8 @@
     "namePlaceholder": "Your name",
     "email": "Email",
     "emailPlaceholder": "you@example.com",
+    "emailAutoFilled": "Your account email is filled in and locked.",
+    "emailGuestHint": "Enter your email so we can follow up.",
     "message": "Message",
     "messagePlaceholder": "Write your feedback…",
     "send": "Send feedback",

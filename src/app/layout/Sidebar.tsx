@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { getVersion } from "@tauri-apps/api/app";
 import {
   LayoutGrid,
   Drama,
   Film,
+  LogIn,
   LogOut,
   Users,
   CircleUser,
@@ -56,6 +57,31 @@ const links: SidebarLink[] = getNavigationRoutes().map((route) => ({
   status: route.status ?? "stable",
   navGroup: route.navGroup ?? "tools",
 }));
+const GUEST_NAVIGATION = new Set([
+  "dashboard",
+  "currency",
+  "bg-remover",
+  "archive-explorer",
+  "ai-chat-2b-model",
+  "ai-tools",
+  "cleaner",
+  "crosshair-overlay",
+  "steam-idler",
+  "steam-sam",
+  "steam-review",
+  "developer-tools",
+  "json-viewer",
+  "css-tools",
+  "image",
+  "start-up-apps",
+  "git",
+  "video-downloader",
+  "port-scanner",
+  "dns-records",
+  "ai-chat-2b-model",
+  "feedback",
+  "world-3d",
+]);
 
 const SIDEBAR_WIDTH_KEY = "yolnoma_sidebar_width";
 const SIDEBAR_COLLAPSED_KEY = "yolnoma_sidebar_collapsed";
@@ -81,6 +107,7 @@ export default function Sidebar() {
   const [isResizing, setIsResizing] = useState(false);
   const resizeStart = useRef({ pointerX: 0, width: DEFAULT_SIDEBAR_WIDTH });
   const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const { t } = useTranslation("common");
   const { pinnedTools, togglePinnedTool } = usePinnedTools();
   const { idlingCount, isCrosshairActive } = useActiveToolsStatus();
@@ -141,10 +168,11 @@ export default function Sidebar() {
     setIsResizing(true);
   };
 
-  // Filter links based on user's role
-  const filteredLinks = links.filter((link) =>
-    canAccessPage(user?.role, link.name),
-  );
+  // Guest users can discover public tools; account-owned links stay hidden
+  // until a user signs in.
+  const filteredLinks = user
+    ? links.filter((link) => canAccessPage(user.role, link.name))
+    : links.filter((link) => GUEST_NAVIGATION.has(link.name));
   const navigationGroups = [
     {
       key: "home",
@@ -465,19 +493,41 @@ export default function Sidebar() {
         <div className="flex-1" /> {/* Spacer */}
         {/* Separator */}
         <div className="h-px bg-[var(--border)] my-3 mx-2" />
-        {/* Logout Button */}
+        {/* Authentication CTA */}
         <button
-          onClick={() => setShowLogoutConfirm(true)}
+          onClick={() =>
+            user ? setShowLogoutConfirm(true) : navigate("/login")
+          }
           className={`group relative w-full flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-colors duration-150 cursor-pointer ${isCollapsed ? "justify-center px-2" : "px-4"}`}
-          title={isCollapsed ? t("sidebar.signOut") : undefined}
-          aria-label={isCollapsed ? t("sidebar.signOut") : undefined}
+          title={
+            isCollapsed
+              ? user
+                ? t("sidebar.signOut")
+                : t("auth.login")
+              : undefined
+          }
+          aria-label={
+            isCollapsed
+              ? user
+                ? t("sidebar.signOut")
+                : t("auth.login")
+              : undefined
+          }
         >
-          <LogOut
-            size={17}
-            strokeWidth={1.75}
-            className="text-red-400/60 group-hover:text-red-400"
-          />
-          {!isCollapsed && t("sidebar.signOut")}
+          {user ? (
+            <LogOut
+              size={17}
+              strokeWidth={1.75}
+              className="text-red-400/60 group-hover:text-red-400"
+            />
+          ) : (
+            <LogIn
+              size={17}
+              strokeWidth={1.75}
+              className="text-[var(--accent)]/70 group-hover:text-[var(--accent)]"
+            />
+          )}
+          {!isCollapsed && (user ? t("sidebar.signOut") : t("auth.login"))}
         </button>
       </nav>
 
@@ -525,6 +575,7 @@ export default function Sidebar() {
         onConfirm={async () => {
           setShowLogoutConfirm(false);
           await logout();
+          navigate("/dashboard", { replace: true });
         }}
         title={t("sidebar.signOutTitle")}
         description={t("sidebar.signOutDescription")}

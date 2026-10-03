@@ -10,6 +10,16 @@
       "code": "ru",
       "label": "Russian",
       "nativeLabel": "Русский"
+    },
+    {
+      "code": "es",
+      "label": "Spanish (test)",
+      "nativeLabel": "Español (test)"
+    },
+    {
+      "code": "zh",
+      "label": "Chinese (test)",
+      "nativeLabel": "中文 (test)"
     }
   ]
 }

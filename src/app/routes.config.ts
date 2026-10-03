@@ -18,9 +18,9 @@ import {
   WandSparkles,
   Palette,
   Trees,
-	  Rocket,
-	} from "lucide-react";
-	import { isAndroidApp } from "@/shared/lib/platform";
+  Rocket,
+} from "lucide-react";
+import { isAndroidApp } from "@/shared/lib/platform";
 
 export type RouteStatus = "stable" | "dev" | "test";
 export type RouteComponent = ComponentType;
@@ -124,9 +124,9 @@ const DnsRecordsPage = lazyPage(
 const ArchiveExplorerPage = lazyPage(
   () => import("@/features/archive-explorer/pages/ArchiveExplorerPage"),
 );
-	const AiChatPage = lazyPage(() => import("@/features/ai/pages/AiChatPage"));
-	const AiAgentPage = lazyPage(() => import("@/features/ai/pages/AiAgentPage"));
-	const World3DPage = lazyPage(
+const AiChatPage = lazyPage(() => import("@/features/ai/pages/AiChatPage"));
+const AiAgentPage = lazyPage(() => import("@/features/ai/pages/AiAgentPage"));
+const World3DPage = lazyPage(
   () => import("@/features/world3d/pages/World3DPage"),
 );
 const DeveloperToolsPage = lazyPage(
@@ -158,7 +158,7 @@ const roleGuard = (page: string, message: string): RouteRoleGuard => ({
 export const ROUTE_CONFIG: readonly RouteDefinition[] = [
   {
     id: "dashboard",
-    path: "/",
+    path: "/dashboard",
     component: DashboardPage,
     mobile: true,
     label: "Dashboard",
@@ -245,7 +245,16 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
     icon: Bot,
     navGroup: "workspace",
   },
-  { id: "settings", path: "/settings", component: SettingsPage, mobile: true },
+  {
+    id: "settings",
+    path: "/settings",
+    component: SettingsPage,
+    mobile: true,
+    guard: roleGuard(
+      "settings",
+      "Access restricted: Settings are available to signed-in users only.",
+    ),
+  },
   {
     id: "marketplace",
     path: "/marketplace",
@@ -390,8 +399,8 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
     navGroup: "tools",
     pinnable: true,
   },
-	{
-	  id: "steam-sam",
+  {
+    id: "steam-sam",
     path: "/tools/steam/sam",
     component: SteamSamPage,
     label: "Steam / SAM",

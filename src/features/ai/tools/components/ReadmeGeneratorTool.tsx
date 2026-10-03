@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getApiKey, saveApiKey } from "@/features/ai/storage";
+import { getStorageScope } from "@/shared/hooks/useAccountStorage";
 import {
   fetchOpenRouterModels,
   getShortModelName,
@@ -291,7 +292,7 @@ export default function ReadmeGeneratorTool() {
       setContext(
         `PROJECT NAME: ${selected.split(/[\\/]/).filter(Boolean).pop() || "Project"}\nPROJECT ROOT: ${selected}\n\nFILE TREE:\n${tree}\n\nIMAGE / LOGO ASSETS (use the likely logo path and dimensions in the README when relevant):\n${assetDetails.join("\n") || scannedImageFiles.join("\n") || "No image assets found"}\n\nTEXT FILE SNAPSHOTS:${snapshots.join("")}`,
       );
-      const key = await getApiKey(user?.id ?? "");
+      const key = await getApiKey(getStorageScope(user?.id));
       setApiKey(key ?? "");
       setDraftKey(key ?? "");
       if (key) {
@@ -410,7 +411,7 @@ export default function ReadmeGeneratorTool() {
   const saveKey = async () => {
     const cleanKey = draftKey.trim();
     if (!cleanKey) return;
-    await saveApiKey(user?.id ?? "", cleanKey);
+    await saveApiKey(getStorageScope(user?.id), cleanKey);
     setApiKey(cleanKey);
     setShowKeyModal(false);
     setError("");

@@ -65,7 +65,9 @@
   },
   "language": {
     "english": "English",
-    "russian": "Русский"
+    "russian": "Русский",
+    "spanish": "Испанский (test)",
+    "chinese": "Китайский (test)"
   },
   "appShell": {
     "loading": "Открытие инструмента",
@@ -1168,6 +1170,9 @@
     "emailPlaceholder": "you@example.com",
     "passwordPlaceholder": "Введите пароль",
     "login": "Войти",
+    "or": "или",
+    "continueAsGuest": "Продолжить без аккаунта",
+    "guestDescription": "Используйте публичные инструменты без входа. Войдите позже, чтобы открыть профиль и приватные функции.",
     "loggingIn": "Выполняется вход…",
     "logout": "Выйти",
     "sessionManagement": "Управление сеансами",
@@ -1290,6 +1295,8 @@
     "namePlaceholder": "Ваше имя",
     "email": "Электронная почта",
     "emailPlaceholder": "you@example.com",
+    "emailAutoFilled": "Электронная почта аккаунта заполнена и заблокирована.",
+    "emailGuestHint": "Введите электронную почту, чтобы мы могли ответить.",
     "message": "Сообщение",
     "messagePlaceholder": "Напишите отзыв…",
     "send": "Отправить отзыв",

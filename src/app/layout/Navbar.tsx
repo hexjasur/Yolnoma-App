@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   Globe,
   Settings,
+  CircleUser,
+  LogIn,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -163,23 +165,44 @@ export default function Navbar() {
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold">
             <span>TESTER</span>
           </div>
-        ) : (
+        ) : user ? (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/4 border border-white/8 text-white/60 text-xs font-medium">
             <span>USER</span>
           </div>
-        )}
+        ) : null}
 
         <LanguageSwitcher />
 
-        {/* /Settings Button */}
+        {/* /Settings Button - Only visible for signed-in users */}
+        {user && (
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/6 transition-colors"
+            title={t("navbar.settings")}
+            aria-label={t("navbar.settings")}
+          >
+            <Settings size={15} strokeWidth={1.75} />
+          </button>
+        )}
         <button
           type="button"
-          onClick={() => navigate("/settings")}
-          className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/6 transition-colors"
-          title={t("navbar.settings")}
-          aria-label={t("navbar.settings")}
+          onClick={() => navigate(user ? "/profile" : "/login")}
+          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/[0.10] bg-white/[0.04] text-white/55 transition-colors hover:border-[#D97757]/50 hover:bg-[#D97757]/10 hover:text-white"
+          title={user ? t("navigation.routes.profile") : t("auth.login")}
+          aria-label={user ? t("navigation.routes.profile") : t("auth.login")}
         >
-          <Settings size={15} strokeWidth={1.75} />
+          {user?.avatarUrl || user?.avatar_url ? (
+            <img
+              src={user.avatarUrl || user.avatar_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : user ? (
+            <CircleUser size={17} strokeWidth={1.75} />
+          ) : (
+            <LogIn size={16} strokeWidth={1.75} />
+          )}
         </button>
       </div>
     </header>

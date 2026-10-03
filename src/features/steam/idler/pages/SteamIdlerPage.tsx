@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { memo, useState, useEffect, useCallback, useRef } from "react";
+import { memo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { SteamStatusBadge } from "../components/SteamStatusBadge";
 import Pagination from "@/shared/ui/Pagination";
@@ -14,6 +14,7 @@ import {
   type SteamProfile,
   type SteamUser,
 } from "../../api/steamApi";
+import { useIdlingStore } from "@/shared/stores/idlingStore";
 import {
   Gamepad2,
   Play,
@@ -375,7 +376,14 @@ export default function SteamIdlerPage() {
   const [accounts, setAccounts] = useState<SteamUser[]>([]);
   const [selectedSteamId, setSelectedSteamId] = useState("");
   const [games, setGames] = useState<SteamGame[]>([]);
-  const [idlingIds, setIdlingIds] = useState<Set<number>>(new Set());
+  const {
+    idlingIds,
+    startTimes,
+    syncIdleState,
+    setAppIds,
+    stopOne: storeStopOne,
+    stopAll: storeStopAll,
+  } = useIdlingStore();
   const [favorites, setFavorites] = useState<Set<number>>(getFavorites);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<Tab>("all");
@@ -398,7 +406,6 @@ export default function SteamIdlerPage() {
 
   // ── Timers
   const [tick, setTick] = useState(0);
-  const idleStartTimesRef = useRef<Map<number, number>>(new Map());
   const debouncedSearch = useDebouncedValue(search, 220);
 
   const activeAccount =
@@ -449,27 +456,11 @@ export default function SteamIdlerPage() {
 
   const refreshIdleState = useCallback(async () => {
     try {
-      const ids = await steamApi.getIdleState();
-      const idSet = new Set(ids);
-      const now = Date.now();
-
-      ids.forEach((id) => {
-        if (!idleStartTimesRef.current.has(id)) {
-          idleStartTimesRef.current.set(id, now);
-        }
-      });
-
-      for (const id of idleStartTimesRef.current.keys()) {
-        if (!idSet.has(id)) {
-          idleStartTimesRef.current.delete(id);
-        }
-      }
-
-      setIdlingIds(idSet);
+      await syncIdleState();
     } catch {
       // ignore
     }
-  }, []);
+  }, [syncIdleState]);
 
   useEffect(() => {
     checkSteam();
@@ -585,8 +576,7 @@ export default function SteamIdlerPage() {
     setError(null);
     try {
       const result = await steamApi.startIdling(targets);
-      setIdlingIds(new Set(result.running));
-      await refreshIdleState();
+      setAppIds(result.running);
       if (result.failed.length > 0) {
         setError(
           `${result.failed.length} games failed to start idling. Please make sure Steam is running.`,
@@ -601,13 +591,7 @@ export default function SteamIdlerPage() {
 
   const stopOne = async (appId: number) => {
     try {
-      await steamApi.stopIdling(appId);
-      await refreshIdleState();
-      setIdlingIds((prev) => {
-        const n = new Set(prev);
-        n.delete(appId);
-        return n;
-      });
+      await storeStopOne(appId);
     } catch (e: unknown) {
       setError(String(e));
     }
@@ -615,9 +599,7 @@ export default function SteamIdlerPage() {
 
   const stopAll = async () => {
     try {
-      await steamApi.stopAllIdling();
-      await refreshIdleState();
-      setIdlingIds(new Set());
+      await storeStopAll();
     } catch (e: unknown) {
       setError(String(e));
     }
@@ -1305,7 +1287,7 @@ export default function SteamIdlerPage() {
                   game={game}
                   isIdling={idlingIds.has(game.appId)}
                   isFavorite={favorites.has(game.appId)}
-                  idleStartTime={idleStartTimesRef.current.get(game.appId)}
+                  idleStartTime={startTimes[game.appId]}
                   tick={tick}
                   onToggleFavorite={toggleFavorite}
                   onStop={stopOne}

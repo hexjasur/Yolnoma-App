@@ -2,6 +2,20 @@
 
 All notable Yolnoma releases are documented here. This file is the source of truth for updater release notes.
 
+## [1.2.7] - 2026-10-03
+
+### Added
+
+- Spanish (`es`) and Chinese (`zh`) preview localizations with navigation, sidebar, navbar, and dashboard translations.
+
+### Improved
+
+- Persistent Steam idling state and runtime timer across page navigation through a centralized store.
+
+### Fixed
+
+- Enabled Steam Idler visibility in sidebar for guest users and restricted Settings page access to authenticated accounts.
+
 ## [1.2.6] - 2026-10-01
 
 ### Improved

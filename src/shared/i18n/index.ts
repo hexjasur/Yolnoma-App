@@ -3,6 +3,8 @@ import { initReactI18next } from "react-i18next";
 import localizationConfig from "@/config/localization.json";
 import enCommon from "./locales/en/common.json";
 import ruCommon from "./locales/ru/common.json";
+import esCommon from "./locales/es/common.json";
+import zhCommon from "./locales/zh/common.json";
 
 export type AppLanguage =
   (typeof localizationConfig.supportedLanguages)[number]["code"];
@@ -32,6 +34,8 @@ void i18n.use(initReactI18next).init({
   resources: {
     en: { common: enCommon },
     ru: { common: ruCommon },
+    es: { common: esCommon },
+    zh: { common: zhCommon },
   },
   lng: getInitialLanguage(),
   fallbackLng: localizationConfig.defaultLanguage,

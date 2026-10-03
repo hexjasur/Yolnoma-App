@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactElement, type ReactNode } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "@/app/layout/Layout";
 import ProtectedLayout from "@/app/layout/ProtectedLayout";
@@ -76,6 +76,7 @@ export default function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/session-limit" element={<SessionManagementPage />} />
       <Route

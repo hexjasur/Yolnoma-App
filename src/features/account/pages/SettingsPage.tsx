@@ -70,6 +70,10 @@ export default function SettingsPage() {
   const [showTerminateAllConfirm, setShowTerminateAllConfirm] = useState(false);
 
   const loadSessions = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -177,6 +181,10 @@ export default function SettingsPage() {
     }
     return Monitor;
   };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20 select-none">

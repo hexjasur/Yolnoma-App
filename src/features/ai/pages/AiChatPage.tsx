@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/core";
 import {
   Bot,
   KeyRound,
@@ -15,6 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { Button } from "@/shared/ui";
+import { getStorageScope } from "@/shared/hooks/useAccountStorage";
 import { useAuth } from "@/features/auth/AuthContext";
 import {
   fetchOpenRouterModels,
@@ -51,6 +51,7 @@ import {
   loadChatSessions,
   migrateLegacyChat,
   persistChatSession,
+  deleteChatSession,
 } from "../storage";
 
 export default function AiChatPage() {
@@ -109,7 +110,7 @@ export default function AiChatPage() {
   useEffect(() => {
     setStorageReady(false);
 
-    const userId = user?.id ?? "";
+    const userId = getStorageScope(user?.id);
     getApiKey(userId).then((key) => {
       const accountKey = key ?? "";
       setApiKey(accountKey);
@@ -120,8 +121,6 @@ export default function AiChatPage() {
       );
       setStorageReady(true);
     });
-
-    if (!userId) return;
 
     void (async () => {
       let loaded = await loadChatSessions(user);
@@ -162,7 +161,7 @@ export default function AiChatPage() {
   // this component made itself is skipped, because knownSessionIdRef already
   // matches it.
   useEffect(() => {
-    if (!storageReady || !user) return;
+    if (!storageReady) return;
     if (!requestedSessionId) return;
     if (requestedSessionId === knownSessionIdRef.current) return;
     if (requestedSessionId === activeSession?.id) {
@@ -174,7 +173,7 @@ export default function AiChatPage() {
   }, [requestedSessionId, storageReady]);
 
   useEffect(() => {
-    if (!storageReady || !activeSession || !user) return;
+    if (!storageReady || !activeSession) return;
     const messageSignature = JSON.stringify(messages);
     if (hydratedMessagesRef.current === messageSignature) {
       hydratedMessagesRef.current = null;
@@ -304,7 +303,7 @@ export default function AiChatPage() {
 
   const saveKey = async () => {
     const cleanKey = draftKey.trim();
-    const userId = user?.id ?? "";
+    const userId = getStorageScope(user?.id);
     if (cleanKey) {
       await saveApiKey(userId, cleanKey);
       setApiKey(cleanKey);
@@ -372,7 +371,7 @@ export default function AiChatPage() {
   };
 
   const selectSession = async (id: string) => {
-    if (!user || id === activeSession?.id) return;
+    if (id === activeSession?.id) return;
     knownSessionIdRef.current = id;
     const session = await loadChatSession(user, id);
     setActiveSession(session);
@@ -386,7 +385,7 @@ export default function AiChatPage() {
   };
 
   const saveSessionTitle = async (id: string) => {
-    if (!user || !editingTitle.trim()) return;
+    if (!editingTitle.trim()) return;
     const target =
       activeSession?.id === id
         ? activeSession
@@ -403,8 +402,8 @@ export default function AiChatPage() {
   };
 
   const deleteSession = async (id: string) => {
-    if (!user || !window.confirm("Delete this chat session?")) return;
-    await invoke("delete_ai_chat_session", { userId: user.id, sessionId: id });
+    if (!window.confirm("Delete this chat session?")) return;
+    await deleteChatSession(user, id);
     const remaining = sessions.filter((session) => session.id !== id);
     if (activeSession?.id === id) {
       knownSessionIdRef.current = null;
@@ -948,7 +947,7 @@ export default function AiChatPage() {
               aria-label={t("ai.removeKey")}
               onClick={async () => {
                 if (!window.confirm(t("ai.removeConfirm"))) return;
-                await removeApiKey(user?.id ?? "");
+                await removeApiKey(getStorageScope(user?.id));
                 setApiKey("");
                 setDraftKey("");
                 setShowKeyModal(true);

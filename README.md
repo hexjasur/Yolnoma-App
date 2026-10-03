@@ -7,6 +7,11 @@
     <a href="https://github.com/hexjasur/Yolnoma-App/issues">Issues</a> ·
     <a href="CONTRIBUTING.md">Contributing</a>
   </p>
+  <p align="center">
+    <a href="README.md"><b>English</b></a> ·
+    <a href="docs/locales/README.ru.md">Русский</a> ·
+    <a href="docs/locales/README.zh.md">中文</a>
+  </p>
 </div> <p align="center">
   <img src=".github/images/brand.jpg" alt="Yolnoma desktop workspace" width="100%" />
 </p>
@@ -60,7 +65,7 @@ The high-level architecture is documented in [ARCHITECTURE.md](docs/ARCHITECTURE
 ## Table of contents
 
 - [Highlights](#highlights)
-- [Tools and features](#tools-and-features)
+- [Supported languages](#supported-languages)
 - [Screenshots](#screenshots)
 - [Requirements](#requirements)
 - [Getting started](#getting-started)
@@ -78,9 +83,19 @@ The high-level architecture is documented in [ARCHITECTURE.md](docs/ARCHITECTURE
 
 - 🖥️ **One desktop app** for developer, media, and everyday utilities.
 - ⚡ **Fast native shell** built with Tauri, React, and Bun.
+- 🌐 **Multi-language support** — available in English, Russian (Русский), Spanish (Español), and Chinese (中文).
 - 🔐 **Local-first data** — AI chat history and account data stay on your machine.
 - 🧩 **Extensible toolset** — new tools are added continuously between releases.
 - 🤖 **Bring your own AI key** — no shared server-side key, no vendor lock-in.
+
+## Supported languages
+
+Yolnoma-App features built-in internationalization with instant in-app switching from the navbar:
+
+- **English** (`en`) — Default language (Full interface)
+- **Russian** (`ru` / Русский) — Full interface localization
+- **Spanish** (`es` / Español) — Navigation, sidebar, and dashboard localization
+- **Chinese** (`zh` / 中文) — Navigation, sidebar, and dashboard localization
 
 ## Screenshots
 

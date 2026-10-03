@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
+import { getStorageScope } from "@/shared/hooks/useAccountStorage";
 import ApiKeyModal from "@/features/ai/components/ApiKeyModal";
 import { getApiKey, saveApiKey } from "@/features/ai/storage";
 import {
@@ -128,7 +129,7 @@ export default function CommitGenerator({
   const [recentFolders, setRecentFolders] = useState(listRecentGitFolders);
 
   useEffect(() => {
-    getApiKey(user?.id ?? "").then((key) => {
+    getApiKey(getStorageScope(user?.id)).then((key) => {
       setApiKey(key ?? "");
       setDraftKey(key ?? "");
       setApiKeyReady(true);
@@ -203,7 +204,7 @@ export default function CommitGenerator({
   const saveKey = async () => {
     const cleanKey = draftKey.trim();
     if (!cleanKey) return;
-    await saveApiKey(user?.id ?? "", cleanKey);
+    await saveApiKey(getStorageScope(user?.id), cleanKey);
     setApiKey(cleanKey);
     setShowKeyModal(false);
     toast.success(t("git.apiSaved"));

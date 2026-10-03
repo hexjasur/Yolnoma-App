@@ -205,15 +205,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // Transition the UI to guest mode immediately. The remote sign-out is
+    // best-effort and must not leave private navigation visible while it waits.
+    set({ user: null, isAuthenticated: false });
+    clearAuthSession();
+    useAccountConfigStore.getState().reset();
+    void invoke('set_current_user', { userId: '' }).catch(() => {});
+
     try {
       await api.post('/api/v2/auth/sign-out', {}).catch(() => {});
     } catch {
       // Ignore network errors during sign-out
     }
-    set({ user: null, isAuthenticated: false });
-    clearAuthSession();
-    useAccountConfigStore.getState().reset();
-    void invoke('set_current_user', { userId: '' }).catch(() => {});
     toast.success('Signed out successfully.');
   },
 
@@ -237,4 +240,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 }));
-

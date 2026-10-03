@@ -5,20 +5,23 @@ import {
   getApiKey,
   saveApiKey,
   removeApiKey,
+  getStorageScope,
 } from "@/shared/hooks/useAccountStorage";
 import {
   createChatSession,
   getChatSession,
   listChatSessions,
   saveChatSession,
+  deleteChatSession as deleteChatSessionApi,
 } from "./api/openRouterApi";
 
 export { getApiKey, saveApiKey, removeApiKey };
 
 const LEGACY_CHAT_PREFIX = "yolnoma.ai-chat.";
+const LEGACY_GUEST_CHAT_KEY = "yolnoma.ai-chat.messages";
 
 function accountId(user: UserProfile | null) {
-  return user?.id ?? "";
+  return getStorageScope(user?.id);
 }
 
 export async function loadChatSessions(user: UserProfile | null) {
@@ -43,11 +46,19 @@ export async function persistChatSession(
   return saveChatSession(accountId(user), session);
 }
 
+export async function deleteChatSession(
+  user: UserProfile | null,
+  sessionId: string,
+) {
+  return deleteChatSessionApi(accountId(user), sessionId);
+}
+
 /** One-time migration from the old account-scoped localStorage history. */
 export async function migrateLegacyChat(user: UserProfile | null) {
   const identity = user?.id || user?.email;
-  if (!identity) return null;
-  const key = `${LEGACY_CHAT_PREFIX}${encodeURIComponent(identity.trim().toLowerCase())}.messages`;
+  const key = identity
+    ? `${LEGACY_CHAT_PREFIX}${encodeURIComponent(identity.trim().toLowerCase())}.messages`
+    : LEGACY_GUEST_CHAT_KEY;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;

@@ -14,8 +14,11 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { getApiKey } from "@/shared/hooks/useAccountStorage";
-import { saveApiKey } from "@/shared/hooks/useAccountStorage";
+import {
+  getApiKey,
+  saveApiKey,
+  getStorageScope,
+} from "@/shared/hooks/useAccountStorage";
 import { DEFAULT_MODELS } from "@/features/ai/types";
 import { useAuth } from "@/features/auth/AuthContext";
 import { requestOpenRouter } from "@/features/ai/api/openRouterApi";
@@ -316,7 +319,7 @@ export default function DatabaseGenWorkspace() {
     setGenerating(true);
     setError("");
     try {
-      const apiKey = await getApiKey(user?.id ?? "");
+      const apiKey = await getApiKey(getStorageScope(user?.id));
       if (!apiKey) {
         setError(t("aiTools.apiKeyMissing"));
         setShowKeyModal(true);
@@ -356,7 +359,7 @@ export default function DatabaseGenWorkspace() {
   const saveKey = async () => {
     const cleanKey = draftKey.trim();
     if (!cleanKey) return;
-    await saveApiKey(user?.id ?? "", cleanKey);
+    await saveApiKey(getStorageScope(user?.id), cleanKey);
     setShowKeyModal(false);
     setError("");
   };
