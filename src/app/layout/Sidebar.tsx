@@ -66,12 +66,21 @@ const GUEST_NAVIGATION = new Set([
   "ai-tools",
   "cleaner",
   "crosshair-overlay",
+  "steam-idler",
   "steam-sam",
   "steam-review",
   "developer-tools",
   "json-viewer",
   "css-tools",
+  "image",
+  "start-up-apps",
+  "git",
+  "video-downloader",
+  "port-scanner",
+  "dns-records",
+  "ai-chat-2b-model",
   "feedback",
+  "world-3d",
 ]);
 
 const SIDEBAR_WIDTH_KEY = "yolnoma_sidebar_width";
@@ -490,8 +499,20 @@ export default function Sidebar() {
             user ? setShowLogoutConfirm(true) : navigate("/login")
           }
           className={`group relative w-full flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-colors duration-150 cursor-pointer ${isCollapsed ? "justify-center px-2" : "px-4"}`}
-          title={isCollapsed ? (user ? t("sidebar.signOut") : t("auth.login")) : undefined}
-          aria-label={isCollapsed ? (user ? t("sidebar.signOut") : t("auth.login")) : undefined}
+          title={
+            isCollapsed
+              ? user
+                ? t("sidebar.signOut")
+                : t("auth.login")
+              : undefined
+          }
+          aria-label={
+            isCollapsed
+              ? user
+                ? t("sidebar.signOut")
+                : t("auth.login")
+              : undefined
+          }
         >
           {user ? (
             <LogOut

@@ -165,24 +165,26 @@ export default function Navbar() {
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold">
             <span>TESTER</span>
           </div>
-        ) : (
+        ) : user ? (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/4 border border-white/8 text-white/60 text-xs font-medium">
             <span>USER</span>
           </div>
-        )}
+        ) : null}
 
         <LanguageSwitcher />
 
-        {/* /Settings Button */}
-        <button
-          type="button"
-          onClick={() => navigate("/settings")}
-          className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/6 transition-colors"
-          title={t("navbar.settings")}
-          aria-label={t("navbar.settings")}
-        >
-          <Settings size={15} strokeWidth={1.75} />
-        </button>
+        {/* /Settings Button - Only visible for signed-in users */}
+        {user && (
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/6 transition-colors"
+            title={t("navbar.settings")}
+            aria-label={t("navbar.settings")}
+          >
+            <Settings size={15} strokeWidth={1.75} />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => navigate(user ? "/profile" : "/login")}

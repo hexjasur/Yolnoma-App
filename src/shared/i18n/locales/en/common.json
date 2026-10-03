@@ -65,7 +65,9 @@
   },
   "language": {
     "english": "English",
-    "russian": "Русский"
+    "russian": "Русский",
+    "spanish": "Español (test)",
+    "chinese": "中文 (test)"
   },
   "appShell": {
     "loading": "Opening tool",
