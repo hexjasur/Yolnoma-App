@@ -1293,6 +1293,8 @@
     "namePlaceholder": "Your name",
     "email": "Email",
     "emailPlaceholder": "you@example.com",
+    "emailAutoFilled": "Your account email is filled in and locked.",
+    "emailGuestHint": "Enter your email so we can follow up.",
     "message": "Message",
     "messagePlaceholder": "Write your feedback…",
     "send": "Send feedback",

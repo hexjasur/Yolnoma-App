@@ -1293,6 +1293,8 @@
     "namePlaceholder": "Ваше имя",
     "email": "Электронная почта",
     "emailPlaceholder": "you@example.com",
+    "emailAutoFilled": "Электронная почта аккаунта заполнена и заблокирована.",
+    "emailGuestHint": "Введите электронную почту, чтобы мы могли ответить.",
     "message": "Сообщение",
     "messagePlaceholder": "Напишите отзыв…",
     "send": "Отправить отзыв",

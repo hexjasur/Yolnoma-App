@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useForm, ValidationError } from "@formspree/react";
 import { Lightbulb, Send } from "lucide-react";
@@ -8,7 +9,12 @@ export default function FeedbackPage() {
   const FORMSFREE_ID = import.meta.env.VITE_FORMSPREE_ID;
   const { user } = useAuth();
   const [state, handleSubmit] = useForm(FORMSFREE_ID);
-  const email = user?.email ?? "";
+  const [email, setEmail] = useState(user?.email ?? "");
+  const isAuthenticated = Boolean(user?.email);
+
+  useEffect(() => {
+    setEmail(user?.email ?? "");
+  }, [user?.email]);
 
   if (state.succeeded) {
     return (
@@ -66,11 +72,21 @@ export default function FeedbackPage() {
             type="email"
             name="email"
             value={email}
-            readOnly
+            onChange={(event) => setEmail(event.target.value)}
+            readOnly={isAuthenticated}
             required
-            className="w-full cursor-not-allowed border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/55 outline-none"
+            placeholder={t("feedback.emailPlaceholder")}
+            className={`w-full border border-white/10 px-4 py-3 text-sm outline-none ${
+              isAuthenticated
+                ? "cursor-not-allowed bg-white/[0.03] text-white/55"
+                : "bg-black/20 text-white/80 focus:border-[var(--accent)]"
+            }`}
           />
-          <p className="mt-2 text-[11px]">The email is already filled in 😁</p>
+          <p className="mt-2 text-[11px] text-white/35">
+            {isAuthenticated
+              ? t("feedback.emailAutoFilled")
+              : t("feedback.emailGuestHint")}
+          </p>
           <ValidationError
             prefix={t("feedback.email")}
             field="email"
