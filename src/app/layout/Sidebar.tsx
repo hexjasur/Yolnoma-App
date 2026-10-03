@@ -63,6 +63,7 @@ const GUEST_NAVIGATION = new Set([
   "bg-remover",
   "archive-explorer",
   "ai-chat-2b-model",
+  "ai-tools",
   "cleaner",
   "crosshair-overlay",
   "steam-sam",
@@ -553,6 +554,7 @@ export default function Sidebar() {
         onConfirm={async () => {
           setShowLogoutConfirm(false);
           await logout();
+          navigate("/dashboard", { replace: true });
         }}
         title={t("sidebar.signOutTitle")}
         description={t("sidebar.signOutDescription")}

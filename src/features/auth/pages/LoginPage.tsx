@@ -60,7 +60,9 @@ export default function LoginPage({
       onClosePreview?.();
       return;
     }
-    navigate(from === "/login" ? "/dashboard" : from, { replace: true });
+    // A guest cannot return to account-owned pages such as profile/settings;
+    // doing so would immediately redirect back to this login page.
+    navigate("/dashboard", { replace: true });
   };
 
   const handleBackendChange = (url: string) => {
