@@ -1,5 +1,9 @@
 pub mod dns;
+#[cfg(not(target_os = "android"))]
 pub mod plugins;
+#[cfg(not(target_os = "android"))]
 pub mod proxy;
+#[cfg(not(target_os = "android"))]
 pub mod video;
+#[cfg(not(target_os = "android"))]
 pub mod windows;

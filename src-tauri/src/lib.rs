@@ -4,7 +4,6 @@ use tauri_plugin_deep_link::DeepLinkExt;
 #[cfg(not(target_os = "android"))]
 mod app_commands;
 mod app_state;
-#[cfg(not(target_os = "android"))]
 mod commands;
 mod deep_link;
 #[cfg(not(target_os = "android"))]
