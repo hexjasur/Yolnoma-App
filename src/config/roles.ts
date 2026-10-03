@@ -67,12 +67,13 @@ export const canAccessPage = (
   page: string,
 ): boolean => {
   if (!role) return false;
-  if (role === ROLES.OWNER) return true; // Owner has full access to everything
-  return Boolean(page && PAGE_ROLES[page]?.includes(role));
+  const normalizedRole = role.trim().toLowerCase();
+  if (normalizedRole === ROLES.OWNER) return true; // Owner has full access to everything
+  return Boolean(page && PAGE_ROLES[page]?.includes(normalizedRole));
 };
 
 // ===== Get visible pages for sidebar =====
 export const getVisiblePages = (role: string | undefined): string[] => {
   if (!role) return [];
-  return ROLE_PERMISSIONS[role] ?? [];
+  return ROLE_PERMISSIONS[role.trim().toLowerCase()] ?? [];
 };
