@@ -9,8 +9,6 @@ use sysinfo::System;
 const POLICY_PREFIX: &str = "Yolnoma-";
 const MIN_LIMIT_KBPS: u64 = 1;
 const MAX_LIMIT_KBPS: u64 = 10_000_000;
-#[cfg(windows)]
-const ADMIN_HINT: &str = "Administrator rights are required to change bandwidth limits. Restart Yolnoma as administrator and try again.";
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,20 +110,78 @@ fn run_powershell(script: &str) -> Result<String, String> {
     if output.status.success() {
         return Ok(String::from_utf8_lossy(&output.stdout).into_owned());
     }
-
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    let lowered = stderr.to_lowercase();
-    if lowered.contains("access is denied")
-        || lowered.contains("administrator")
-        || lowered.contains("unauthorized")
-    {
-        return Err(ADMIN_HINT.to_string());
-    }
     Err(format!("Bandwidth policy command failed: {stderr}"))
+}
+
+#[cfg(windows)]
+fn is_elevated() -> bool {
+    run_powershell(
+        "([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent())\
+         .IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)",
+    )
+    .map(|output| output.trim().eq_ignore_ascii_case("true"))
+    .unwrap_or(false)
+}
+
+/// Runs the script in a separate elevated PowerShell. Windows shows its own
+/// UAC consent prompt, so Yolnoma never has to run as administrator itself.
+/// The script goes through -EncodedCommand instead of a temp file, so nothing
+/// can be swapped in between writing it and the elevated process running it.
+///
+/// Exit codes from the launcher: 9 = prompt declined or launch failed,
+/// 1 = the script itself failed while elevated.
+#[cfg(windows)]
+fn run_elevated(script: &str) -> Result<(), String> {
+    use base64::Engine;
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+    let wrapped = format!("try {{ {script}; exit 0 }} catch {{ exit 1 }}");
+    let utf16: Vec<u8> = wrapped
+        .encode_utf16()
+        .flat_map(|unit| unit.to_le_bytes())
+        .collect();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(utf16);
+
+    let launcher = format!(
+        "try {{ $p = Start-Process -FilePath 'powershell.exe' \
+         -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand','{encoded}') \
+         -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode }} catch {{ exit 9 }}"
+    );
+
+    let status = std::process::Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", launcher.as_str()])
+        .creation_flags(CREATE_NO_WINDOW)
+        .status()
+        .map_err(|error| format!("PowerShell could not be started: {error}"))?;
+
+    match status.code() {
+        Some(0) => Ok(()),
+        Some(9) => Err("Administrator permission was not granted. Accept the Windows prompt to change bandwidth limits.".to_string()),
+        Some(1) => Err("The bandwidth change failed while running with administrator rights.".to_string()),
+        other => Err(format!("Bandwidth change ended unexpectedly (exit code {other:?}).")),
+    }
+}
+
+/// Uses the current rights when Yolnoma is already elevated, otherwise asks
+/// Windows for elevation only for this single change.
+#[cfg(windows)]
+fn run_privileged(script: &str) -> Result<(), String> {
+    if is_elevated() {
+        run_powershell(script).map(|_| ())
+    } else {
+        run_elevated(script)
+    }
 }
 
 #[cfg(not(windows))]
 fn run_powershell(_script: &str) -> Result<String, String> {
+    Err("Bandwidth limits are available only on Windows.".to_string())
+}
+
+#[cfg(not(windows))]
+fn run_privileged(_script: &str) -> Result<(), String> {
     Err("Bandwidth limits are available only on Windows.".to_string())
 }
 
@@ -236,7 +292,7 @@ pub async fn set_app_bandwidth_limit(
         bps = bits_per_second,
     );
 
-    tokio::task::spawn_blocking(move || run_powershell(&script))
+    tokio::task::spawn_blocking(move || run_privileged(&script))
         .await
         .map_err(|error| format!("Policy update failed: {error}"))??;
 
@@ -256,7 +312,7 @@ pub async fn remove_app_bandwidth_limit(policy_name: String) -> Result<(), Strin
         ps_quote(&policy_name)
     );
 
-    tokio::task::spawn_blocking(move || run_powershell(&script))
+    tokio::task::spawn_blocking(move || run_privileged(&script))
         .await
         .map_err(|error| format!("Policy removal failed: {error}"))??;
     Ok(())

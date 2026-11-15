@@ -1606,7 +1606,7 @@
     "eyebrow": "Network Control",
     "title": "Internet Limit",
     "description": "Pick a running application and cap its outgoing internet speed. Limits are enforced by Windows QoS policies and persist until removed.",
-    "adminNotice": "Setting or removing limits requires administrator rights. Outgoing (upload) traffic is limited.",
+    "adminNotice": "Yolnoma does not need to run as administrator. Each limit change asks Windows for permission (UAC prompt) just for that change. Only outgoing (upload) traffic is limited.",
     "searchPlaceholder": "Search applications…",
     "refresh": "Refresh",
     "activeLimits": "Active Limits ({{count}})",
