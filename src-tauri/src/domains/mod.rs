@@ -7,5 +7,6 @@ pub mod git;
 pub mod image;
 pub mod network;
 pub mod steam;
+pub mod tech_scan;
 pub mod system;
 pub mod startup;

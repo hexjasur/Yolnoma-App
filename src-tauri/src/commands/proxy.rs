@@ -2,7 +2,7 @@
 /// - Faqat http/https schemasi
 /// - Cloud metadata endpointlar taqiqlangan
 /// - Localhost (port 3000/1420), api.yolnoma.uz va barcha tashqi API lari to'liq ruxsat etiladi
-fn validate_proxy_url(url: &str) -> Result<(), String> {
+pub(crate) fn validate_proxy_url(url: &str) -> Result<(), String> {
     let parsed = url
         .parse::<reqwest::Url>()
         .map_err(|_| format!("Invalid URL format: {}", url))?;

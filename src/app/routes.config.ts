@@ -19,6 +19,7 @@ import {
   Palette,
   Trees,
   Rocket,
+  ScanSearch,
 } from "lucide-react";
 import { isAndroidApp } from "@/shared/lib/platform";
 
@@ -147,6 +148,9 @@ const FeedbackPage = lazyPage(
 );
 const JsonViewerPage = lazyPage(
   () => import("@/features/json-viewer/pages/JsonViewerPage"),
+);
+const TechScanPage = lazyPage(
+  () => import("@/features/tech-scan/pages/TechScanPage"),
 );
 
 const roleGuard = (page: string, message: string): RouteRoleGuard => ({
@@ -480,6 +484,16 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
     label: "Start Up Apps",
     description: "Manage programs that run at system startup.",
     icon: Rocket,
+    navGroup: "tools",
+    pinnable: true,
+  },
+  {
+    id: "tech-scan",
+    path: "/tools/tech-scan",
+    component: TechScanPage,
+    label: "Tech Scan",
+    description: "Detect a site's stack and hosting",
+    icon: ScanSearch,
     navGroup: "tools",
     pinnable: true,
   },

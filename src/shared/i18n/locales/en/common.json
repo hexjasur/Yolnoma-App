@@ -1579,5 +1579,27 @@
     "workingTree": "Working Tree (Modified / New)",
     "currentFile": "Current file",
     "hunk": "Hunk"
+  },
+  "techScan": {
+    "eyebrow": "Website Intelligence",
+    "title": "Tech Scan",
+    "description": "Enter a website address to see the technologies it is built with and the hosting and DNS providers behind it.",
+    "urlLabel": "Website URL",
+    "urlPlaceholder": "example.com or https://example.com",
+    "scan": "Scan Site",
+    "scanning": "Scanning…",
+    "emptyHint": "Results will show frameworks, CMS, analytics, CDN and hosting detected from headers, HTML and DNS.",
+    "host": "Host",
+    "status": "HTTP Status",
+    "generator": "Generator",
+    "notFound": "Not detected",
+    "technologies": "Technologies",
+    "noTechnologies": "No technologies detected from the page.",
+    "hosting": "Hosting & Infrastructure",
+    "noHosting": "No hosting provider detected.",
+    "headers": "Response Headers ({{count}})",
+    "errors": {
+      "empty": "Enter a website URL."
+    }
   }
 }
