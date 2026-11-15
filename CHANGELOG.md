@@ -6,6 +6,7 @@ All notable Yolnoma releases are documented here. This file is the source of tru
 
 ### Added
 
+- Tech Scan for identifying a website's technology stack and hosting.
 - Per-application live upload and download rates, clearer bandwidth caps, and limit removal controls in Internet Limit (Test).
 - An authentication maintenance notice on sign-in entry points.
 
