@@ -20,6 +20,7 @@ import {
   Trees,
   Rocket,
   ScanSearch,
+  Gauge,
 } from "lucide-react";
 import { isAndroidApp } from "@/shared/lib/platform";
 
@@ -151,6 +152,9 @@ const JsonViewerPage = lazyPage(
 );
 const TechScanPage = lazyPage(
   () => import("@/features/tech-scan/pages/TechScanPage"),
+);
+const InternetLimitPage = lazyPage(
+  () => import("@/features/internet-limit/pages/InternetLimitPage"),
 );
 
 const roleGuard = (page: string, message: string): RouteRoleGuard => ({
@@ -494,6 +498,16 @@ export const ROUTE_CONFIG: readonly RouteDefinition[] = [
     label: "Tech Scan",
     description: "Detect a site's stack and hosting",
     icon: ScanSearch,
+    navGroup: "tools",
+    pinnable: true,
+  },
+  {
+    id: "internet-limit",
+    path: "/tools/internet-limit",
+    component: InternetLimitPage,
+    label: "Internet Limit",
+    description: "Cap apps' upload speed",
+    icon: Gauge,
     navGroup: "tools",
     pinnable: true,
   },

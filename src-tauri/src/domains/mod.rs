@@ -5,6 +5,7 @@ pub mod cleaner;
 pub mod crosshair;
 pub mod git;
 pub mod image;
+pub mod internet_limit;
 pub mod network;
 pub mod steam;
 pub mod tech_scan;

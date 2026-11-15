@@ -1601,5 +1601,33 @@
     "errors": {
       "empty": "Enter a website URL."
     }
+  },
+  "internetLimit": {
+    "eyebrow": "Network Control",
+    "title": "Internet Limit",
+    "description": "Pick a running application and cap its outgoing internet speed. Limits are enforced by Windows QoS policies and persist until removed.",
+    "adminNotice": "Setting or removing limits requires administrator rights. Outgoing (upload) traffic is limited.",
+    "searchPlaceholder": "Search applications…",
+    "refresh": "Refresh",
+    "activeLimits": "Active Limits ({{count}})",
+    "runningApps": "Running Applications ({{count}})",
+    "noApps": "No user applications are running.",
+    "limited": "Limited to {{speed}}",
+    "unlimited": "No limit",
+    "limit": "Limit",
+    "apply": "Apply",
+    "remove": "Remove",
+    "cancel": "Cancel",
+    "speedLabel": "Limit (KB/s)",
+    "presets": "Quick presets",
+    "applied": "Limit applied to {{name}}.",
+    "removed": "Limit removed from {{name}}.",
+    "errors": {
+      "load": "Could not load applications.",
+      "invalidSpeed": "Enter a speed between 1 and 10,000,000 KB/s.",
+      "unsupported": "Bandwidth limits are available only on Windows."
+    },
+    "processes_one": "{{count}} process",
+    "processes_other": "{{count}} processes"
   }
 }

@@ -288,6 +288,11 @@ pub fn run() {
             domains::network::get_common_ports,
             // ── Tech Scan ──
             domains::tech_scan::scan_website_tech,
+            // ── Internet Limit ──
+            domains::internet_limit::list_network_apps,
+            domains::internet_limit::list_bandwidth_limits,
+            domains::internet_limit::set_app_bandwidth_limit,
+            domains::internet_limit::remove_app_bandwidth_limit,
             // ── Archive Explorer ──
             domains::archive::list_archive_entries,
             domains::archive::read_archive_entry_content,
