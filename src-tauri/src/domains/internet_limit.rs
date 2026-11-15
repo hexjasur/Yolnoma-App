@@ -71,11 +71,14 @@ fn validate_exe_path(path: &str) -> Result<String, String> {
 }
 
 fn validate_policy_name(name: &str) -> Result<(), String> {
-    let valid = name.starts_with(POLICY_PREFIX)
+    let has_yolnoma_prefix = name
+        .get(..POLICY_PREFIX.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(POLICY_PREFIX));
+    let valid = has_yolnoma_prefix
         && name.len() <= 200
-        && name
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'));
+        && name.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+        });
     if valid {
         Ok(())
     } else {
@@ -151,7 +154,14 @@ fn run_elevated(script: &str) -> Result<(), String> {
     );
 
     let status = std::process::Command::new("powershell.exe")
-        .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", launcher.as_str()])
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            launcher.as_str(),
+        ])
         .creation_flags(CREATE_NO_WINDOW)
         .status()
         .map_err(|error| format!("PowerShell could not be started: {error}"))?;
@@ -229,7 +239,8 @@ pub async fn list_network_apps() -> Result<Vec<NetworkApp>, String> {
 
 #[tauri::command]
 pub async fn list_bandwidth_limits() -> Result<Vec<BandwidthLimit>, String> {
-    let script = "Get-NetQosPolicy | Where-Object { $_.Name -like 'Yolnoma-*' } | \
+    let script =
+        "Get-NetQosPolicy -PolicyStore ActiveStore | Where-Object { $_.Name -like 'Yolnoma-*' } | \
                   Select-Object Name, AppPathNameMatchCondition, ThrottleRateActionBitsPerSecond | \
                   ConvertTo-Json -Compress";
 
@@ -254,9 +265,7 @@ pub async fn list_bandwidth_limits() -> Result<Vec<BandwidthLimit>, String> {
         .filter_map(|item| {
             let policy_name = item.get("Name")?.as_str()?.to_string();
             let exe_path = item.get("AppPathNameMatchCondition")?.as_str()?.to_string();
-            let bits_per_second = item
-                .get("ThrottleRateActionBitsPerSecond")?
-                .as_u64()?;
+            let bits_per_second = item.get("ThrottleRateActionBitsPerSecond")?.as_u64()?;
             Some(BandwidthLimit {
                 policy_name,
                 exe_path,
@@ -284,7 +293,8 @@ pub async fn set_app_bandwidth_limit(
     // Remove first so re-applying a limit replaces the old value instead of failing.
     let script = format!(
         "$ErrorActionPreference = 'Stop'; \
-         Get-NetQosPolicy -Name {name} -ErrorAction SilentlyContinue | Remove-NetQosPolicy -Confirm:$false; \
+         if (Get-NetQosPolicy -PolicyStore ActiveStore -Name {name} -ErrorAction SilentlyContinue) {{ \
+         Remove-NetQosPolicy -PolicyStore ActiveStore -Name {name} -Confirm:$false }}; \
          New-NetQosPolicy -Name {name} -AppPathNameMatchCondition {path} \
          -ThrottleRateActionBitsPerSecond {bps} -PolicyStore ActiveStore | Out-Null",
         name = ps_quote(&policy_name),
@@ -308,7 +318,7 @@ pub async fn remove_app_bandwidth_limit(policy_name: String) -> Result<(), Strin
     validate_policy_name(&policy_name)?;
 
     let script = format!(
-        "$ErrorActionPreference = 'Stop'; Remove-NetQosPolicy -Name {} -Confirm:$false",
+        "$ErrorActionPreference = 'Stop'; Remove-NetQosPolicy -PolicyStore ActiveStore -Name {} -Confirm:$false",
         ps_quote(&policy_name)
     );
 
@@ -316,4 +326,16 @@ pub async fn remove_app_bandwidth_limit(policy_name: String) -> Result<(), Strin
         .await
         .map_err(|error| format!("Policy removal failed: {error}"))??;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_policy_name;
+
+    #[test]
+    fn accepts_policy_names_returned_by_windows_case_insensitively() {
+        assert!(validate_policy_name("yolnoma-ayugram.exe-85eb1bd4").is_ok());
+        assert!(validate_policy_name("Yolnoma-ayugram.exe-85eb1bd4").is_ok());
+        assert!(validate_policy_name("Other-app").is_err());
+    }
 }

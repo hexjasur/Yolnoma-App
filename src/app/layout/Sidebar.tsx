@@ -80,6 +80,8 @@ const GUEST_NAVIGATION = new Set([
   "dns-records",
   "ai-chat-2b-model",
   "feedback",
+  "tech-scan",
+  "internet-limit",
   "world-3d",
 ]);
 
@@ -97,7 +99,11 @@ function getStoredWidth() {
     : DEFAULT_SIDEBAR_WIDTH;
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  onSignIn: () => void;
+}
+
+export default function Sidebar({ onSignIn }: SidebarProps) {
   const [version, setVersion] = useState<string>("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [width, setWidth] = useState(getStoredWidth);
@@ -495,9 +501,7 @@ export default function Sidebar() {
         <div className="h-px bg-[var(--border)] my-3 mx-2" />
         {/* Authentication CTA */}
         <button
-          onClick={() =>
-            user ? setShowLogoutConfirm(true) : navigate("/login")
-          }
+          onClick={() => (user ? setShowLogoutConfirm(true) : onSignIn())}
           className={`group relative w-full flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-colors duration-150 cursor-pointer ${isCollapsed ? "justify-center px-2" : "px-4"}`}
           title={
             isCollapsed

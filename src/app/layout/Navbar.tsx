@@ -16,7 +16,11 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/shared/ui/LanguageSwitcher";
 
-export default function Navbar() {
+interface NavbarProps {
+  onSignIn: () => void;
+}
+
+export default function Navbar({ onSignIn }: NavbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -187,7 +191,7 @@ export default function Navbar() {
         )}
         <button
           type="button"
-          onClick={() => navigate(user ? "/profile" : "/login")}
+          onClick={() => (user ? navigate("/profile") : onSignIn())}
           className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/[0.10] bg-white/[0.04] text-white/55 transition-colors hover:border-[#D97757]/50 hover:bg-[#D97757]/10 hover:text-white"
           title={user ? t("navigation.routes.profile") : t("auth.login")}
           aria-label={user ? t("navigation.routes.profile") : t("auth.login")}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input } from "@/shared/ui";
-import type { BandwidthLimit, NetworkApp } from "../types";
+import type { BandwidthLimit, NetworkApp, NetworkTrafficRate } from "../types";
 
 const SPEED_PRESETS_KBPS = [64, 256, 1024, 4096] as const;
 
@@ -9,9 +9,21 @@ export function formatSpeed(kbps: number): string {
   return kbps >= 1024 ? `${(kbps / 1024).toFixed(1)} MB/s` : `${kbps} KB/s`;
 }
 
+export function formatTrafficRate(bytesPerSecond: number): string {
+  if (bytesPerSecond >= 1024 * 1024) {
+    return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
+  }
+  if (bytesPerSecond >= 1024) {
+    return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+  }
+  return `${Math.round(bytesPerSecond)} B/s`;
+}
+
 interface AppLimitRowProps {
   app: NetworkApp;
   limit: BandwidthLimit | undefined;
+  traffic: NetworkTrafficRate | undefined;
+  trafficReady: boolean;
   busy: boolean;
   onApply: (limitKbps: number) => void;
   onRemove: () => void;
@@ -20,6 +32,8 @@ interface AppLimitRowProps {
 export function AppLimitRow({
   app,
   limit,
+  traffic,
+  trafficReady,
   busy,
   onApply,
   onRemove,
@@ -50,6 +64,23 @@ export function AppLimitRow({
           <p className="mt-1 text-xs text-white/35">
             {t("internetLimit.processes", { count: app.processCount })} ·{" "}
             {Math.round(app.memoryBytes / 1024 / 1024)} MB
+          </p>
+          <p className="mt-1 text-xs text-white/55">
+            {trafficReady ? (
+              <>
+                {t("internetLimit.downloadRate", {
+                  speed: formatTrafficRate(
+                    traffic?.downloadBytesPerSecond ?? 0,
+                  ),
+                })}
+                {" · "}
+                {t("internetLimit.uploadRate", {
+                  speed: formatTrafficRate(traffic?.uploadBytesPerSecond ?? 0),
+                })}
+              </>
+            ) : (
+              t("internetLimit.rateUnavailable")
+            )}
           </p>
         </div>
 
@@ -84,7 +115,7 @@ export function AppLimitRow({
               onClick={() => setIsEditing(true)}
               disabled={busy}
             >
-              {t("internetLimit.limit")}
+              {t(limit ? "internetLimit.changeLimit" : "internetLimit.limit")}
             </Button>
           )}
         </div>

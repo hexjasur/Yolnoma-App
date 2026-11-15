@@ -46,6 +46,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "image",
     "dns-records",
     "start-up-apps",
+    "tech-scan",
+    "internet-limit",
   ],
 };
 

@@ -9,17 +9,22 @@ mod commands;
 mod deep_link;
 #[cfg(not(target_os = "android"))]
 mod domains;
+#[cfg(not(target_os = "android"))]
+mod embedded_api_key;
 #[cfg(target_os = "android")]
 mod mobile_backend;
 #[cfg(target_os = "android")]
 mod mobile_proxy;
 #[cfg(not(target_os = "android"))]
-mod embedded_api_key;
-#[cfg(not(target_os = "android"))]
 mod updater;
 
 // Kept public for feature modules that use the shared authentication state.
 pub use app_state::AuthState;
+
+#[cfg(not(target_os = "android"))]
+pub fn run_network_monitor_helper(address: &str, token: &str) -> i32 {
+    domains::internet_traffic::run_network_monitor_helper(address, token)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[cfg(not(target_os = "android"))]
@@ -29,6 +34,7 @@ pub fn run() {
         .manage(domains::account::ApiKeyCache::new())
         .manage(domains::steam::IdlingState::new())
         .manage(domains::system::SystemMonitorState::new())
+        .manage(domains::internet_traffic::TrafficMonitorState::default())
         .manage(commands::video::DownloadState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -183,7 +189,8 @@ pub fn run() {
                             let text = format!("🟢 Steam: {} games idling", count);
                             let _ = idling_item_clone.set_text(&text);
                             let _ = stop_idling_clone.set_enabled(true);
-                            let _ = tray_icon.set_tooltip(Some(&format!("Yolnoma • {} games idling", count)));
+                            let _ = tray_icon
+                                .set_tooltip(Some(&format!("Yolnoma • {} games idling", count)));
                         } else {
                             let _ = idling_item_clone.set_text("Steam: No active idling");
                             let _ = stop_idling_clone.set_enabled(false);
@@ -293,6 +300,8 @@ pub fn run() {
             domains::internet_limit::list_bandwidth_limits,
             domains::internet_limit::set_app_bandwidth_limit,
             domains::internet_limit::remove_app_bandwidth_limit,
+            domains::internet_traffic::start_network_traffic_monitor,
+            domains::internet_traffic::get_network_traffic_snapshot,
             // ── Archive Explorer ──
             domains::archive::list_archive_entries,
             domains::archive::read_archive_entry_content,
@@ -312,7 +321,6 @@ pub fn run() {
                 });
             }
         });
-
 }
 
 #[cfg(target_os = "android")]

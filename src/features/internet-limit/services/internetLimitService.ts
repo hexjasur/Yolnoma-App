@@ -1,5 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { BandwidthLimit, NetworkApp } from "../types";
+import type {
+  BandwidthLimit,
+  NetworkApp,
+  TrafficMonitorSnapshot,
+} from "../types";
+
+export function startNetworkTrafficMonitor(): Promise<void> {
+  return invoke<void>("start_network_traffic_monitor");
+}
+
+export function getNetworkTrafficSnapshot(): Promise<TrafficMonitorSnapshot> {
+  return invoke<TrafficMonitorSnapshot>("get_network_traffic_snapshot");
+}
 
 export function listNetworkApps(): Promise<NetworkApp[]> {
   return invoke<NetworkApp[]>("list_network_apps");

@@ -2,6 +2,17 @@
 
 All notable Yolnoma releases are documented here. This file is the source of truth for updater release notes.
 
+## [1.2.8] - 2026-11-16
+
+### Added
+
+- Per-application live upload and download rates, clearer bandwidth caps, and limit removal controls in Internet Limit (Test).
+- An authentication maintenance notice on sign-in entry points.
+
+### Improved
+
+- Internet Limit now distinguishes unavailable traffic measurements from an actual zero rate.
+
 ## [1.2.7] - 2026-10-03
 
 ### Added

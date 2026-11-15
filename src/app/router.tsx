@@ -8,7 +8,7 @@ import RouteLoadErrorFallback from "@/app/components/RouteLoadErrorFallback";
 import RouteStatusGuard from "@/app/components/RouteStatusGuard";
 import MobileAccessGuard from "@/app/components/MobileAccessGuard";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
-import LoginPage from "@/features/auth/pages/LoginPage";
+import AuthMaintenancePage from "@/features/auth/pages/AuthMaintenancePage";
 import SessionManagementPage from "@/features/auth/pages/SessionManagementPage";
 import RoleGuard from "@/shared/ui/RoleGuard";
 import { usePluginRoutes } from "@/plugins";
@@ -77,7 +77,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<AuthMaintenancePage />} />
       <Route path="/session-limit" element={<SessionManagementPage />} />
       <Route
         path="/crosshair-overlay-window"

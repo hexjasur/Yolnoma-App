@@ -1,12 +1,15 @@
-import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import Navbar from './Navbar';
-import StandaloneTabBar from './StandaloneTabBar';
-import KeepAliveOutlet from './KeepAliveOutlet';
-import { useIsStandalone } from '@/shared/lib/window';
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import Sidebar from "./Sidebar";
+import Navbar from "./Navbar";
+import StandaloneTabBar from "./StandaloneTabBar";
+import KeepAliveOutlet from "./KeepAliveOutlet";
+import { useIsStandalone } from "@/shared/lib/window";
+import AuthMaintenanceModal from "@/features/auth/components/AuthMaintenanceModal";
 
 export default function Layout() {
   const isStandalone = useIsStandalone();
+  const [showAuthMaintenance, setShowAuthMaintenance] = useState(false);
 
   if (isStandalone) {
     return (
@@ -14,7 +17,7 @@ export default function Layout() {
         {/* ambient stage-light glow, sits behind everything */}
         <div
           className="pointer-events-none absolute -top-32 left-1/3 h-[420px] w-[620px] rounded-full opacity-[0.07] blur-3xl"
-          style={{ background: '#D97757' }}
+          style={{ background: "#D97757" }}
         />
 
         {/* Steam-Style Tab Bar - NO SIDEBAR */}
@@ -33,18 +36,22 @@ export default function Layout() {
       {/* ambient stage-light glow, sits behind everything */}
       <div
         className="pointer-events-none absolute -top-32 left-1/3 h-[420px] w-[620px] rounded-full opacity-[0.07] blur-3xl"
-        style={{ background: '#D97757' }}
+        style={{ background: "#D97757" }}
       />
 
-      <Sidebar />
+      <Sidebar onSignIn={() => setShowAuthMaintenance(true)} />
 
       <main className="flex-1 flex flex-col overflow-hidden relative z-10">
-        <Navbar />
+        <Navbar onSignIn={() => setShowAuthMaintenance(true)} />
 
         <div className="flex-1 overflow-y-auto p-8 relative z-10">
           <Outlet />
         </div>
       </main>
+      <AuthMaintenanceModal
+        open={showAuthMaintenance}
+        onClose={() => setShowAuthMaintenance(false)}
+      />
     </div>
   );
 }

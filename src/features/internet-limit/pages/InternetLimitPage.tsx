@@ -11,15 +11,37 @@ export default function InternetLimitPage() {
     totalApps,
     limits,
     limitByPath,
+    trafficByPath,
     query,
     setQuery,
     isLoading,
     busyPath,
     error,
+    trafficStatus,
+    trafficError,
+    observedEventCount,
+    decodedEventCount,
+    unattributedBytes,
     refresh,
+    startTrafficMonitor,
     applyLimit,
     removeLimit,
   } = useInternetLimit();
+
+  const monitorMessage =
+    trafficStatus === "running"
+      ? decodedEventCount === 0
+        ? observedEventCount === 0
+          ? t("internetLimit.monitorNoEvents")
+          : t("internetLimit.monitorDecodeError")
+        : unattributedBytes > 0
+          ? t("internetLimit.monitorUnattributed")
+          : t("internetLimit.monitorRunning")
+      : trafficStatus === "starting"
+        ? t("internetLimit.monitorStarting")
+        : trafficStatus === "error"
+          ? (trafficError ?? t("internetLimit.monitorError"))
+          : t("internetLimit.monitorIdle");
 
   return (
     <div className="mx-auto min-h-full max-w-6xl space-y-6 p-6 pb-16 text-[var(--text-primary)]">
@@ -43,6 +65,22 @@ export default function InternetLimitPage() {
         <p>{t("internetLimit.adminNotice")}</p>
       </div>
 
+      <div
+        aria-live="polite"
+        className="flex flex-col gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+      >
+        <p className="text-white/65">{monitorMessage}</p>
+        {trafficStatus === "error" && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => void startTrafficMonitor()}
+          >
+            {t("internetLimit.retryMonitor")}
+          </Button>
+        )}
+      </div>
+
       {error && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
@@ -54,26 +92,46 @@ export default function InternetLimitPage() {
           <h2 className="font-serif text-xl text-white">
             {t("internetLimit.activeLimits", { count: limits.length })}
           </h2>
-          <ul className="flex flex-wrap gap-2">
-            {limits.map((limit) => (
-              <li
-                key={limit.policyName}
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-3 pr-1 text-sm"
-              >
-                <span className="text-white/85">
-                  {limit.exePath.split(/[\\/]/).pop()} ·{" "}
-                  {formatSpeed(limit.limitKbps)}
-                </span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void removeLimit(limit)}
-                  disabled={busyPath !== null}
+          <ul className="space-y-3">
+            {limits.map((limit) => {
+              const app = apps.find(
+                (runningApp) =>
+                  runningApp.exePath.toLowerCase() ===
+                  limit.exePath.toLowerCase(),
+              );
+              const appName =
+                app?.name ??
+                limit.exePath.split(/[\\/]/).pop() ??
+                limit.exePath;
+              return (
+                <li
+                  key={limit.policyName}
+                  className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  {t("internetLimit.remove")}
-                </Button>
-              </li>
-            ))}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-white">{appName}</p>
+                    <p className="truncate font-mono text-xs text-white/40">
+                      {limit.exePath}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="rounded-full bg-amber-400/15 px-3 py-1 text-xs text-amber-200">
+                      {t("internetLimit.uploadCap", {
+                        speed: formatSpeed(limit.limitKbps),
+                      })}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => void removeLimit(limit)}
+                      disabled={busyPath !== null}
+                    >
+                      {t("internetLimit.removeLimit")}
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -113,6 +171,10 @@ export default function InternetLimitPage() {
                 key={app.exePath}
                 app={app}
                 limit={limitByPath.get(app.exePath.toLowerCase())}
+                traffic={trafficByPath.get(app.exePath.toLowerCase())}
+                trafficReady={
+                  trafficStatus === "running" && decodedEventCount > 0
+                }
                 busy={busyPath === app.exePath}
                 onApply={(limitKbps) => void applyLimit(app, limitKbps)}
                 onRemove={() => {

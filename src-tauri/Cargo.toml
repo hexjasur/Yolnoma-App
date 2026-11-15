@@ -7,7 +7,7 @@
 
 [package]
 name = "yolnoma-app"
-version = "1.2.7"
+version = "1.2.8"
 description = "Yolnoma Desktop Utility App"
 authors = ["Jasurbek Haydarov"]
 edition = "2021"
@@ -68,6 +68,9 @@ windows-sys = { version = "0.61", features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+[target.'cfg(windows)'.dependencies]
+ferrisetw = "1.2.0"
 
 [profile.dev]
 codegen-units = 1
